@@ -5,6 +5,7 @@ import { enqueue } from '../outbox.mjs';
 import { closeAppeals, closeDisputes, closeReports } from '../reports.mjs';
 import { closePending } from '../approvals.mjs';
 import { deleteCouple } from './couples.mjs';
+import { closeOwned } from './communities.mjs';
 import { endConversations } from './chats.mjs';
 import { checkCode, confirmEnrol, factorState, newRecoveryCodes, removeFactor, startEnrol } from '../second-factor.mjs';
 import { keepOnlyThisSignin, passSignin } from '../signin.mjs';
@@ -22,24 +23,8 @@ import { hmac } from '../hash.mjs';
 
 const HOLD_DAYS = 30;
 
-/** Communities a profile owns close (members are told) and its future events are cancelled (people who answered are
- * told); events nobody saw yet go. Used for the person and for each couple deleted with the account.
- * @param {Q} q @param {string} owner */
-async function closeOwned(q, owner) {
-  const closed = await q.query(`update feture.community set state = 'deleted', pending_change = null, updated_at = now() where owner_profile_id = $1 and state <> 'deleted' returning id, state`, [owner]);
-  for (const c of closed) await enqueue(q, 'community.closed', owner, { communityId: c.id, organizerGone: true });
-  await closeReports(q, 'community', closed.map(c => c.id), 'unavailable');
-  const cancelled = await q.query(
-    `update feture.event set state = 'cancelled', cancelled_at = now(), rev = rev + 1, updated_at = now() where organizer_profile_id = $1 and state = 'published' and ends_at > now() returning id`, [owner]);
-  for (const e of cancelled) {
-    await q.query(`update feture.event_application set state = 'closed', decided_at = now(), rev = rev + 1 where event_id = $1 and state = 'pending'`, [e.id]);
-    await enqueue(q, 'event.cancelled', owner, { eventId: e.id, organizerGone: true });
-  }
-  await q.query(`delete from feture.event where organizer_profile_id = $1 and state in ('pending_partner', 'in_review', 'rejected')`, [owner]);
-}
-
-/** Ends the person profile's ties and hides its content. @param {Q} q @param {string} pp person profile */
-async function clearPerson(q, pp) {
+/** Ends the person profile's ties and hides its content. @param {Q} q @param {string} pp person profile @param {string} accountId */
+async function clearPerson(q, pp, accountId) {
   // Access both ways and requests.
   await q.query(`update feture.access_grant set revoked_at = now() where (owner_profile_id = $1 or viewer_profile_id = $1) and revoked_at is null`, [pp]);
   await q.query(`update feture.access_request set state = 'closed', closed_reason = 'revoked', decided_at = now() where (owner_profile_id = $1 or requester_profile_id = $1) and state = 'pending'`, [pp]);
@@ -68,7 +53,7 @@ async function clearPerson(q, pp) {
   // Communities and events: memberships end; owned ones close; organised events are cancelled.
   await q.query(`update feture.community_member set state = 'left', role = 'member' where profile_id = $1 and state = 'active'`, [pp]);
   await q.query(`update feture.community_request set state = 'withdrawn', decided_at = now(), rev = rev + 1 where profile_id = $1 and state = 'pending'`, [pp]);
-  await closeOwned(q, pp);
+  await closeOwned(q, pp, [accountId]);
   await q.query(`delete from feture.event_rsvp where profile_id = $1`, [pp]);
   await q.query(`update feture.event_application set state = 'withdrawn', decided_at = now(), rev = rev + 1 where profile_id = $1 and state in ('pending', 'approved')`, [pp]);
   // Files: out of sight now, bytes purged by the queue (never before a CSAM check, never evidence).
@@ -119,10 +104,7 @@ const run = {
     const couples = await q.query(
       `select p.id from feture.profile_member m join feture.profile p on p.id = m.profile_id
        where m.account_id = $1 and m.state = 'active' and p.kind = 'couple' and p.state in ('active', 'paused', 'suspended')`, [a.id]);
-    for (const c of couples) {
-      await closeOwned(q, c.id);
-      await deleteCouple(q, c.id, 'member_deleted');
-    }
+    for (const c of couples) await deleteCouple(q, c.id, 'member_deleted'); // its communities and events go with it (couples.mjs)
     await closePending(q, `a.requested_by = $1`, [a.id], 'cancelled', { silent: true });
     // Every open report about the person closes as «unavailable» — profile, posts, replies, chats (audit items 22, 28);
     // its appeals close and disputes on its posts too (24, 25). The evidence stays until then; blocked files never go.
@@ -137,7 +119,7 @@ const run = {
     await closeDisputes(q, (await q.query(`select id from feture.post where owner_profile_id = $1`, [a.person_profile_id])).map(r => r.id));
     // Age and photo checks nobody will finish: out of the staff queues (and their counts) now.
     for (const t of ['age_check', 'photo_check']) await q.query(`update feture.${t} set state = 'expired' where account_id = $1 and state in ('started', 'submitted')`, [a.id]);
-    await clearPerson(q, a.person_profile_id);
+    await clearPerson(q, a.person_profile_id, a.id);
     // The account itself: no way back in, nothing personal left on it.
     await q.query(`delete from feture.conversation_member where account_id = $1`, [a.id]);
     for (const t of ['notification', 'push_device', 'notification_settings']) await q.query(`delete from feture.${t} where ${t === 'notification' ? 'recipient_account_id' : 'account_id'} = $1`, [a.id]);

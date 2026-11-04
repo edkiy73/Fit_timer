@@ -25,6 +25,7 @@ function writtenTypes() {
   const src = read('server/notify.mjs');
   const types = new Set([...src.matchAll(/\btype: '([a-zA-Z.]+)'(?!, id:)/g)].map(m => m[1]));
   for (const m of src.matchAll(/\['event\.\w+', '(\w+)', (?:true|false)\]/g)) types.add(m[1]);
+  for (const m of src.matchAll(/\['community\.\w+', '(\w+)'\]/g)) types.add(m[1]);
   return types;
 }
 

@@ -10,6 +10,8 @@ import { randomBytes } from 'node:crypto';
 import { sha256 } from '../hash.mjs';
 import { readAbout } from '../notify.mjs';
 import { closeAppeals, closeDisputes, closeReports } from '../reports.mjs';
+import { closeOwned } from './communities.mjs';
+import { pauseOrganizer } from './events.mjs';
 
 /** Slice E: couples (S1 §5). An account is in at most one couple; the couple is its own profile that starts empty.
  * Either partner stops it at once; restoring needs both within 30 days, then it is deleted (jobs.sweepExpiredCouples).
@@ -139,6 +141,17 @@ export async function closeOutgoing(q, profileId) {
 /** Deletes a couple now: members leave, access both ways and pending changes end, and the couple's own content
  * (interests, history, private part, details, private media) is deleted (S1 §16). @param {Q} q @param {string} profileId @param {string} reason */
 export async function deleteCouple(q, profileId, reason) {
+  // Everything the couple was part of ends as with a deleted account (audit item 13): what it owns goes to a host or
+  // closes, its events are cancelled, it leaves other communities and events, follows and links end.
+  const leaving = (await q.query(`select account_id from feture.profile_member where profile_id = $1 and state = 'active'`, [profileId])).map(r => r.account_id);
+  await closeOwned(q, profileId, leaving);
+  await q.query(`update feture.community_member set state = 'left', role = 'member' where profile_id = $1 and state = 'active'`, [profileId]);
+  await q.query(`update feture.community_request set state = 'withdrawn', decided_at = now(), rev = rev + 1 where profile_id = $1 and state = 'pending'`, [profileId]);
+  await q.query(`delete from feture.event_rsvp where profile_id = $1`, [profileId]);
+  await q.query(`update feture.event_application set state = 'withdrawn', decided_at = now(), rev = rev + 1 where profile_id = $1 and state in ('pending', 'approved')`, [profileId]);
+  await q.query(`delete from feture.follow where follower_profile_id = $1 or target_profile_id = $1`, [profileId]);
+  await q.query(`delete from feture.profile_link where a_profile_id = $1 or b_profile_id = $1`, [profileId]);
+  for (const t of ['discover_decision', 'discover_filter', 'saved_item', 'feed_hide']) await q.query(`delete from feture.${t} where profile_id = $1`, [profileId]);
   await closeAll(q, profileId, 'couple_stopped');
   await closeOutgoing(q, profileId);
   await closePending(q, `a.profile_id = $1`, [profileId], 'cancelled', { silent: true });
@@ -330,6 +343,7 @@ const run = {
        where id = $1 and state = 'active' returning restore_until`, [acting.profileId]);
     if (!p) fail(409, 'conflict', { state: 'not_active' });
     await q.query(`delete from feture.couple_restore where profile_id = $1`, [acting.profileId]);
+    await pauseOrganizer(q, acting.profileId);
     await enqueue(q, 'couple.stopped', acting.profileId, { for: acting.partnerAccountId });
     return { state: 'paused', restoreUntil: p.restore_until, ...closed };
   },

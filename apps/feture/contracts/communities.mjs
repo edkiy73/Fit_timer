@@ -54,6 +54,9 @@ export const communitiesCommands = {
     profile: true, write: true,
     input: z.strictObject({ opId, communityId: id, profileId: id, change: z.enum(['host', 'unhost', 'readOnly', 'canWrite', 'remove']) }),
   },
+  // The owner hands the community to a host, or closes it (audit item 14).
+  'community.transfer': { profile: true, write: true, input: z.strictObject({ opId, communityId: id, profileId: id }) },
+  'community.close': { profile: true, write: true, input: z.strictObject({ opId, communityId: id }) },
   'community.self': {
     profile: true, write: true,
     input: z.strictObject({ opId, communityId: id, listed: z.boolean().optional(), muted: z.boolean().optional() }),

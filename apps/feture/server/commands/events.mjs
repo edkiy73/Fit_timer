@@ -192,9 +192,13 @@ async function doUpdate(q, acting, eventId, rev, f) {
   await checkEventRefs(q, acting, { ...f, communityId: null });
   const timeChanged = Date.parse(f.startsAt) !== new Date(e.starts_at).getTime() || Date.parse(f.endsAt) !== new Date(e.ends_at).getTime();
   if (timeChanged && Date.parse(f.startsAt) <= Date.now()) fail(400, 'invalid_input', { fields: ['startsAt'] });
-  const keys = Object.keys(COLS).filter(k => e.state !== 'published' || !MAJOR.includes(k));
+  // Offline → online on a published event (audit item 17): the format, the link and dropping the place wait for staff
+  // together and apply at once; online → offline applies now, as before.
+  const toOnline = e.state === 'published' && e.format === 'offline' && f.format === 'online';
+  const major = toOnline ? [...MAJOR, 'format', 'placeId', 'area', 'exactAddress'] : MAJOR;
+  const keys = Object.keys(COLS).filter(k => e.state !== 'published' || !major.includes(k));
   const later = e.state === 'published'
-    ? Object.fromEntries(MAJOR.filter(k => !same(f[k], formOf(e)[/** @type {keyof ReturnType<typeof formOf>} */ (k)])).map(k => [k, f[k] ?? null]))
+    ? Object.fromEntries(major.filter(k => !same(f[k], formOf(e)[/** @type {keyof ReturnType<typeof formOf>} */ (k)])).map(k => [k, f[k] ?? null]))
     : {};
   const all = values(f), cols = Object.keys(COLS);
   await q.query(
@@ -207,7 +211,7 @@ async function doUpdate(q, acting, eventId, rev, f) {
     // People who answered learn about a new time or place at once; their answers stay. A new link waits for staff.
     const changes = [
       ...(timeChanged ? ['time'] : []),
-      ...(f.placeId !== e.place_id || f.area !== e.area || f.exactAddress !== e.exact_address ? ['place'] : []),
+      ...(!toOnline && (f.placeId !== e.place_id || f.area !== e.area || f.exactAddress !== e.exact_address) ? ['place'] : []),
     ];
     if (timeChanged) await q.query('update feture.event set reminded_at = null where id = $1', [e.id]); // a new time, a new reminder
     if (changes.length) {
@@ -304,6 +308,55 @@ export async function releaseLateEvents(q) {
   }
   await q.query(`update feture.event set pending_change = null where state = 'published' and pending_change is not null and ends_at <= now()`);
   return late.length;
+}
+
+/** Cancels a published event that is not over (audit items 13, 15, 33 — one path for the organizer, a closed community,
+ * a deleted account or couple, a paused couple): pending applications and waiting approvals close, everyone following it
+ * hears «Событие отменено» (`why` says why, when it was not the organizer's choice).
+ * @param {Q} q @param {any} e an event row @param {{reason?: string | null, by?: string | null, why?: 'community_closed' | 'organizer_gone' | null}} [o] */
+export async function cancelEvent(q, e, { reason = null, by = null, why = null } = {}) {
+  const rows = await q.query(
+    `update feture.event set state = 'cancelled', cancel_reason = nullif($2, ''), cancelled_at = now(), rev = rev + 1, updated_at = now()
+     where id = $1 and state = 'published' and ends_at > now() returning id`, [e.id, reason ?? '']);
+  if (!rows[0]) return false;
+  await q.query(`update feture.event_application set state = 'closed', decided_at = now(), rev = rev + 1 where event_id = $1 and state = 'pending'`, [e.id]);
+  await closePending(q, `a.kind in ('event.rsvp', 'event.apply', 'event.update') and a.target_id = $1`, [e.id], 'stale', { by, hooks: false });
+  await enqueue(q, 'event.cancelled', e.organizer_profile_id, { eventId: e.id, ...(why ? { why } : {}), ...(why === 'organizer_gone' ? { organizerGone: true } : {}) });
+  return true;
+}
+
+/** Hides an event by a staff decision (a report or the event queue — one path, audit item 33): applications and waiting
+ * approvals close, the people following it hear «Событие больше недоступно» — no reason, no staff name.
+ * @param {Q} q @param {string} eventId @param {string | null} reason */
+export async function hideEvent(q, eventId, reason) {
+  const [e] = await q.query(`update feture.event set state = 'hidden', reject_reason = $2, rev = rev + 1, updated_at = now() where id = $1 returning organizer_profile_id`, [eventId, reason]);
+  if (!e) return;
+  await q.query(`update feture.event_application set state = 'closed', decided_at = now(), rev = rev + 1 where event_id = $1 and state = 'pending'`, [eventId]);
+  await closePending(q, `a.kind in ('event.rsvp', 'event.apply', 'event.update') and a.target_id = $1`, [eventId], 'stale', { hooks: false });
+  await enqueue(q, 'event.unavailable', e.organizer_profile_id, { eventId });
+}
+
+/** A couple paused (audit item 13, В7): its future events are cancelled (guests told, the paused couple not named) and
+ * events still waiting for staff or the partner go back to drafts, so staff never publish an event of a couple that is
+ * not there. Restoring the couple brings none of them back. @param {Q} q @param {string} profileId */
+export async function pauseOrganizer(q, profileId) {
+  for (const e of await q.query(`select * from feture.event where organizer_profile_id = $1 and state = 'published' and ends_at > now() for update`, [profileId])) {
+    await cancelEvent(q, e, { why: 'organizer_gone' });
+  }
+  for (const e of await q.query(`select * from feture.event where organizer_profile_id = $1 and state in ('pending_partner', 'in_review') for update`, [profileId])) {
+    await closePending(q, `a.kind = 'event.submit' and a.target_id = $1`, [e.id], 'stale', { hooks: false });
+    await toEventDraft(q, e);
+  }
+}
+
+/** Unpublished events of a community that closes go back to their organizers' drafts, without the community (audit
+ * item 15). @param {Q} q @param {string} communityId */
+export async function releaseCommunityEvents(q, communityId) {
+  const rows = await q.query(`select * from feture.event where community_id = $1 and state in ('pending_partner', 'in_review', 'rejected') for update`, [communityId]);
+  for (const e of rows) {
+    await closePending(q, `a.kind = 'event.submit' and a.target_id = $1`, [e.id], 'stale', { hooks: false });
+    await toEventDraft(q, { ...e, community_id: null });
+  }
 }
 
 /** Events left in `pending_partner` with nothing waiting (closed before stage 3, or a race) go back to drafts (jobs.mjs).
@@ -458,10 +511,7 @@ const run = {
     if (e.state !== 'published') fail(409, 'conflict', { state: e.state });
     // A past event is not cancelled: nobody is to be told «отменено» about something that already happened.
     if (new Date(e.ends_at).getTime() <= Date.now()) fail(409, 'conflict', { rule: 'event_over' });
-    await q.query(`update feture.event set state = 'cancelled', cancel_reason = nullif($2, ''), cancelled_at = now(), rev = rev + 1, updated_at = now() where id = $1`, [e.id, input.reason]);
-    await q.query(`update feture.event_application set state = 'closed', decided_at = now(), rev = rev + 1 where event_id = $1 and state = 'pending'`, [e.id]);
-    await closePending(q, `a.kind in ('event.rsvp', 'event.apply', 'event.update') and a.target_id = $1`, [e.id], 'stale', { by: acting.accountId, hooks: false });
-    await enqueue(q, 'event.cancelled', e.organizer_profile_id, { eventId: e.id });
+    await cancelEvent(q, e, { reason: input.reason, by: acting.accountId });
     return { state: 'cancelled' };
   },
 
@@ -755,8 +805,7 @@ const run = {
     const change = Object.fromEntries(Object.entries(e.pending_change ?? {}).filter(([k]) => Object.hasOwn(COLS, k)));
     if (input.decision === 'hide') {
       if (!['published', 'cancelled'].includes(e.state)) fail(409, 'conflict', { state: e.state });
-      await q.query(`update feture.event set state = 'hidden', reject_reason = $2, rev = rev + 1, updated_at = now() where id = $1`, [e.id, input.reason || null]);
-      await q.query(`update feture.event_application set state = 'closed', decided_at = now(), rev = rev + 1 where event_id = $1 and state = 'pending'`, [e.id]);
+      await hideEvent(q, e.id, input.reason || null);
     } else if (input.decision === 'approve') {
       const cover = Object.hasOwn(change, 'coverAssetId') ? change.coverAssetId : e.cover_asset_id;
       if (cover) {
@@ -766,6 +815,10 @@ const run = {
       }
       if (e.state === 'in_review') {
         if (new Date(e.starts_at).getTime() <= Date.now()) fail(409, 'conflict', { rule: 'started' });
+        // Not into a community that is no longer published (audit item 15): the organizer re-submits without it.
+        if (e.community_id && !(await q.query(`select 1 from feture.community where id = $1 and state = 'published'`, [e.community_id]))[0]) {
+          fail(409, 'conflict', { rule: 'community_closed' });
+        }
         await q.query(`update feture.event set state = 'published', published_at = now(), reject_reason = null, rev = rev + 1, updated_at = now() where id = $1`, [e.id]);
       } else if (e.state === 'published' && e.pending_change) {
         const keys = Object.keys(change);

@@ -2,7 +2,7 @@ import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import {useLocation,useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,Bell,ChevronRight,CircleCheck,Clock,Copy,Ellipsis,FileText,Flag,Info,Link as LinkIcon,Lock,MessageCircle,Pencil,Pin,PinOff,Send,Settings,ShieldAlert,Trash2,TrendingDown,TrendingUp,User,UserMinus,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
+import {Ban,Bell,ChevronRight,CircleCheck,Clock,Copy,Crown,Ellipsis,FileText,Flag,Info,Link as LinkIcon,Lock,MessageCircle,Pencil,Pin,PinOff,Send,Settings,ShieldAlert,Trash2,TrendingDown,TrendingUp,User,UserMinus,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Announcement,Answer,Ask,Av,Btn,Card,IconBtn,Empty,Group,LoadMore,Note,PersonLine,Pill,RequestCard,Row,SectionLabel,Seg,Sheet,Skel,Stack,StatTiles,SubBar,nickShown,useLeaveGuard} from './kit';
 import {useFe,usePartnerApproves} from './session';
@@ -147,8 +147,12 @@ export function MembersList({c,data,onChange}:{c:{id:string,me?:{role:string,sta
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
  const [openId,setOpen]=useState<string|null>(null);const [confirm,setConfirm]=useState(false);const [busy,setBusy]=useState(false);
  // What a change did, shown at once until the list is read again: the next tap on the person offers the next step.
- const [done,setDone]=useState<Record<string,Partial<Mem>>>({});
+ const [done,setDone]=useState<Record<string,Partial<Mem>>>({});const [handOver,setHandOver]=useState(false);
  const host=isHost(c);const owner=host&&c.me?.role==='owner';const writeTo=useWriteTo();
+ // «Передать владение» (audit item 14): to a host; the owner stays as a host.
+ const transfer=async(m:Mem)=>{setBusy(true);
+  try{await call('community.transfer',{opId:newOpId(),communityId:c.id,profileId:m.id},okRes);toast(t('fe.host.mem.transferred').replace('{name}',pname(m)),{type:'ok'});setOpen(null);setHandOver(false);onChange();}
+  catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}};
  const change=async(m:Mem,ch:'host'|'unhost'|'readOnly'|'canWrite'|'remove')=>{
   setBusy(true);
   try{await call('community.member',{opId:newOpId(),communityId:c.id,profileId:m.id,change:ch},okRes);setDone(d=>({...d,[m.id]:ch==='host'||ch==='unhost'?{role:ch==='host'?'host':'member'}:ch==='readOnly'||ch==='canWrite'?{read_only:ch==='readOnly'}:{}}));
@@ -178,15 +182,18 @@ export function MembersList({c,data,onChange}:{c:{id:string,me?:{role:string,sta
     :<Empty compact icon={Users} title={t('fe.cm.noOtherMembers')}/>}
    <LoadMore more={!!next} busy={loadingMore} error={moreErr} onMore={()=>void showMore()}/>
   </>}
-  {open&&!confirm&&<Sheet title={pname(open)} onClose={()=>setOpen(null)}><Card list>
+  {open&&!confirm&&!handOver&&<Sheet title={pname(open)} onClose={()=>setOpen(null)}><Card list>
    <Row icon={User} title={t('fe.host.mem.profile')} onClick={()=>navigate('/n/people/'+open.id)}/>
    <Row icon={MessageCircle} title={t('fe.rq.write')} onClick={()=>void writeTo.open(open.id)}/>
    {owner&&<Row icon={open.role==='host'?UserMinus:UserPlus} tone="v" noChev disabled={busy} title={open.role==='host'?t('fe.host.mem.unhost'):t('fe.host.mem.makeHost')}
     sub={open.role==='host'?t('fe.host.mem.unhostSub'):t('fe.host.mem.makeHostSub')} onClick={()=>void change(open,open.role==='host'?'unhost':'host')}/>}
+   {owner&&open.role==='host'&&<Row icon={Crown} noChev disabled={busy} title={t('fe.host.mem.transfer')} sub={t('fe.host.mem.transferSub')} onClick={()=>setHandOver(true)}/>}
    {open.role==='member'&&<Row icon={Lock} noChev disabled={busy} title={open.read_only?t('fe.host.mem.canWrite'):t('fe.host.mem.makeReadOnly')} sub={open.read_only?undefined:t('fe.host.mem.readOnlySub')}
     onClick={()=>void change(open,open.read_only?'canWrite':'readOnly')}/>}
    {open.role==='member'&&<Row icon={X} danger noChev disabled={busy} title={t('fe.host.mem.remove')} onClick={()=>setConfirm(true)}/>}
   </Card></Sheet>}
+  {open&&handOver&&<Ask icon={Crown} title={t('fe.host.mem.transferQ').replace('{name}',pname(open))} text={t('fe.host.mem.transferText')} ok={t('fe.host.mem.transferOk')} busy={busy}
+   onOk={()=>void transfer(open)} onCancel={()=>setHandOver(false)}/>}
   {open&&confirm&&<Ask icon={X} danger title={t('fe.host.mem.removeQ').replace('{name}',pname(open))} text={t('fe.host.mem.removeText')} ok={t('fe.host.mem.removeOk')} busy={busy}
    onOk={()=>void change(open,'remove')} onCancel={()=>setConfirm(false)}/>}
  </>;
@@ -200,8 +207,12 @@ export function CommunityManageScreen(){
  // The edit screen comes back with what happened to the edit (saved, or waiting for staff).
  const notice=useRef((location.state as {notice?:unknown}|null)?.notice);
  useEffect(()=>{if(typeof notice.current==='string'){toast(notice.current,{type:'ok'});notice.current=undefined;}},[toast]);
- const [busy,setBusy]=useState(false);const [reports,setReports]=useState(false);
+ const [busy,setBusy]=useState(false);const [reports,setReports]=useState(false);const [closing,setClosing]=useState(false);
  const owner=!!c&&c.me?.role==='owner'&&c.me.state==='active'&&typeof c.rev==='number';
+ // «Закрыть сообщество» (audit item 14): members are told, future events are cancelled; then back to «Сообщества».
+ const close=async()=>{setBusy(true);
+  try{await call('community.close',{opId:newOpId(),communityId:id},okRes);toast(t('fe.host.closed'),{type:'ok'});navigate('/n/communities',{replace:true});}
+  catch(x){toast(feErrorMessage(x,t),{type:'err'});setClosing(false);}finally{setBusy(false);}};
  const pendingPrivacy=(()=>{const p=c?.pendingChange;return p&&typeof p==='object'&&'privacy' in p&&typeof (p as {privacy?:unknown}).privacy==='string'?(p as {privacy:string}).privacy:'';})();
  const setPrivacy=async(privacy:'open'|'closed'|'hidden')=>{
   if(!c||busy||privacy===c.privacy||typeof c.rev!=='number')return;
@@ -234,6 +245,8 @@ export function CommunityManageScreen(){
       :<Row icon={Lock} title={t('fe.cc.privacy')} sub={t('fe.ece.priv.sub.'+c.privacy)} val={t('fe.cc.privacy.'+c.privacy)}/>}
      {c.privacy==='hidden'&&<InviteRows communityId={id}/>}
     </Card>
+    {owner&&c.state==='published'&&<Card list><Row icon={X} danger noChev title={t('fe.host.close')} sub={t('fe.host.closeSub')} onClick={()=>setClosing(true)} disabled={busy}/></Card>}
+    {closing&&<Ask icon={X} danger title={t('fe.host.closeQ')} text={t('fe.host.closeText')} ok={t('fe.host.closeOk')} busy={busy} onOk={()=>void close()} onCancel={()=>setClosing(false)}/>}
    </>}
   </div></div>
  </>;

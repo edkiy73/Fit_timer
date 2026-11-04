@@ -36,7 +36,7 @@ const community=z.object({id:z.uuid(),name:z.string(),description:z.string(),top
  plate:z.string().nullable().optional(),cover:media.nullable().optional(),placeId:z.string().nullable().optional(),hosts:z.array(prof.extend({role:z.string()})).optional(),
  me:z.object({role:z.string(),state:z.string(),muted:z.boolean().optional(),readOnly:z.boolean().optional()}).passthrough().nullable(),request:z.object({id:z.uuid(),at:z.string().nullable().optional()}).nullable(),joinQuestion:z.string().nullable(),
  declined:z.object({until:z.string()}).nullable().optional(),waiting:z.object({id:z.uuid()}).nullable().optional(),
- pendingRequests:z.number().optional(),state:z.string().optional(),rejectReason:z.string().nullable().optional(),
+ pendingRequests:z.number().optional(),state:z.string().optional(),rejectReason:z.string().nullable().optional(),ownerPaused:z.boolean().optional(),
  /** Only on my rejected community: attempts left, whether anything changed since, when the next try opens. */
  resubmit:z.object({left:z.number(),max:z.number(),edited:z.boolean(),after:z.string().nullable()}).optional()}).passthrough();
 export type Community=z.infer<typeof community>;
@@ -360,6 +360,7 @@ export function CommunityScreen(){
        <span>{place?<MapPin/>:<Video/>}{place||t('fe.cm.online')}</span>
        {c.me?.muted&&<span><BellOff/>{t('fe.cm.mutedMeta')}</span>}</>}/>
      {c.state==='in_review'&&<Alert kind="warn" icon={Clock}><b>{t('fe.cm.inReview')}</b>{t(couple?'fe.cm.inReviewTextCouple':'fe.cm.inReviewText')}</Alert>}
+     {c.ownerPaused&&<Alert kind="info">{t('fe.cm.ownerPaused')}</Alert>}
      {c.state==='rejected'&&<>
       <Alert kind="err" icon={Ban}><b>{t('fe.cm.rejected')}</b>{c.rejectReason??''}</Alert>
       {c.resubmit&&host&&(c.resubmit.left>0

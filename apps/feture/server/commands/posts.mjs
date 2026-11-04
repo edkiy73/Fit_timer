@@ -50,6 +50,12 @@ function asDiscussion(f, communityId) {
   return { ...rest, audience: 'all', inFeed: false, communityId };
 }
 
+/** An edit of one's own discussion or reply needs the right to write there now (audit item 12): removed or read-only,
+ * nothing is changed (deleting stays possible). @param {Q} q @param {string | null} communityId @param {any} actor */
+export async function requireWritable(q, communityId, actor) {
+  if (communityId && !(await canWrite(q, communityId, { kind: 'person', ...actor }))) fail(403, 'forbidden', { rule: 'community_write_closed' });
+}
+
 /** Discussions: the community must be published and the acting profile allowed to write there (members who are not
  * read-only; a couple when it or both partners are members). @param {Q} q @param {string | null | undefined} communityId @param {Acting} acting */
 async function requireCommunityWriter(q, communityId, acting) {
@@ -235,6 +241,7 @@ async function checkRestore(q, acting, postId, p) {
 export async function doEdit(q, postId, actor, rev, f) {
   const [p] = await q.query('select * from feture.post where id = $1 and owner_profile_id = $2 for update', [postId, actor.profileId]);
   if (!p) fail(404, 'not_found');
+  await requireWritable(q, p.community_id, actor);
   f = asDiscussion(f, p.community_id);
   if (p.state === 'draft' && p.created_by !== actor.accountId) fail(404, 'not_found'); // a couple's draft is its writer's alone
   if (p.rev !== rev) fail(409, 'conflict', { rev: p.rev });
@@ -874,8 +881,9 @@ const run = {
 
   async 'post.saveEdits'(q, { acting: a, input }) {
     const acting = need(a);
-    const [p] = await q.query(`select state, rev from feture.post where id = $1 and owner_profile_id = $2 for update`, [input.postId, acting.profileId]);
+    const [p] = await q.query(`select state, rev, community_id from feture.post where id = $1 and owner_profile_id = $2 for update`, [input.postId, acting.profileId]);
     if (!p) fail(404, 'not_found');
+    await requireWritable(q, p.community_id, acting);
     // A draft is saved with post.saveDraft; saved edits are for a post that is already out.
     if (!['published', 'review'].includes(p.state)) fail(409, 'conflict', { state: p.state });
     if (p.rev !== input.rev) fail(409, 'conflict', { rev: p.rev });
@@ -1032,6 +1040,8 @@ const run = {
 
   async 'reply.edit'(q, { acting: a, input }) {
     const viewer = need(a);
+    const [r] = await q.query(`select p.community_id from feture.reply r join feture.post p on p.id = r.post_id where r.id = $1 and r.author_profile_id = $2`, [input.replyId, viewer.profileId]);
+    if (r) await requireWritable(q, r.community_id, viewer);
     const rows = await q.query(
       `update feture.reply set body = $3, rev = rev + 1, edited_at = now() where id = $1 and author_profile_id = $2 and state = 'published' and rev = $4 returning rev`,
       [input.replyId, viewer.profileId, input.body, input.rev]);

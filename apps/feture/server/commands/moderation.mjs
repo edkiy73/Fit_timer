@@ -11,6 +11,8 @@ import { settleAvatar } from './photos.mjs';
 import { CREATED_KEYS, pageInfo, queuePageSql } from '../queue-page.mjs';
 import { staffOwn, staffOwnAccount } from '../sql-rules.mjs';
 import { closeDisputes, closeReports } from '../reports.mjs';
+import { hideEvent } from './events.mjs';
+import { canWrite, closeCommunity } from './communities.mjs';
 
 /** Sort keys of the queues here (each unique last key; `order` follows the reader's choice). */
 const REPORT_KEYS = [{ name: 'priority', type: 'int', dir: 'asc' }, { name: 'first_at', type: 'timestamptz' },
@@ -58,12 +60,9 @@ export async function removeContent(q, type, id, owner, rule) {
     await closeDisputes(q, [id]);
   }
   if (type === 'reply') await q.query(`update feture.reply set state = 'removed' where id = $1`, [id]);
-  // A change waiting for staff goes with it (audit item 18).
-  if (type === 'community') await q.query(`update feture.community set state = 'hidden', reject_reason = $2, pending_change = null, updated_at = now() where id = $1`, [id, rule]);
-  if (type === 'event') {
-    await q.query(`update feture.event set state = 'hidden', reject_reason = $2, rev = rev + 1, updated_at = now() where id = $1`, [id, rule]);
-    await q.query(`update feture.event_application set state = 'closed', decided_at = now(), rev = rev + 1 where event_id = $1 and state = 'pending'`, [id]);
-  }
+  // A change waiting for staff goes with it (audit item 18); its future events are cancelled, members told (15, 33).
+  if (type === 'community') await closeCommunity(q, id, 'hidden', { reason: rule });
+  if (type === 'event') await hideEvent(q, id, rule);
   await enqueue(q, 'content.removed', owner, { targetType: type, targetId: id, rule });
 }
 
@@ -370,6 +369,15 @@ const run = {
     if (!r) fail(404, 'not_found');
     await targetOwner(q, account.id, 'post', r.post_id);
     if (r.state !== 'review' || !['published', 'review'].includes(r.post_state)) fail(409, 'conflict', { state: r.state });
+    // An author who may no longer write in the community (removed, read-only) gets no edit through: it is withdrawn
+    // quietly and the card leaves the queue (audit item 12).
+    const [pc] = await q.query('select community_id from feture.post where id = $1', [r.post_id]);
+    if (input.decision === 'approve' && pc.community_id
+      && !(await canWrite(q, pc.community_id, /** @type {any} */ ({ kind: 'person', profileId: r.owner_profile_id, accountId: r.submitted_by })))) {
+      await q.query(`update feture.post_revision set state = 'rejected', decided_at = now() where id = $1`, [r.id]);
+      await journal(q, account.id, 'revision.reject', 'post', r.post_id, { revisionId: r.id, rule: null, authorCannotWrite: true });
+      return { state: 'rejected', gone: true };
+    }
     if (input.decision === 'approve') {
       // Approving a revision made on an older version would overwrite later edits: refused as stale.
       const [{ rev: now }] = await q.query('select rev from feture.post where id = $1', [r.post_id]);
