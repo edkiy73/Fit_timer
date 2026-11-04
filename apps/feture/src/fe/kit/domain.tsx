@@ -186,12 +186,13 @@ export function AnswerScale<M extends string,L extends string=string>({value,onC
  const [drag,setDrag]=useState<{id:L,x:number,y:number,moved:boolean,over:number|null}|null>(null);
  const cellAt=(x:number,y:number,id:L)=>{const el=document.elementFromPoint(x,y)?.closest<HTMLElement>('[data-k]');return el&&el.dataset.lane===id?Number(el.dataset.k):null;};
  const pick=(k:number,id:L)=>{setOpen(null);setDrag(null);onLane?.(k,id);};
+ // In a lane only the chosen number is marked (owner 05.11.2026); the single scale still fills up to it.
  const scale=(aria:string,on:(k:number)=>boolean,act:(k:number)=>void,id?:L)=><div className="ans-scale" role="radiogroup" aria-label={aria}>
-  {[1,2,3,4,5,6,7,8,9,10].map(k=><button key={k} type="button" data-k={k} data-lane={id} className={[on(k)&&n&&k<=n?'fill':'',on(k)&&n===k?'on':'',drag&&drag.id===id&&drag.over===k?'held':''].filter(Boolean).join(' ')}
+  {[1,2,3,4,5,6,7,8,9,10].map(k=><button key={k} type="button" data-k={k} data-lane={id} className={[!id&&on(k)&&n&&k<=n?'fill':'',on(k)&&n===k?'on':'',drag&&drag.id===id&&drag.over===k?'held':''].filter(Boolean).join(' ')}
    role="radio" aria-checked={on(k)&&n===k} onClick={()=>act(k)}>{k}</button>)}
  </div>;
  return <>
-  {lanes&&onLane?<div className="ans-rows"
+  {lanes&&onLane?<div className={'ans-rows'+(open?' busy':'')+(lane&&n&&!open?' chosen':'')}
     onPointerMove={e=>{if(!drag)return;const moved=drag.moved||Math.abs(e.clientX-drag.x)>8||Math.abs(e.clientY-drag.y)>8;setDrag({...drag,moved,over:cellAt(e.clientX,e.clientY,drag.id)});}}
     onPointerUp={e=>{if(!drag)return;const k=cellAt(e.clientX,e.clientY,drag.id);if(drag.moved&&k)pick(k,drag.id);else setDrag(null);}}
     onPointerCancel={()=>setDrag(null)}>
@@ -205,7 +206,7 @@ export function AnswerScale<M extends string,L extends string=string>({value,onC
         onClick={e=>{if(e.detail===0)setOpen(l.id);}}>{mine?<b>{n}</b>:null}</button>}
     </div>;})}
   </div>:scale(label,()=>true,k=>onChange(k))}
-  <div className="ans-marks">{marks.map(m=><button key={m.id} type="button" className={'ans-m'+(m.taboo?' taboo':'')+(m.soft?' soft':'')+(value===m.id?' on':'')} aria-pressed={value===m.id} onClick={()=>{setOpen(null);onChange(m.id);}}><m.icon/><span>{m.label}</span></button>)}</div>
+  <div className={'ans-marks'+(open?' dim':'')}>{marks.map(m=><button key={m.id} type="button" className={'ans-m'+(m.taboo?' taboo':'')+(m.soft?' soft':'')+(value===m.id?' on':'')} aria-pressed={value===m.id} onClick={()=>{setOpen(null);onChange(m.id);}}><m.icon/><span>{m.label}</span></button>)}</div>
  </>;
 }
 
