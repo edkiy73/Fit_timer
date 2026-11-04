@@ -57,6 +57,10 @@ export const listedEvent = (e, viewer) => `(${e}.state = 'published' and ${e}.en
  * @param {string} c conversation alias @param {string} cm conversation_member alias */
 export const incomingRequest = (c, cm) => `(${c}.origin = 'request' and ${c}.request_state <> 'accepted' and ${cm}.profile_id is distinct from ${c}.request_from)`;
 
+/** The profile a staff card is about (owner 05.11.2026: «Меры» wherever a person is behind the item): id, kind, @nick
+ * and name. @param {string} expr profile id expression */
+export const staffPerson = expr => `(select json_build_object('id', sp.id, 'kind', sp.kind, 'handle', sp.handle, 'name', sp.name) from feture.profile sp where sp.id = ${expr})`;
+
 /** `person` (a person profile id) is a partner of `account`: both in one couple, active or paused (audit 04.11.2026
  * item 42 — a partner is never blocked; a stopped couple is ended in its settings instead).
  * @param {string} person profile id expression @param {string} account the acting account id (`$n`) */

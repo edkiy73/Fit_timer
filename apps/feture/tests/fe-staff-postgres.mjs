@@ -101,3 +101,52 @@ test('staff: roles are server-side, owner grants, queue excludes own media, deci
     assert.equal((await call('um', null, { action: 'staff.mediaQueue' })).status, 403);
   } finally { await pg.close(); }
 });
+
+test('one card per upload (owner 05.11.2026): the files of one post waiting for review come as one item, in the post’s order, even across pages', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    const boss = await person('uo', 'Boss'), user = await person('uu', 'Alex');
+    await db.query(`insert into feture.staff_role (account_id, role) select id, 'owner' from feture.account where person_profile_id = $1`, [boss]);
+    const [{ account_id: acc }] = await db.query('select account_id from feture.profile_member where profile_id = $1', [user]);
+    const [post] = await db.query(`insert into feture.post (owner_profile_id, created_by, type, body, audience, state) values ($1, $2, 'post', 'Три фото', 'all', 'review') returning id`, [user, acc]);
+    const ids = [];
+    for (let k = 0; k < 3; k++) {
+      const [a] = await db.query(
+        `insert into feture.media_asset (owner_profile_id, uploaded_by, kind, purpose, storage_key, mime, declared_bytes, state, copies_at, reject_reason)
+         values ($1, $2, 'image', 'post', 'u/' || gen_random_uuid(), 'image/jpeg', 10, 'needs_review', now(), 'scanner_not_configured') returning id`, [user, acc]);
+      await db.query(`insert into feture.media_attachment (asset_id, target_type, target_id, position) values ($1, 'post', $2, $3)`, [a.id, post.id, 2 - k]);
+      ids.unshift(a.id);
+    }
+    const q = await call('uo', null, { action: 'staff.mediaQueue' });
+    assert.equal(q.items.length, 1);
+    assert.equal(q.items[0].group, 'post:' + post.id);
+    assert.deepEqual(q.items[0].assets.map((/** @type {any} */ x) => x.id), ids);
+    assert.ok(q.items[0].assets.every((/** @type {any} */ x) => x.blur));
+    const p1 = await call('uo', null, { action: 'staff.mediaQueue', limit: 1 });
+    assert.equal(p1.items[0].assets.length, 3);
+  } finally { await pg.close(); }
+});
+
+test('a rejected file of a post on review leaves the post; the post goes out with the rest (owner 05.11.2026)', async () => {
+  const { pg, db, call, person } = await setup();
+  const { settlePublication } = await import('../server/commands/posts.mjs');
+  try {
+    const boss = await person('uo', 'Boss'), user = await person('uu', 'Alex');
+    await db.query(`insert into feture.staff_role (account_id, role) select id, 'owner' from feture.account where person_profile_id = $1`, [boss]);
+    const [{ account_id: acc }] = await db.query('select account_id from feture.profile_member where profile_id = $1', [user]);
+    const [post] = await db.query(`insert into feture.post (owner_profile_id, created_by, type, body, audience, state) values ($1, $2, 'post', 'Два фото', 'followers', 'review') returning id`, [user, acc]);
+    const ids = [];
+    for (let k = 0; k < 2; k++) {
+      const [a] = await db.query(
+        `insert into feture.media_asset (owner_profile_id, uploaded_by, kind, purpose, storage_key, mime, declared_bytes, state, copies_at, reject_reason)
+         values ($1, $2, 'image', 'post', 'u/' || gen_random_uuid(), 'image/jpeg', 10, 'needs_review', now(), 'scanner_not_configured') returning id`, [user, acc]);
+      await db.query(`insert into feture.media_attachment (asset_id, target_type, target_id, position) values ($1, 'post', $2, $3)`, [a.id, post.id, k]);
+      ids.push(a.id);
+    }
+    assert.equal((await call('uo', null, { action: 'staff.mediaDecide', opId: op(), assetId: ids[0], decision: 'reject', reason: 'spam' })).state, 'rejected');
+    assert.equal(await db.tx(q => settlePublication(q, post.id)), 'review'); // the other one still waits
+    assert.equal((await call('uo', null, { action: 'staff.mediaDecide', opId: op(), assetId: ids[1], decision: 'approve', explicit: false })).state, 'approved');
+    assert.equal(await db.tx(q => settlePublication(q, post.id)), 'published');
+    assert.deepEqual((await db.query(`select asset_id from feture.media_attachment where target_type = 'post' and target_id = $1`, [post.id])).map(r => r.asset_id), [ids[1]]);
+  } finally { await pg.close(); }
+});

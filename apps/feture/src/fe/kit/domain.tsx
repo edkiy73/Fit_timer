@@ -1,6 +1,6 @@
 import React,{useEffect,useRef,useState,type CSSProperties,type ReactNode} from 'react';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Check,ChevronLeft,X,Clock,Heart,Image as ImageIcon,Lock,MessageCircle,Pencil,Plus,Ticket,Users,type LucideIcon} from 'lucide-react';
+import {Ban,Check,ChevronLeft,ChevronRight,X,Clock,Heart,Image as ImageIcon,Lock,MessageCircle,Pencil,Plus,Ticket,Users,type LucideIcon} from 'lucide-react';
 import {Alert,Av,Btn,Card,IconBtn,Note,Row,Sheet,Skel,Stack,Switch,plate,useBack} from './index';
 import {VideoPlayer} from './av';
 import './domain.css';
@@ -505,12 +505,28 @@ export function ReviewObject({kind,title,meta,text,children}:{kind?:ReactNode,ti
 /** The decision of a review card: failure, the «are you sure» question and the buttons. It sits at the bottom of the
  * screen in the same place for every kind of item (short content: pushed down; long: pinned while it scrolls), and its
  * buttons take the width of their text and wrap under each other when two do not fit side by side. */
-export function ReviewBar({children}:{children:ReactNode}){return <div className="st-bar">{children}</div>;}
-/** Label → value pairs of a review card (empty values are left out). */
-export function KeyValues({rows}:{rows:[string,ReactNode][]}){
+export function ReviewBar({children,main,more,nav}:{children?:ReactNode,
+ /** The main decision: one wide button, between ‹ and › when the card is one of a list (owner 05.11.2026: everything
+  * within reach of the thumb, at the top only ✕). */ main?:ReactNode,
+ /** The other decisions: one row of equal short buttons under it. */ more?:ReactNode,
+ nav?:{prev?:(()=>void)|undefined,next?:(()=>void)|undefined,prevLabel:string,nextLabel:string}|undefined}){
+ return <div className="st-bar">{children}
+  {(main||nav)&&<div className="st-bar-main">
+   {nav&&<IconBtn icon={ChevronLeft} kind="ghost" label={nav.prevLabel} disabled={!nav.prev} onClick={()=>nav.prev?.()}/>}
+   <div className="st-bar-act">{main}</div>
+   {nav&&<IconBtn icon={ChevronRight} kind="ghost" label={nav.nextLabel} disabled={!nav.next} onClick={()=>nav.next?.()}/>}
+  </div>}
+  {more&&<div className="st-bar-more">{more}</div>}
+ </div>;
+}
+/** «Сведения» of a staff card (owner 05.11.2026: no labels floating in the air): one framed block of even rows with
+ * dividers — the label muted on the left, the value on the right. A long value (text over ~40 characters, or `wide`)
+ * takes a row of its own under its label. Empty values are left out. */
+export function KeyValues({rows}:{rows:(readonly [string,ReactNode]|readonly [string,ReactNode,'wide'])[]}){
  const shown=rows.filter(([,v])=>v!==null&&v!==undefined&&v!=='');
  if(!shown.length)return null;
- return <dl className="kv st-kv">{shown.map(([k,v])=><div key={k} className="st-kv-row"><dt>{k}</dt><dd>{v}</dd></div>)}</dl>;
+ return <dl className="st-kv">{shown.map(([k,v,w])=>{const wide=w==='wide'||(typeof v==='string'&&v.length>40);
+  return <div key={k} className={'st-kv-row'+(wide?' wide':'')}><dt>{k}</dt><dd>{v}</dd></div>;})}</dl>;
 }
 /** The picture under review: the media, a blurred preview, or a placeholder icon; `caption` under it (side by side in ReviewPair). */
 export function ReviewMedia({children,blur,icon:I,caption}:{children?:ReactNode,blur?:string|null|undefined,icon?:LucideIcon|undefined,caption?:ReactNode}){
@@ -519,19 +535,33 @@ export function ReviewMedia({children,blur,icon:I,caption}:{children?:ReactNode,
 }
 /** Media under review, the same everywhere in the staff area: square tiles (three across) with a caption — a blurred
  * preview or an icon until opened, then the picture; the screen opens the media on tap. */
-export function ReviewTiles({tiles,onOpen}:{tiles:{label:string,thumb?:string|null|undefined,blur?:string|null|undefined,icon?:LucideIcon|undefined,busy?:boolean|undefined}[],onOpen:(i:number)=>void}){
- return <div className="st-tiles">{tiles.map((x,i)=>{const I=x.icon;
-  return <button key={i} type="button" className="st-tile" aria-label={x.label} aria-busy={x.busy||undefined} disabled={!!x.busy} onClick={()=>onOpen(i)}>
+export function ReviewTiles({tiles,onOpen}:{tiles:{label:string,thumb?:string|null|undefined,blur?:string|null|undefined,icon?:LucideIcon|undefined,busy?:boolean|undefined,
+ /** Marked to be rejected while the rest of the upload is approved: dimmed with a ⊘. */ off?:boolean|undefined}[],onOpen:(i:number)=>void}){
+ return <div className="st-tiles">{tiles.map((x,i)=>{const I=x.off?Ban:x.icon;
+  return <button key={i} type="button" className={'st-tile'+(x.off?' off':'')} aria-label={x.label} aria-busy={x.busy||undefined} disabled={!!x.busy} onClick={()=>onOpen(i)}>
    {x.thumb?<img src={x.thumb} alt="" draggable={false}/>:x.blur?<img className="st-blur" src={x.blur} alt="" draggable={false}/>:null}
-   {!x.thumb&&I&&<span className="st-tile-ico"><I/></span>}<span className="st-tile-cap">{x.label}</span></button>;})}</div>;
+   {(!x.thumb||x.off)&&I&&<span className="st-tile-ico"><I/></span>}<span className="st-tile-cap">{x.label}</span></button>;})}</div>;
 }
 /** The tapped review photo, large and sharp under the tiles (owner 04.11.2026): it grows in smoothly; a tap on it opens
  * the full-screen viewer, ✕ folds it back. One look first, full screen only when asked. */
-export function ReviewPreview({src,label,openLabel,closeLabel,onOpen,onClose}:{src:string,label:string,openLabel:string,closeLabel:string,onOpen:()=>void,onClose:()=>void}){
+export function ReviewPreview({src,label,openLabel,closeLabel,onOpen,onClose,foot}:{src:string,label:string,openLabel:string,closeLabel:string,onOpen:()=>void,onClose:()=>void,
+ /** Under the picture: what can be done with this one file («Отклонить это фото»). */ foot?:ReactNode}){
  return <div className="st-preview">
   <button type="button" className="st-preview-img" aria-label={openLabel} title={openLabel} onClick={onOpen}><img src={src} alt={label} draggable={false}/></button>
-  <IconBtn icon={X} kind="glass" size="sm" className="st-preview-x" label={closeLabel} onClick={onClose}/>
+  <span className="st-preview-x"><IconBtn icon={X} kind="glass" size="sm" label={closeLabel} onClick={onClose}/></span>
+  {foot&&<div className="st-preview-foot">{foot}</div>}
  </div>;
+}
+/** A horizontal swipe over `children` (staff items: the next one to the left, the previous to the right). A mostly
+ * vertical move stays a scroll; a swipe that starts on a slider or a text field is theirs. */
+export function Swipe({children,onLeft,onRight}:{children:ReactNode,onLeft?:(()=>void)|undefined,onRight?:(()=>void)|undefined}){
+ const start=useRef<{x:number,y:number}|null>(null);
+ return <div className="k-swipe" onTouchStart={e=>{const el=e.target as HTMLElement;const t=e.touches[0];
+   start.current=!t||el.closest('input,textarea,select,[role=slider],.st-tiles')?null:{x:t.clientX,y:t.clientY};}}
+  onTouchEnd={e=>{const s=start.current;start.current=null;const t=e.changedTouches[0];if(!s||!t)return;
+   const dx=t.clientX-s.x,dy=t.clientY-s.y;
+   if(Math.abs(dx)<70||Math.abs(dx)<Math.abs(dy)*1.5)return;
+   if(dx<0)onLeft?.();else onRight?.();}}>{children}</div>;
 }
 /** Two or more pictures side by side (a selfie and the profile photos). */
 export function ReviewPair({children}:{children:ReactNode}){return <div className="st-pair">{children}</div>;}

@@ -9,7 +9,7 @@ import { narrowCouple } from '../approvals.mjs';
 import { closeAll } from './access.mjs';
 import { settleAvatar } from './photos.mjs';
 import { CREATED_KEYS, pageInfo, queuePageSql } from '../queue-page.mjs';
-import { staffOwn, staffOwnAccount } from '../sql-rules.mjs';
+import { staffOwn, staffOwnAccount, staffPerson } from '../sql-rules.mjs';
 import { closeDisputes, closeReports } from '../reports.mjs';
 import { hideEvent } from './events.mjs';
 import { canWrite, closeCommunity } from './communities.mjs';
@@ -268,7 +268,7 @@ const run = {
     // on the photo, their trust level and strikes, a possible attack on the author and the author's explanation.
     // Urgent claims (not yet hidden, nobody has hidden the photo) come first, then the reader's date order.
     const { sql, params } = queuePageSql(input, DISPUTE_KEYS,
-      `select p.id, p.disputed_at, p.dispute_note note, left(coalesce(p.title || ': ', '') || p.body, 300) excerpt,
+      `select p.id, p.disputed_at, p.dispute_note note, ${staffPerson('p.owner_profile_id')} person, left(coalesce(p.title || ': ', '') || p.body, 300) excerpt,
          (select count(*)::int from feture.media_attachment a where a.target_type = 'post' and a.target_id = p.id) media,
          min(d.created_at) opened_at, bool_or(d.hid) hid, bool_or(d.attack) attack, bool_or(d.tagged) tagged,
          (p.disputed_at is null and not bool_or(d.hid)) urgent,
@@ -292,7 +292,7 @@ const run = {
         `select a.asset_id "assetId", m.kind from feture.media_attachment a join feture.media_asset m on m.id = a.asset_id
          where a.target_type = 'post' and a.target_id = $1 order by a.position`, [r.id]);
       items.push({ id: r.id, disputed_at: r.disputed_at, opened_at: r.opened_at, excerpt: r.excerpt, media: r.media, hidden, urgent: !hidden,
-        attack: !!r.attack, tagged: !!r.tagged, note: r.note ?? null, claims, object: await targetObject(q, 'post', r.id), evidence });
+        attack: !!r.attack, tagged: !!r.tagged, note: r.note ?? null, person: r.person, claims, object: await targetObject(q, 'post', r.id), evidence });
     }
     // Accounts that reached the claim restriction wait for a staff look (S4: a person, so staff may see the handle).
     const flagged = await q.query(
@@ -352,13 +352,13 @@ const run = {
   async 'staff.revisionQueue'(q, { account, input }) {
     await requireStaff(q, account, MODERATORS);
     const { sql, params } = queuePageSql(input, CREATED_KEYS,
-      `select r.id, r.post_id, r.created_at, r.payload, left(coalesce(p.title || ': ', '') || p.body, 300) live
+      `select r.id, r.post_id, r.created_at, r.payload, left(coalesce(p.title || ': ', '') || p.body, 300) live, ${staffPerson('p.owner_profile_id')} person
        from feture.post_revision r join feture.post p on p.id = r.post_id
        -- a post its author hid (archived) or that was removed is not live: its proposed edit cannot be decided (revisionDecide)
        where r.state = 'review' and p.state in ('published', 'review')
          and not ${staffOwn('p.owner_profile_id', '$1::uuid')}`, [account.id]);
     const rows = await q.query(sql, params);
-    return { items: rows.map(r => ({ id: r.id, postId: r.post_id, createdAt: r.created_at, live: r.live, proposed: r.payload })), ...pageInfo(rows, CREATED_KEYS, input.limit) };
+    return { items: rows.map(r => ({ id: r.id, postId: r.post_id, createdAt: r.created_at, live: r.live, proposed: r.payload, person: r.person })), ...pageInfo(rows, CREATED_KEYS, input.limit) };
   },
 
   async 'staff.revisionDecide'(q, { account, input }) {
@@ -449,12 +449,14 @@ const run = {
     const [p] = await q.query(
       `select p.id, p.kind, p.handle, p.name, p.state, p.suspended_until, p.restriction_rule,
          case when p.restricted_at is not null and coalesce(p.restricted_until > now(), true) then p.restricted_at end restricted_at,
-         p.restricted_until, (select a.suspension_rule from feture.account a where a.person_profile_id = p.id) suspension_rule
-       from feture.profile p where lower(p.handle) = lower($1) and p.kind in ('person', 'couple') and p.state <> 'deleted'`, [input.handle.replace(/^@/, '')]);
+         p.restricted_until, (select a.suspension_rule from feture.account a where a.person_profile_id = p.id) suspension_rule, p.created_at,
+         (select count(*)::int from feture.report r where r.state = 'open' and r.target_type = 'profile' and r.target_id = p.id) open_reports
+       from feture.profile p where (lower(p.handle) = lower($1) or p.id = $2::uuid) and p.kind in ('person', 'couple') and p.state <> 'deleted'`,
+      [input.handle?.replace(/^@/, '') ?? null, input.profileId ?? null]);
     if (!p) fail(404, 'not_found');
     await targetOwner(q, account.id, 'profile', p.id);
     return {
-      profileId: p.id, kind: p.kind, handle: p.handle, name: p.name,
+      profileId: p.id, kind: p.kind, handle: p.handle, name: p.name, state: p.state, createdAt: p.created_at, openReports: p.open_reports,
       restricted: p.restricted_at ? { rule: p.restriction_rule, until: p.restricted_until } : null,
       suspended: p.state === 'suspended' ? { rule: p.suspension_rule, until: p.suspended_until } : null,
     };
@@ -535,7 +537,7 @@ const run = {
   async 'staff.appealQueue'(q, { account, input }) {
     await requireStaff(q, account, ['owner', 'lead']);
     const { sql, params } = queuePageSql(input, CREATED_KEYS,
-      `select ap.id, ap.target_type, ap.target_id, ap.body, ap.created_at, p.handle,
+      `select ap.id, ap.target_type, ap.target_id, ap.body, ap.created_at, p.handle, ${staffPerson('ap.profile_id')} person,
          (select json_build_object('action', s.action, 'detail', s.detail, 'at', s.created_at, 'mine', s.staff_account_id = $1) from feture.staff_action s
           where s.id = ap.staff_action_id) decision
        from feture.appeal ap join feture.profile p on p.id = ap.profile_id
@@ -544,7 +546,7 @@ const run = {
     const alone = await onlyReviewer(q, account.id, null);
     const items = [];
     for (const r of rows) {
-      items.push({ id: r.id, target_type: r.target_type, target_id: r.target_id, body: r.body, created_at: r.created_at, handle: r.handle, decision: r.decision, onlyReviewer: alone,
+      items.push({ id: r.id, target_type: r.target_type, target_id: r.target_id, body: r.body, created_at: r.created_at, handle: r.handle, person: r.person, decision: r.decision, onlyReviewer: alone,
         object: await targetObject(q, r.target_type, r.target_id) });
     }
     return { items, ...pageInfo(rows, CREATED_KEYS, input.limit) };

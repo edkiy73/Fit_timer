@@ -52,7 +52,7 @@ export const ru = {
   'fe.w8.sup.replyLabel': 'Твой ответ',
   'fe.w8.sup.closedNote': 'Обращение закрыто. Если вопрос остался — напиши новое.',
   'fe.w8.sup.tooMany': 'Открытых обращений уже много. Дождись ответа на них',
-  'fe.w8.staff.support': 'Поддержка',
+  'fe.w8.staff.support': 'Помощь',
   'fe.w8.staff.maint': 'Техработы',
   'fe.w8.staff.supEmpty': 'Новых обращений нет',
   'fe.w8.staff.answer': 'Ответ',
