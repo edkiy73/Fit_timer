@@ -188,6 +188,39 @@ const run = {
     return { reset: removed };
   },
 
+  async 'staff.topics'(q, { account }) {
+    await requireStaff(q, account, ['owner', 'lead']);
+    const [categories, topics] = await Promise.all([
+      q.query('select id, ru, en, hidden from feture.topic_category order by position'),
+      q.query(`select t.id, t.category_id "categoryId", t.ru, t.en, t.desc_ru "descRu", t.desc_en "descEn", t.hidden,
+         (select count(*)::int from feture.interest i where i.topic_id = t.id) used
+       from feture.topic t order by t.position`),
+    ]);
+    return { categories, topics };
+  },
+
+  async 'staff.topicSave'(q, { account, input }) {
+    await requireStaff(q, account, ['owner', 'lead']);
+    const [c] = await q.query('select 1 from feture.topic_category where id = $1', [input.categoryId]);
+    if (!c) fail(400, 'invalid_input', { fields: ['categoryId'] });
+    const desc = (/** @type {string | null} */ v) => v && v.trim() ? v.trim() : null;
+    if (input.create) {
+      const [taken] = await q.query('select 1 from feture.topic where id = $1', [input.id]);
+      if (taken) fail(409, 'conflict', { rule: 'topic_exists' });
+      await q.query(
+        `insert into feture.topic (id, category_id, ru, en, desc_ru, desc_en, hidden, position)
+         values ($1, $2, $3, $4, $5, $6, $7, coalesce((select max(position) + 1 from feture.topic where category_id = $2), 0))`,
+        [input.id, input.categoryId, input.ru, input.en, desc(input.descRu), desc(input.descEn), input.hidden]);
+    } else {
+      const rows = await q.query(
+        `update feture.topic set category_id = $2, ru = $3, en = $4, desc_ru = $5, desc_en = $6, hidden = $7 where id = $1 returning id`,
+        [input.id, input.categoryId, input.ru, input.en, desc(input.descRu), desc(input.descEn), input.hidden]);
+      if (!rows[0]) fail(404, 'not_found');
+    }
+    await journal(q, account.id, input.create ? 'topic.create' : 'topic.save', 'topic', null, { topic: input.id, hidden: input.hidden });
+    return { id: input.id };
+  },
+
   async 'staff.team'(q, { account }) {
     await requireStaff(q, account, ['owner']);
     const rows = await q.query(

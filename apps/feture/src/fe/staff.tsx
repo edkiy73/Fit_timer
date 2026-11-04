@@ -2,9 +2,9 @@ import {Children,cloneElement,createContext,Fragment,isValidElement,useCallback,
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {ArrowUpDown,BadgeCheck,Ban,CalendarDays,Check,ClipboardCheck,ChevronLeft,ChevronRight,Eye,FilePen,Flag,Gavel,IdCard,Image,ImageOff,Inbox,ListFilter,Lock,MapPin,Minus,RefreshCw,Scale,Search,ShieldAlert,ShieldCheck,User,UserPlus,UserX,Users,X,Ellipsis,Film,Mic,Camera,Image as ImageIcon,LifeBuoy,Crown,Wrench,ScrollText,KeyRound,type LucideIcon} from 'lucide-react';
+import {ArrowUpDown,BadgeCheck,Ban,CalendarDays,Check,ClipboardCheck,ChevronLeft,ChevronRight,Eye,FilePen,Flag,Gavel,IdCard,Image,ImageOff,Inbox,ListFilter,Lock,MapPin,Minus,RefreshCw,Scale,Search,ShieldAlert,ShieldCheck,User,UserPlus,Tags,Plus,UserX,Users,X,Ellipsis,Film,Mic,Camera,Image as ImageIcon,LifeBuoy,Crown,Wrench,ScrollText,KeyRound,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,Alert,Btn,Swipe,Card,CheckList,RadioList,Chip,ChoiceChips,MultiChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewBar,ReviewCard,ReviewMedia,ReviewObject,ReviewPair,ReviewTiles,ReviewPreview,type Slide,useBackClose,Row,SearchInput,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
+import {Actions,Alert,Btn,Swipe,Card,CheckList,ToggleRow,RadioList,Chip,ChoiceChips,MultiChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewBar,ReviewCard,ReviewMedia,ReviewObject,ReviewPair,ReviewTiles,ReviewPreview,type Slide,useBackClose,Row,SearchInput,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
 import {askFactor,useFe,useLive} from './session';
 import {useToast} from './toast';
 import {pullStaffCounts,useStaffCounts} from './staff-counts';
@@ -88,8 +88,8 @@ const QUEUE_IDS=Object.keys(QUEUES) as QueueId[];
 /** Who may open what (the server's requireStaff lists); the screen only asks for what the roles allow. Queues not
  * listed are open to every staff role that has a queue. */
 const QUEUE_ROLES:Partial<Record<QueueId,string[]>>={appeal:['owner','lead']};
-const SECTION_ROLES={queues:['owner','lead','moderator','verifier'],support:['owner','lead','moderator','support'],measures:['owner','lead','moderator'],premium:['owner','lead'],maintenance:['owner','lead'],journal:['owner','lead','auditor'],access:['owner','lead'],team:['owner']} as const;
-const SECTIONS=['queues','measures','journal','support','team','premium','maintenance','access'] as const;
+const SECTION_ROLES={queues:['owner','lead','moderator','verifier'],support:['owner','lead','moderator','support'],measures:['owner','lead','moderator'],premium:['owner','lead'],maintenance:['owner','lead'],journal:['owner','lead','auditor'],access:['owner','lead'],team:['owner'],topics:['owner','lead']} as const;
+const SECTIONS=['queues','measures','journal','support','team','topics','premium','maintenance','access'] as const;
 type Section=typeof SECTIONS[number];
 const can=(roles:readonly string[],need:readonly string[]|undefined)=>!need||roles.some(r=>need.includes(r));
 const LIMIT=50;
@@ -146,7 +146,7 @@ export function StaffScreen(){
      {daily.length>1&&daily.includes(cur)&&<Seg<Section> small={false} value={cur} onChange={setSection}
       // Four tabs on a phone: a dot says something waits (the number is on the shield in «Я»).
       options={daily.map(id=>{const n=id==='queues'?(counts?counts.total-counts.support:0):id==='support'?(counts?.support??0):0;return {id,label:label(id),...(n>0?{dot:t('fe.staff.entryN',{n:String(n)})}:{})};})}/>}
-     {cur==='queues'?<Queues/>:cur==='support'?<StaffSupport/>:cur==='measures'?<People/>:cur==='premium'?<Premium/>:cur==='maintenance'?<StaffMaintenance/>:cur==='journal'?<Journal/>:cur==='access'?<FactorReset/>:cur==='team'?<Team/>:null}
+     {cur==='queues'?<Queues/>:cur==='support'?<StaffSupport/>:cur==='measures'?<People/>:cur==='premium'?<Premium/>:cur==='maintenance'?<StaffMaintenance/>:cur==='journal'?<Journal/>:cur==='access'?<FactorReset/>:cur==='team'?<Team/>:cur==='topics'?<Topics/>:null}
     </>}
   </View>
   {menu&&<Sheet title={t('fe.staff.tools')} sub={roles?.length?t('fe.staff.roles')+': '+roles.map(r=>t('fe.staff.role.'+r)).join(', '):undefined} onClose={()=>setMenu(false)}>
@@ -157,8 +157,8 @@ export function StaffScreen(){
 }
 /** The system «Назад» closes the sheet it sits in instead of leaving the staff area. */
 function BackCloses({onClose}:{onClose:()=>void}){useBackClose(onClose);return null;}
-const SECTION_LABEL:Record<Section,string>={queues:'fe.staff.section.queues',measures:'fe.staff.section.measures',support:'fe.w8.staff.support',premium:'fe.staff.section.premium',maintenance:'fe.w8.staff.maint',journal:'fe.staff.section.journal',access:'fe.staff.section.access',team:'fe.staff.section.team'};
-const SECTION_ICON:Record<Section,LucideIcon>={queues:Inbox,measures:Gavel,support:LifeBuoy,premium:Crown,maintenance:Wrench,journal:ScrollText,access:KeyRound,team:Users};
+const SECTION_LABEL:Record<Section,string>={queues:'fe.staff.section.queues',measures:'fe.staff.section.measures',support:'fe.w8.staff.support',premium:'fe.staff.section.premium',maintenance:'fe.w8.staff.maint',journal:'fe.staff.section.journal',access:'fe.staff.section.access',team:'fe.staff.section.team',topics:'fe.staff.section.topics'};
+const SECTION_ICON:Record<Section,LucideIcon>={queues:Inbox,measures:Gavel,support:LifeBuoy,premium:Crown,maintenance:Wrench,journal:ScrollText,access:KeyRound,team:Users,topics:Tags};
 
 type Order='old'|'new';
 type PageOf={items:unknown[],locked?:boolean|undefined,next?:string|null|undefined,tail?:string|null|undefined,total?:number|undefined};
@@ -1096,6 +1096,56 @@ function PersonSheet({profileId,onClose}:{profileId:string,onClose:()=>void}){
     {history.length?<Card list>{history.map(x=><Row key={String(x.id)} noChev title={jw('action',x.action)} sub={staffName(x)+' · '+when(x.created_at)}/>)}</Card>
      :<Empty compact icon={Inbox} title={t('fe.staff.people.noHistory')}/>}</Group>}
   </Stack>}
+ </Sheet>;
+}
+
+// ——— Темы ———
+
+const topicsRes=z.object({ok:z.literal(true),categories:z.array(z.object({id:z.string(),ru:z.string(),en:z.string(),hidden:z.boolean()})),
+ topics:z.array(z.object({id:z.string(),categoryId:z.string(),ru:z.string(),en:z.string(),descRu:z.string().nullable(),descEn:z.string().nullable(),hidden:z.boolean(),used:z.number()}))});
+type TopicRow=z.infer<typeof topicsRes>['topics'][number];
+
+/** «Темы» (owner 05.11.2026): the interests catalog, by category; a topic is renamed, described, moved or hidden here,
+ * and the app shows the change at once. Topics are never deleted (people keep their answers): a hidden one is not offered. */
+function Topics(){
+ const {call}=useFe();const {t,locale}=useI18n();const toast=useToast();
+ const [data,setData]=useState<z.infer<typeof topicsRes>|null>(null);const [error,setError]=useState<unknown>(null);
+ const [open,setOpen]=useState<TopicRow|'new'|null>(null);
+ const load=useCallback(()=>{call('staff.topics',{},topicsRes,{asAccount:true}).then(r=>{setData(r);setError(null);}).catch(setError);},[call]);
+ useEffect(load,[load]);
+ const name=(x:{ru:string,en:string})=>locale==='en'?x.en:x.ru;
+ return <>
+  <Btn kind="soft" icon={Plus} onClick={()=>setOpen('new')}>{t('fe.staff.topics.add')}</Btn>
+  {error&&!data?<Alert kind="err">{feErrorMessage(error,t)}</Alert>:!data?<Skel kind="list"/>:data.categories.map(c=>{const rows=data.topics.filter(x=>x.categoryId===c.id);
+   return rows.length?<Group key={c.id} title={name(c)}><Card list>{rows.map(x=><Row key={x.id} title={name(x)}
+    sub={[x.hidden?t('fe.staff.topics.hidden'):null,t('fe.staff.topics.used',{n:x.used})].filter(Boolean).join(' · ')} onClick={()=>setOpen(x)}/>)}</Card></Group>:null;})}
+  {open&&data&&<TopicSheet topic={open==='new'?null:open} categories={data.categories} onClose={()=>setOpen(null)} onDone={()=>{setOpen(null);toast(t('fe.staff.topics.saved'),{type:'ok'});load();}}/>}
+ </>;
+}
+
+function TopicSheet({topic,categories,onClose,onDone}:{topic:TopicRow|null,categories:z.infer<typeof topicsRes>['categories'],onClose:()=>void,onDone:()=>void}){
+ const {call}=useFe();const {t,locale}=useI18n();
+ const [f,setF]=useState({id:topic?.id??'',categoryId:topic?.categoryId??categories[0]?.id??'',ru:topic?.ru??'',en:topic?.en??'',descRu:topic?.descRu??'',descEn:topic?.descEn??'',hidden:topic?.hidden??false});
+ const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const set=<K extends keyof typeof f>(k:K,v:(typeof f)[K])=>setF(x=>({...x,[k]:v}));
+ const idOk=/^[a-z][a-z0-9_-]{1,31}$/.test(f.id);
+ const save=async()=>{setBusy(true);setFailure('');
+  try{await call('staff.topicSave',{opId:newOpId(),id:f.id,create:!topic,categoryId:f.categoryId,ru:f.ru.trim(),en:f.en.trim(),descRu:f.descRu.trim()||null,descEn:f.descEn.trim()||null,hidden:f.hidden},ok,{asAccount:true});onDone();}
+  catch(e){setFailure(e instanceof FeError&&e.rule==='topic_exists'?t('fe.staff.topics.exists'):feErrorMessage(e,t));}finally{setBusy(false);}};
+ return <Sheet className="st-sheet" title={topic?(locale==='en'?topic.en:topic.ru):t('fe.staff.topics.add')} onClose={onClose}
+  foot={<Btn icon={Check} disabled={busy||!f.ru.trim()||!f.en.trim()||!idOk} busy={busy} onClick={()=>void save()}>{t('fe.staff.team.save')}</Btn>}>
+  <BackCloses onClose={onClose}/>
+  <Stack gap={4}>
+   {!topic&&<><LineField label={t('fe.staff.topics.id')} value={f.id} max={32} autoCapitalize="none" onChange={v=>set('id',v.toLowerCase())}/><Note>{t('fe.staff.topics.idHint')}</Note></>}
+   <LineField label={t('fe.staff.topics.ru')} value={f.ru} max={40} onChange={v=>set('ru',v)}/>
+   <LineField label={t('fe.staff.topics.en')} value={f.en} max={40} onChange={v=>set('en',v)}/>
+   <TextField label={t('fe.staff.topics.descRu')} value={f.descRu} max={300} onChange={v=>set('descRu',v)}/>
+   <TextField label={t('fe.staff.topics.descEn')} value={f.descEn} max={300} onChange={v=>set('descEn',v)}/>
+   <Field id="st-topic-cat" label={t('fe.staff.topics.category')}><Select id="st-topic-cat" label={t('fe.staff.topics.category')} value={f.categoryId}
+    options={categories.map(c=>[c.id,locale==='en'?c.en:c.ru] as [string,string])} onChange={v=>set('categoryId',v)}/></Field>
+   <Card list><ToggleRow title={t('fe.staff.topics.shown')} sub={t('fe.staff.topics.shownSub')} on={!f.hidden} onClick={()=>set('hidden',!f.hidden)}/></Card>
+   <Failure text={failure}/>
+  </Stack>
  </Sheet>;
 }
 

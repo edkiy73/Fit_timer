@@ -153,3 +153,23 @@ test('a rejected file of a post on review leaves the post; the post goes out wit
     assert.deepEqual((await db.query(`select asset_id from feture.media_attachment where target_type = 'post' and target_id = $1`, [post.id])).map(r => r.asset_id), [ids[1]]);
   } finally { await pg.close(); }
 });
+
+test('«Темы» (owner 05.11.2026): owners and leads add, rename and hide topics; the app catalog follows at once; others may not', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    const boss = await person('uo', 'Boss'), mod = await person('um', 'Mira');
+    await db.query(`insert into feture.staff_role (account_id, role) select id, 'owner' from feture.account where person_profile_id = $1`, [boss]);
+    await db.query(`insert into feture.staff_role (account_id, role) select id, 'moderator' from feture.account where person_profile_id = $1`, [mod]);
+    const list = await call('uo', null, { action: 'staff.topics' });
+    const cat = list.categories[0].id;
+    const save = (/** @type {string} */ u, /** @type {any} */ x) => call(u, null, { action: 'staff.topicSave', opId: op(), categoryId: cat, descRu: null, descEn: null, hidden: false, ...x });
+    assert.equal((await save('um', { id: 'tea_party', create: true, ru: 'Чаепития', en: 'Tea parties' })).status, 403);
+    assert.equal((await save('uo', { id: 'tea_party', create: true, ru: 'Чаепития', en: 'Tea parties' })).id, 'tea_party');
+    assert.equal((await save('uo', { id: 'tea_party', create: true, ru: 'Ещё раз', en: 'Again' })).rule, 'topic_exists');
+    const seen = async () => (await call('uo', boss, { action: 'catalog.get' })).topics.find((/** @type {any} */ x) => x.id === 'tea_party');
+    assert.equal((await seen()).ru, 'Чаепития');
+    await save('uo', { id: 'tea_party', ru: 'Чай', en: 'Tea', hidden: true });
+    assert.equal(await seen(), undefined);
+    assert.equal((await db.query(`select count(*)::int n from feture.staff_action where action = 'topic.save'`))[0].n, 1);
+  } finally { await pg.close(); }
+});
