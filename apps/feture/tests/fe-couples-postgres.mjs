@@ -285,3 +285,22 @@ test('a partner is never blocked (audit item 42): from the personal profile or t
     assert.deepEqual(left.map(r => [r.blocker_profile_id, r.blocked_profile_id]), [[a, c]]);
   } finally { await pg.close(); }
 });
+
+test('«Не восстанавливать» (owner 04.11.2026): one partner ends a paused couple for good; both are free and can be invited again', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    await person('ua', 'Anya'); await person('ub', 'Max');
+    const c = await person('uc', 'Noa');
+    const inv = await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'Max' });
+    const pair = (await call('ub', null, { action: 'couple.inviteAnswer', opId: op(), inviteId: inv.id, accept: true })).profileId;
+    assert.equal((await call('ua', pair, { action: 'couple.decline', opId: op() })).status, 409); // only a paused couple
+    assert.equal((await call('ua', pair, { action: 'couple.stop', opId: op(), confirm: true })).state, 'paused');
+    assert.equal((await call('uc', c, { action: 'couple.invite', opId: op(), handle: 'Max' })).status, 404); // still in a couple
+    assert.equal((await call('ub', pair, { action: 'couple.decline', opId: op() })).state, 'deleted');
+    assert.equal((await db.query('select state from feture.profile where id = $1', [pair]))[0].state, 'deleted');
+    assert.equal((await call('uc', c, { action: 'couple.invite', opId: op(), handle: 'Max' })).status, 200);
+    assert.equal((await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'Noa' })).status, 200);
+    const told = await db.query(`select payload from feture.outbox where topic = 'couple.deleted'`);
+    assert.equal(told.length, 2);
+  } finally { await pg.close(); }
+});

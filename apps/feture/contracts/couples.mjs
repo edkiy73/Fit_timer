@@ -19,6 +19,8 @@ export const couplesCommands = {
   'couple.setApproval': { profile: true, write: true, input: z.strictObject({ opId, approvesPartner: z.boolean() }) },
   'couple.stop': { profile: true, write: true, input: z.strictObject({ opId, confirm: z.literal(true) }) },
   'couple.restore': { profile: true, write: true, allowPaused: true, input: z.strictObject({ opId }) },
+  // «Не восстанавливать» on a paused couple: it can come back only if both agree, so one «no» ends it for good.
+  'couple.decline': { profile: true, write: true, allowPaused: true, input: z.strictObject({ opId }) },
   // V21 pairShareLink: a single-use link for a partner who has no account yet (no email is sent; the person shares it).
   'couple.linkCreate': {
     profile: false, write: true, rate: { kind: 'couple.link', max: 20, window: '1 day' }, input: z.strictObject({ opId }),

@@ -209,8 +209,9 @@ function PairMain({onOpen}:{onOpen:(id:string)=>void}){
  * already agreed, until when, and — plainly — the approval mode that comes back (owner decision 2); visibility,
  * Discover and access do not. `extra`: what else the screen offers (start a new couple). */
 function RestoreView({coupleId,extra,onLeave}:{coupleId:string,extra?:ReactNode,onLeave:()=>void}){
- const {call,reload}=useFe();const {t,locale}=useI18n();const toast=useToast();
+ const {call,reload,state,setActing}=useFe();const {t,locale}=useI18n();const toast=useToast();const navigate=useNavigate();
  const [c,setC]=useState<Couple|null>(null);const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [askDecline,setAskDecline]=useState(false);
  const load=useCallback(()=>{call('couple.get',{},coupleRes,{profileId:coupleId,fresh:true}).then(r=>{setC(r.couple);setError(null);}).catch(setError);},[call,coupleId]);
  useEffect(()=>{load();},[load]);
  useLive(['couple','decide'],load);
@@ -230,8 +231,16 @@ function RestoreView({coupleId,extra,onLeave}:{coupleId:string,extra?:ReactNode,
    toast(r.state==='active'?t('fe.pq.restored')+'. '+modes[0]:t('fe.pq.waitPartner',{name:otherName}),{type:'ok'});
    if(r.state==='active'){reload();onLeave();}else load();}
   catch(e){setFailure(pairErrorText(e,t));}finally{setBusy(false);}};
+ // «Не восстанавливать»: the couple ends for both; the app goes on as the personal profile.
+ const decline=async()=>{setBusy(true);setFailure('');
+  try{await call('couple.decline',{opId:newOpId()},z.object({ok:z.literal(true)}).passthrough(),{profileId:coupleId});
+   const person=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='person'):undefined;
+   if(person)setActing(person.id);reload();toast(t('fe.ap.restore.declined'),{type:'ok'});navigate('/n/me',{replace:true});}
+  catch(e){setFailure(pairErrorText(e,t));setAskDecline(false);}finally{setBusy(false);}};
  return <>
   {bar}
+  {askDecline&&<Ask icon={Users} danger title={t('fe.ap.restore.declineTitle')} text={t('fe.ap.restore.declineText',{name:otherName})} ok={t('fe.ap.restore.declineOk')}
+   busy={busy} onOk={()=>void decline()} onCancel={()=>setAskDecline(false)}/>}
   <View className="nodock"><div className="pair-wrap">
    <Scene me={{name:nameOf(me),id:me?.profileId}} other={{name:otherName,id:other?.profileId}}/>
    <H level={2} className="t center">{c.name||`${nameOf(me)} ${t('fe.pair.and')} ${otherName}`}</H>
@@ -243,7 +252,7 @@ function RestoreView({coupleId,extra,onLeave}:{coupleId:string,extra?:ReactNode,
     <Actions stack>
      {me?.restoreAgreed?<Btn icon={Check} disabled>{t('fe.ap.restore.waiting',{name:otherName})}</Btn>
       :<Btn disabled={busy} busy={busy} onClick={()=>void agree()}>{t('fe.ap.restore.agree')}</Btn>}
-     {!me?.restoreAgreed&&<Btn kind="soft" disabled={busy} onClick={onLeave}>{t('fe.ap.restore.decline')}</Btn>}
+     {!me?.restoreAgreed&&<Btn kind="soft" disabled={busy} onClick={()=>setAskDecline(true)}>{t('fe.ap.restore.decline')}</Btn>}
      {extra}
     </Actions>
    </>:<Note className="center">{t('fe.pq.restored')}</Note>}
