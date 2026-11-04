@@ -363,7 +363,7 @@ export const en: Record<keyof typeof ru, string> = {
   "fe.pair.rule.already_in_couple": "You’re already in a couple.",
   "fe.pair.rule.invite_cooldown": "You can invite this person again later.",
   "fe.pair.rule.invite_pending": "You already have an invitation waiting for an answer.",
-  "fe.pair.rule.partner_in_couple": "This person is already in a couple.",
+  "fe.pair.rule.invite_unavailable": "You can’t invite this person.",
   "fe.pair.rule.paused_couple_exists": "First decide what to do with your stopped couple.",
   "fe.pair.rule.registration_required": "This person hasn’t finished signing up.",
   "fe.pair.rule.restricted": "You can’t invite right now.",

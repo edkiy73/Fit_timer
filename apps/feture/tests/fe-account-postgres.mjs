@@ -59,8 +59,14 @@ test('deletion: confirmed by nickname; the couple goes (partner stays), ties end
     const post = d.id;
     await call('ua', a, { action: 'post.publish', opId: op(), postId: post });
 
+    // An age check and a photo check waiting for staff (audit item 10): they expire with the account.
+    const [{ id: acc }] = await db.query('select id from feture.account where person_profile_id = $1', [a]);
+    await db.query(`insert into feture.age_check (account_id, gesture, state, submitted_at) values ($1, 'peace', 'submitted', now())`, [acc]);
+    await db.query(`insert into feture.photo_check (profile_id, account_id, gesture, state, submitted_at) values ($1, $2, 'peace', 'submitted', now())`, [a, acc]);
+
     assert.deepEqual((await call('ua', null, { action: 'account.delete', opId: op(), confirmHandle: 'Kira' })).fields, ['confirmHandle']);
     assert.equal((await call('ua', null, { action: 'account.delete', opId: op(), confirmHandle: 'alex' })).deleted, true);
+    assert.deepEqual((await db.query(`select state from feture.age_check where account_id = $1 union all select state from feture.photo_check where account_id = $1`, [acc])).map(r => r.state), ['expired', 'expired']);
 
     // Out of sight for others; the partner keeps their own profile; the other side keeps the conversation history.
     assert.equal((await call('uc', c, { action: 'profile.get', profileId: a })).status, 404);

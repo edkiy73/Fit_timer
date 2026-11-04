@@ -55,3 +55,12 @@ export const listedEvent = (e, viewer) => `(${e}.state = 'published' and ${e}.en
  * «Запросы» while waiting and is gone once hidden or reported; it never counts as unread or as a new match.
  * @param {string} c conversation alias @param {string} cm conversation_member alias */
 export const incomingRequest = (c, cm) => `(${c}.origin = 'request' and ${c}.request_state <> 'accepted' and ${cm}.profile_id is distinct from ${c}.request_from)`;
+
+/** `person` (a person profile id) is a partner of `account`: both in one couple, active or paused (audit 04.11.2026
+ * item 42 — a partner is never blocked; a stopped couple is ended in its settings instead).
+ * @param {string} person profile id expression @param {string} account the acting account id (`$n`) */
+export const partnerOf = (person, account) => `exists (select 1 from feture.account pa
+  join feture.profile_member pm on pm.account_id = pa.id and pm.profile_kind = 'couple' and pm.state = 'active'
+  join feture.profile pc on pc.id = pm.profile_id and pc.state in ('active', 'paused', 'suspended')
+  join feture.profile_member mm on mm.profile_id = pc.id and mm.account_id = ${account} and mm.state = 'active'
+  where pa.person_profile_id = ${person} and pa.id <> ${account})`;

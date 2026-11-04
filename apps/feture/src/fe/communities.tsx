@@ -6,7 +6,7 @@ import {Ban,ChartColumn,Bell,BellOff,Bookmark,BookmarkCheck,Calendar,CalendarChe
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {useSideNav} from './wide';
 import {Actions,Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventAnswer,EventHero,EventTile,Fact,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,Stack,StatusCard,Text,ToggleRow,Veil,View,useRefreshable} from './kit';
-import {useFe,useKeyChange} from './session';
+import {useFe,useKeyChange,useOwnProfiles} from './session';
 import {mdPlain,RichText} from './post-parts';
 import {evParts,evRange,evTz,evWhere,inTz,usePlaces} from './event-time';
 import {when} from './feed';
@@ -322,6 +322,7 @@ export function CommunityScreen(){
  const couple=acting?.kind==='couple';
  const tname=(x:string)=>{const v=cat?.topics.find(o=>o.id===x);return v?(locale==='en'?v.en:v.ru):x;};
  const member=c?.me?.state==='active';const host=isCommunityHost(c);const owner=member&&c?.me?.role==='owner';
+ const mineIds=useOwnProfiles();const ownedByMe=owner||!!c?.hosts?.some(h=>h.role==='owner'&&mineIds.has(h.id));
  const place=c?.placeId?placeName(cat?.places.find(p=>p.id===c.placeId)??{ru:null,en:null},locale):'';
  const names=useMemo(()=>new Map((mem?.items??[]).map(m=>[m.id,m])),[mem]);
  // The «⋯» sheet reads its discussion from the list as it is now, not as it was when opened: a second open right after
@@ -393,7 +394,7 @@ export function CommunityScreen(){
    <Row icon={LinkIcon} title={t('fe.cm.copyLink')} noChev onClick={()=>void share()}/>
    {member&&<Row icon={c.me?.muted?Bell:BellOff} title={t(c.me?.muted?'fe.cm.unmute':'fe.cm.mute')} noChev disabled={busy} onClick={mute}/>}
    {member&&!owner&&<Row icon={X} danger title={t('fe.cm.leave')} noChev onClick={()=>setLayer('leave')}/>}
-   {!owner&&<Row icon={Flag} danger title={t('fe.cm.report')} noChev onClick={()=>setLayer('report')}/>}
+   {!ownedByMe&&<Row icon={Flag} danger title={t('fe.cm.report')} noChev onClick={()=>setLayer('report')}/>}
   </Card></Sheet>}
   {c&&layer==='join'&&<JoinSheet c={banned&&c.privacy==='open'?{...c,privacy:'closed',joinQuestion:null}:c} invite={invite} onClose={()=>setLayer('')} onDone={msg=>{setLayer('');toast(msg,{type:'ok'});load();}}/>}
   {c&&layer==='leave'&&<Ask icon={Users} danger title={fill(t(couple?'fe.cm.leaveQUs':'fe.cm.leaveQ'),{name:c.name})} text={t(c.privacy==='open'?'fe.cm.leaveTextOpen':'fe.cm.leaveTextClosed')} ok={t(couple?'fe.cm.leaveUs':'fe.comm.leave')} busy={busy}
@@ -405,7 +406,7 @@ export function CommunityScreen(){
   {c&&layer==='appeal'&&<AppealSheet targetType="community" id={c.id} ph={t('fe.cm.appealPh')} onClose={()=>setLayer('')} onDone={msg=>{setLayer('');toast(msg,{type:'ok'});}}/>}
   {c&&layer==='report'&&<ReportSheet targetType="community" targetId={c.id} onClose={()=>setLayer('')} onDone={msg=>{setLayer('');toast(msg,{type:'ok'});}}/>}
   {hostTools&&<DiscussionHostSheet d={hostTools} host={host} onClose={()=>setHostTools(null)} onDone={(msg,change)=>{patchDisc(hostTools.id,change);setHostTools(null);toast(msg,{type:'ok'});load();}}
-   onReport={acting&&hostTools.owner_profile_id!==acting.id?()=>{setReportPost(hostTools.id);setHostTools(null);}:undefined}/>}
+   onReport={acting&&!mineIds.has(hostTools.owner_profile_id??'')?()=>{setReportPost(hostTools.id);setHostTools(null);}:undefined}/>}
   {reportPost&&<ReportSheet targetType="post" targetId={reportPost} onClose={()=>setReportPost(null)} onDone={msg=>{setReportPost(null);toast(msg,{type:'ok'});}}/>}
  </>;
 }
@@ -439,7 +440,7 @@ export function EventScreen(){
  }).catch(setError);},[call,id]);
  useEffect(()=>{load();call('saved.list',{kind:'event'},savedRes).then(r=>setSaved(r.items.some(x=>x.target_id===id))).catch(()=>{});},[load,call,id]);
  const couple=acting?.kind==='couple';
- const orgMe=!!e&&e.organizer?.id===acting?.id;
+ const orgMe=!!e&&e.organizer?.id===acting?.id;const orgMine=useOwnProfiles().has(e?.organizer?.id??'');
  const st=e?.me.rsvp?.status??null;
  // A withdrawn (or closed) application is history: the person may apply again.
  const rawApp=e?.me.application??null;const app=rawApp&&['pending','approved','declined'].includes(rawApp.state)?rawApp:null;const waiting=!!e?.me.waiting;
@@ -558,7 +559,7 @@ export function EventScreen(){
    <Row icon={CalendarPlus} title={t('fe.cm.addCal')} noChev onClick={()=>{setLayer('');downloadIcs(e);toast(t('fe.cm.calDone'),{type:'ok'});}}/>
    {/* An approved application is withdrawn here too (the API takes pending and approved ones). */}
    {application?.st==='approved'&&<Row icon={FileText} danger title={t('fe.host.app.withdraw')} noChev onClick={()=>setLayer('withdraw')}/>}
-   {!orgMe&&<Row icon={Flag} danger title={t('fe.cm.report')} noChev onClick={()=>setLayer('report')}/>}
+   {!orgMine&&<Row icon={Flag} danger title={t('fe.cm.report')} noChev onClick={()=>setLayer('report')}/>}
   </Card></Sheet>}
   {e&&layer==='venue'&&<Sheet title={t(e.format==='online'?'fe.cm.joinT':'fe.cm.addressT')} onClose={()=>setLayer('')}
    foot={<>{e.format==='online'?(e.joinUrl&&<LinkBtn kind="primary" icon={ExternalLink} href={e.joinUrl}>{t('fe.cm.openLink')}</LinkBtn>)

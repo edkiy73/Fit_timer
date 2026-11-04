@@ -7,7 +7,7 @@ import type {LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Actions,Alert,Ask as KitAsk,Btn,Card,Field,Row,Sheet,TextArea} from './kit';
 import {useChecks} from './kit/validate';
-import {useFe} from './session';
+import {useFe,useOwnProfiles} from './session';
 import {ReportSheet} from './report';
 import {useToast} from './toast';
 import type {Post,Reply} from './feed';
@@ -59,7 +59,7 @@ function Ask({icon,title,text,ok,busy,failure,onOk,onCancel}:{icon:LucideIcon,ti
 
 export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=>void,onChange?:(p:Post)=>void,onRemove:(r:Removal)=>void}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();const {op,drop}=useOps();
- const mine=post.rev!=null;const couple=acting?.kind==='couple';const name=nameOf(post.author);
+ const mine=post.rev!=null;const couple=acting?.kind==='couple';const name=nameOf(post.author);const own=useOwnProfiles().has(post.author.id);
  // A draft (owner 29.10.2026): «Удалить черновик», asked once like a post; it is the writer's own, so no couple wording.
  const draft=mine&&post.state==='draft';
  // «Подписаться» right here (owner 28.10.2026), so one doesn't have to open the profile for it.
@@ -138,7 +138,7 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
     <Row noChev icon={EyeOff} title={t('fe.pm.hidePost')} sub={t('fe.pm.hidePostSub')} onClick={()=>hide('post')} disabled={busy}/>
     <Row noChev icon={BellOff} title={t('fe.pm.mute')} sub={t('fe.pm.muteSub',{name})} onClick={()=>hide('author')} disabled={busy}/>
     <Row noChev icon={LinkIcon} title={t('fe.pm.copyLink')} onClick={copy}/>
-    <Row noChev icon={Flag} title={t('fe.pm.report')} danger onClick={()=>go('report')}/>
+    {!own&&<Row noChev icon={Flag} title={t('fe.pm.report')} danger onClick={()=>go('report')}/>}
    </>}
   </Card>
   {failure&&<Alert kind="err">{failure}</Alert>}
@@ -176,7 +176,7 @@ export function ReplyMenu({reply,postId,onClose,onEdit,onDone}:{reply:Reply,post
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const {op,drop}=useOps();
  const [view,setView]=useState<'menu'|'delete'|'block'|'report'>('menu');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  useEscape(onClose);
- const name=nameOf(reply.author);const couple=acting?.kind==='couple';
+ const name=nameOf(reply.author);const couple=acting?.kind==='couple';const own=useOwnProfiles().has(reply.author?.id??'');
  const run=async(key:string,fn:(opId:string)=>Promise<string>)=>{
   if(busy)return;setBusy(true);setFailure('');
   try{onDone(await fn(op(key)));}catch(e){setFailure(feErrorMessage(e,t));drop(key);}finally{setBusy(false);}
@@ -195,8 +195,8 @@ export function ReplyMenu({reply,postId,onClose,onEdit,onDone}:{reply:Reply,post
     {reply.author&&<Row noChev icon={User} title={t('fe.pm.r.profile',{name})} onClick={()=>{onClose();navigate('/n/people/'+reply.author!.id);}}/>}
     {!!acting&&(reply.mentions??[]).some(m=>m.id===acting.id)&&<Row noChev icon={AtSign} title={t('fe.w3.unmention')} sub={t('fe.w3.unmentionSub')} disabled={busy}
      onClick={()=>run('unmention',async opId=>{await call('post.unmentionMe',{opId,postId,replyId:reply.id},okOnly);return t('fe.w3.unmention.done');})}/>}
-    <Row noChev icon={Flag} title={t('fe.pm.report')} danger onClick={()=>setView('report')}/>
-    {reply.author&&<Row noChev icon={Ban} title={t('fe.pm.r.block',{name})} sub={t('fe.pm.r.blockSub')} danger onClick={()=>setView('block')}/>}
+    {!own&&<Row noChev icon={Flag} title={t('fe.pm.report')} danger onClick={()=>setView('report')}/>}
+    {reply.author&&!own&&<Row noChev icon={Ban} title={t('fe.pm.r.block',{name})} sub={t('fe.pm.r.blockSub')} danger onClick={()=>setView('block')}/>}
    </>}
   </Card>
   {failure&&<Alert kind="err">{failure}</Alert>}

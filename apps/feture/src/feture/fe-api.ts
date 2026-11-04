@@ -83,7 +83,8 @@ export function dayMonth(iso:string):string{
 export function feErrorMessage(error:unknown,t:(key:string)=>string):string{
  const e=error instanceof FeError?error:null;
  if(!e)return t('fe.error.generic');
- if(e.code==='rule_violation'&&e.rule){const k='fe.rule.'+e.rule;const m=t(k);if(m!==k)return m.replace('{date}',e.until?dayMonth(e.until):'');}
+ // A refusal the server explains (`rule`) reads in its own words, whatever the error code (src/fe/i18n/errors.ts).
+ if(e.rule){const k='fe.rule.'+e.rule;const m=t(k);if(m!==k)return m.replace('{date}',e.until?dayMonth(e.until):'');}
  const k='fe.error.'+e.code;const m=t(k);
  return m!==k?m:t('fe.error.generic');
 }

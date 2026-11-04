@@ -103,6 +103,8 @@ const run = {
       await deleteCouple(q, c.id, 'member_deleted');
     }
     await closePending(q, `a.requested_by = $1`, [a.id], 'cancelled', { silent: true });
+    // Age and photo checks nobody will finish: out of the staff queues (and their counts) now.
+    for (const t of ['age_check', 'photo_check']) await q.query(`update feture.${t} set state = 'expired' where account_id = $1 and state in ('started', 'submitted')`, [a.id]);
     await clearPerson(q, a.person_profile_id);
     // The account itself: no way back in, nothing personal left on it.
     await q.query(`delete from feture.conversation_member where account_id = $1`, [a.id]);

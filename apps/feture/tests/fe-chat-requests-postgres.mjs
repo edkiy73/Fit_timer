@@ -161,6 +161,17 @@ test('one first message, «Подожди ответа», reading does not tell 
     assert.equal((await call('uk', kira, { action: 'match.end', opId: op(), profileId: alex })).ended, true);
     assert.equal((await call('ua', alex, { action: 'chat.send', opId: op(), conversationId: conv, body: 'Эй' })).rule, 'ended');
     assert.equal((await request('ua', alex, kira)).rule, 'request_wait');
+
+    // A block and unblock does not reset the wait — for either side.
+    const noa = await member('un', 'Noa');
+    await follow('un', noa, kira);
+    const n = await request('un', noa, kira);
+    assert.equal((await call('uk', kira, { action: 'chat.requestAnswer', opId: op(), conversationId: n.conversationId, answer: 'accept' })).state, 'accepted');
+    await call('uk', kira, { action: 'block.set', opId: op(), profileId: noa, on: true });
+    await call('uk', kira, { action: 'block.set', opId: op(), profileId: noa, on: false });
+    await follow('un', noa, kira);
+    assert.equal((await request('un', noa, kira)).rule, 'request_wait');
+    assert.equal((await request('uk', kira, noa)).rule, 'request_wait');
   } finally { await pg.close(); }
 });
 

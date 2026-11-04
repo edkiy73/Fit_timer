@@ -13,7 +13,7 @@ import {NameBadges} from './faces';
 import {BellButton} from './inbox';
 import {when} from './feed';
 import {FollowButton} from './follow';
-import {catalogRes,cardOneRead,cardRead,galleryList,CompatSummary,FollowCounts,MatchOverlay,PersonBio,PersonMenu,PhotoViewer,ProfileBody,ProfilePage,mediaSrc,ownSettingsRes,personName,personProfileRes,pxError,readCard,readCatalog,usePrivate,useRelation,viewedBy,type CardPre,
+import {catalogRes,cardOneRead,cardRead,galleryList,CompatSummary,FollowCounts,MatchOverlay,PersonBio,PersonMenu,PhotoViewer,ProfileBody,ProfilePage,mediaSrc,ownSettingsRes,personName,personProfileRes,pxError,readCard,readCatalog,usePrivate,useRelation,useTakeBackLike,viewedBy,type CardPre,
  type Catalog,type MenuStep,type PersonProfile} from './profile-extras';
 import {AboutGroup} from './about-facts';
 import {topicMatches} from './topic-search';
@@ -558,9 +558,9 @@ function Likes({onCount,toDiscover}:{onCount:(n:number)=>void,toDiscover:()=>voi
   try{const r=await call('like.send',{opId:newOpId(),profileId:c.id,source:'likes'},likeRes);setInc(l=>{const n=l?.filter(x=>x.profile.id!==c.id)??null;onCount(n?.length??0);return n;});
    if(r.state==='matched')setMatch({card:c,...(r.conversationId?{conversationId:r.conversationId}:{})});else toast(fill(t(us?'fe.px.lkd.sentUs':'fe.px.lkd.sent'),{name:cname(c)}));}
   catch(e){toast(pxError(e,t),{type:'err'});}finally{setBusy('');}};
+ const takeBack=useTakeBackLike();
  const unlike=async(c:Card,source?:string|null)=>{if(busy)return;setBusy(c.id);
-  try{await call('like.withdraw',{opId:newOpId(),profileId:c.id},ok);setOut(l=>l?.filter(x=>x.profile.id!==c.id)??null);
-   toast(t(us?'fe.px.lkd.withdrawnUs':'fe.px.lkd.withdrawn'),{action:{label:t('fe.mx.undo'),fn:()=>void resend(c,source)}});}
+  try{await takeBack(c.id,()=>void resend(c,source));setOut(l=>l?.filter(x=>x.profile.id!==c.id)??null);}
   catch(e){toast(pxError(e,t),{type:'err'});}finally{setBusy('');}};
  const seg=<CSeg value={k} onChange={setK} options={[{id:'in',label:t(us?'fe.px.lk.inUs':'fe.px.lk.in'),n:inc?.length??0},{id:'out',label:t(us?'fe.px.lk.outUs':'fe.px.lk.out')}]}/>;
  let body:ReactNode;
@@ -616,7 +616,7 @@ export function PersonScreen(){
  useScrollTo(toPriv?'priv':null,privShown);
  if(p&&!blocked&&ready)return <>
   <ProfilePage p={p} {...(pre?{pre}:{})} gal={gal} onMore={()=>setMenu('menu')} onRefresh={load}
-   menu={(rel,reload)=><PersonMenu profileId={id} name={name} handle={p.kind==='person'?p.handle:null} step={menu} setStep={setMenu} blocked={blocked} setBlocked={setBlock} rel={rel} onRel={reload}/>}/>
+   menu={(rel,reload)=><PersonMenu profileId={id} name={name} handle={p.kind==='person'?p.handle:null} partner={!!p.partner} step={menu} setStep={setMenu} blocked={blocked} setBlocked={setBlock} rel={rel} onRel={reload}/>}/>
   
  </>;
  return <>

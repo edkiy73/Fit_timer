@@ -56,6 +56,8 @@ const disputeItem=z.object({id:z.uuid(),disputed_at:ts,opened_at:ts,excerpt:opt(
 const flaggedRes=z.object({ok:z.literal(true),flagged:z.array(z.object({profileId:z.uuid(),handle:z.string().nullable(),strikes:z.number(),flaggedAt:ts})).optional().default([])}).passthrough();
 const revisionItem=z.object({id:z.uuid(),postId:z.uuid(),createdAt:ts,live:opt(z.string()),proposed:z.unknown().optional()});
 const grantRes=z.object({ok:z.literal(true),id:z.string(),until:z.string()});
+const measure=z.object({rule:z.string().nullable(),until:ts}).nullable();
+const measuresRes=z.object({ok:z.literal(true),profileId:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable(),restricted:measure,suspended:measure});
 
 type MediaItem=z.infer<typeof mediaItem>;type CommItem=z.infer<typeof commItem>;type EventItem=z.infer<typeof eventItem>;type AgeItem=z.infer<typeof ageItem>;type PhotoItem=z.infer<typeof photoItem>;
 type DisputeItem=z.infer<typeof disputeItem>;type RevisionItem=z.infer<typeof revisionItem>;type ReportItem=z.infer<typeof reportItem>;type AppealItem=z.infer<typeof appealItem>;type NoticeItem=z.infer<typeof noticeItem>;type PlaceItem=z.infer<typeof placeItem>;
@@ -82,8 +84,8 @@ const QUEUE_IDS=Object.keys(QUEUES) as QueueId[];
 /** Who may open what (the server's requireStaff lists); the screen only asks for what the roles allow. Queues not
  * listed are open to every staff role that has a queue. */
 const QUEUE_ROLES:Partial<Record<QueueId,string[]>>={appeal:['owner','lead']};
-const SECTION_ROLES={queues:['owner','lead','moderator','verifier'],support:['owner','lead','moderator','support'],premium:['owner','lead'],maintenance:['owner','lead'],journal:['owner','lead','auditor'],access:['owner','lead']} as const;
-const SECTIONS=['queues','support','premium','maintenance','journal','access'] as const;
+const SECTION_ROLES={queues:['owner','lead','moderator','verifier'],support:['owner','lead','moderator','support'],measures:['owner','lead','moderator'],premium:['owner','lead'],maintenance:['owner','lead'],journal:['owner','lead','auditor'],access:['owner','lead']} as const;
+const SECTIONS=['queues','support','measures','premium','maintenance','journal','access'] as const;
 type Section=typeof SECTIONS[number];
 const can=(roles:readonly string[],need:readonly string[]|undefined)=>!need||roles.some(r=>need.includes(r));
 const LIMIT=50;
@@ -139,7 +141,7 @@ export function StaffScreen(){
      <FactorPromptHost onEnrol={reload}/>
      {daily.length>1&&daily.includes(cur)&&<Seg<Section> small={false} value={cur} onChange={setSection}
       options={daily.map(id=>{const n=id==='queues'?(counts?counts.total-counts.support:0):(counts?.support??0);return {id,label:label(id),...(n>0?{n}:{})};})}/>}
-     {cur==='queues'?<Queues/>:cur==='support'?<StaffSupport/>:cur==='premium'?<Premium/>:cur==='maintenance'?<StaffMaintenance/>:cur==='journal'?<Journal/>:cur==='access'?<FactorReset/>:null}
+     {cur==='queues'?<Queues/>:cur==='support'?<StaffSupport/>:cur==='measures'?<ProfileMeasures/>:cur==='premium'?<Premium/>:cur==='maintenance'?<StaffMaintenance/>:cur==='journal'?<Journal/>:cur==='access'?<FactorReset/>:null}
     </>}
   </View>
   {menu&&<Sheet title={t('fe.staff.tools')} sub={roles?.length?t('fe.staff.roles')+': '+roles.map(r=>t('fe.staff.role.'+r)).join(', '):undefined} onClose={()=>setMenu(false)}>
@@ -150,8 +152,8 @@ export function StaffScreen(){
 }
 /** The system «Назад» closes the sheet it sits in instead of leaving the staff area. */
 function BackCloses({onClose}:{onClose:()=>void}){useBackClose(onClose);return null;}
-const SECTION_LABEL:Record<Section,string>={queues:'fe.staff.section.queues',support:'fe.w8.staff.support',premium:'fe.staff.section.premium',maintenance:'fe.w8.staff.maint',journal:'fe.staff.section.journal',access:'fe.staff.section.access'};
-const SECTION_ICON:Record<Section,LucideIcon>={queues:Inbox,support:LifeBuoy,premium:Crown,maintenance:Wrench,journal:ScrollText,access:KeyRound};
+const SECTION_LABEL:Record<Section,string>={queues:'fe.staff.section.queues',measures:'fe.staff.section.measures',support:'fe.w8.staff.support',premium:'fe.staff.section.premium',maintenance:'fe.w8.staff.maint',journal:'fe.staff.section.journal',access:'fe.staff.section.access'};
+const SECTION_ICON:Record<Section,LucideIcon>={queues:Inbox,measures:Gavel,support:LifeBuoy,premium:Crown,maintenance:Wrench,journal:ScrollText,access:KeyRound};
 
 type Order='old'|'new';
 type PageOf={items:unknown[],locked?:boolean|undefined,next?:string|null|undefined,tail?:string|null|undefined,total?:number|undefined};
@@ -576,7 +578,8 @@ function Csam({busy,asking,onAsk,onYes,onNo}:{busy:boolean,asking:boolean,onAsk:
 // ——— communities and events ———
 
 function CommunityCard({item,onDone}:{item:CommItem,onDone:()=>void}){
- const {t}=useI18n();const when=useWhen();const d=useDecide(onDone);
+ const {t}=useI18n();const when=useWhen();
+ const d=useDecide(onDone,e=>e instanceof FeError&&e.rule==='name_taken'?t('fe.staff.community.nameTaken'):null);
  const [reason,setReason]=useState('');const [ask,setAsk]=useState(false);
  const decide=(decision:'approve'|'reject')=>d.run('staff.communityDecide',{communityId:item.id,rev:item.rev,decision,reason:reason.trim()});
  const privacy=item.privacy?(t('fe.staff.chg.privacy.'+item.privacy).startsWith('fe.')?item.privacy:t('fe.staff.chg.privacy.'+item.privacy)):null;
@@ -949,6 +952,50 @@ function PlaceCard({item,onDone}:{item:PlaceItem,onDone:()=>void}){
     <Btn kind="soft" icon={Ban} disabled={d.busy} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></Actions>}
   <Failure text={d.failure}/>
  </StCard>;
+}
+
+// ——— «Меры»: what is in force for a profile, and lifting it ———
+
+/** A profile found by @nick: its restriction and suspension with rule and end, and «Снять» for each
+ * (staff.restrict on:false / staff.sanction lift; the server decides who may lift what). */
+function ProfileMeasures(){
+ const {call}=useFe();const {t}=useI18n();const when=useWhen();const toast=useToast();
+ const [handle,setHandle]=useState('');const [found,setFound]=useState<z.infer<typeof measuresRes>|null>(null);
+ const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [ask,setAsk]=useState<'restricted'|'suspended'|null>(null);const [note,setNote]=useState('');
+ const h=handle.trim().replace(/^@/,'');
+ const err=(e:unknown)=>setFailure(e instanceof FeError&&e.code==='not_found'?t('fe.staff.measures.notFound'):e instanceof FeError&&e.code==='forbidden'?t('fe.staff.measures.forbidden'):feErrorMessage(e,t));
+ const find=async(nick=h)=>{setBusy(true);setFailure('');setAsk(null);
+  try{setFound(await call('staff.profileMeasures',{handle:nick},measuresRes,{asAccount:true}));}catch(e){setFound(null);err(e);}finally{setBusy(false);}};
+ const lift=async(which:'restricted'|'suspended')=>{if(!found)return;setBusy(true);setFailure('');
+  const rule=found[which]?.rule;const r=rule&&(RULES as readonly string[]).includes(rule)?rule:'community_rules';
+  try{await call(which==='restricted'?'staff.restrict':'staff.sanction',which==='restricted'
+    ?{opId:newOpId(),profileId:found.profileId,on:false,rule:r,note:note.trim()}:{opId:newOpId(),profileId:found.profileId,decision:'lift',rule:r,note:note.trim()},ok,{asAccount:true});
+   toast(t('fe.staff.measures.lifted'),{type:'ok'});setNote('');setBusy(false);await find(found.handle??h);}
+  catch(e){setBusy(false);setAsk(null);err(e);}};
+ const who=found?[found.name,found.handle&&'@'+found.handle].filter(Boolean).join(' '):'';
+ const ruleWord=(r:string|null)=>{const x=r?t('fe.staff.rule.'+r):'';return x&&!x.startsWith('fe.')?x:null;};
+ const line=(m:{rule:string|null,until?:string|null|undefined})=>[ruleWord(m.rule),m.until?t('fe.staff.measures.till',{date:when(m.until)}):t('fe.staff.measures.untilLifted')].filter(Boolean).join(' · ');
+ return <>
+  <Group title={t('fe.staff.measures.findTitle')}>
+   <Form>
+    <LineField label={t('fe.staff.premium.handle')} value={handle} max={41} autoCapitalize="none" onChange={v=>{setHandle(v);setFound(null);setFailure('');}}/>
+    <Btn icon={Search} disabled={busy||h.length<1} busy={busy&&!found} onClick={()=>void find()}>{t('fe.staff.measures.find')}</Btn>
+   </Form>
+  </Group>
+  {found&&<Group title={who}>
+   <Form>
+    <Kv rows={[[t('fe.staff.measures.restricted'),found.restricted?line(found.restricted):t('fe.staff.measures.none')],
+     [t('fe.staff.measures.suspended'),found.suspended?line(found.suspended):t('fe.staff.measures.none')]]}/>
+    {(found.restricted||found.suspended)&&<TextField label={t('fe.staff.note')} value={note} onChange={setNote} max={500}/>}
+    {ask?<Confirm text={t(ask==='restricted'?'fe.staff.measures.confirmRestricted':'fe.staff.measures.confirmSuspended',{name:who})} busy={busy} onNo={()=>setAsk(null)} onYes={()=>void lift(ask)}/>
+     :(found.restricted||found.suspended)&&<Actions>
+      {found.restricted&&<Btn kind="soft" icon={Check} disabled={busy} onClick={()=>setAsk('restricted')}>{t('fe.staff.measures.liftRestricted')}</Btn>}
+      {found.suspended&&<Btn kind="soft" icon={Check} disabled={busy} onClick={()=>setAsk('suspended')}>{t('fe.staff.measures.liftSuspended')}</Btn>}
+     </Actions>}
+   </Form>
+  </Group>}
+  <Failure text={failure}/>
+ </>;
 }
 
 // ——— Premium for dogfooding ———

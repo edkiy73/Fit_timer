@@ -107,7 +107,7 @@ test('open events: «иду» admits to the exact address; organizers cannot ans
 });
 
 test('events by application: pending never counts as «идёт», approval admits, revoke takes it back, cancel closes pending', async () => {
-  const { pg, call, a, b, c, publish } = await world();
+  const { pg, db, call, a, b, c, publish } = await world();
   try {
     const id = await publish('ua', a, { requiresApplication: true, questions: ['Был ли опыт?'], format: 'online', placeId: null, area: null, exactAddress: null, joinUrl: 'https://meet.example/x' });
     assert.equal((await call('ub', b, { action: 'event.rsvp', opId: op(), eventId: id, status: 'going' })).rule, 'application_first');
@@ -130,6 +130,11 @@ test('events by application: pending never counts as «идёт», approval admi
 
     // Cancel: pending applications close, the page stays with the reason, no more answers.
     const app2 = await call('uc', c, { action: 'event.apply', opId: op(), eventId: id, answers: ['Нет, впервые'], requirementsAccepted: true });
+    // An event that is over is not cancelled (nobody is told «отменено» afterwards).
+    const [{ starts_at, ends_at }] = await db.query('select starts_at, ends_at from feture.event where id = $1', [id]);
+    await db.query(`update feture.event set starts_at = now() - interval '3 hours', ends_at = now() - interval '1 hour' where id = $1`, [id]);
+    assert.equal((await call('ua', a, { action: 'event.cancel', opId: op(), eventId: id, reason: 'Поздно' })).rule, 'event_over');
+    await db.query('update feture.event set starts_at = $2, ends_at = $3 where id = $1', [id, starts_at, ends_at]);
     await call('ua', a, { action: 'event.cancel', opId: op(), eventId: id, reason: 'Ведущий заболел' });
     got = (await call('uc', c, { action: 'event.get', eventId: id })).event;
     assert.deepEqual([got.state, got.cancelReason, got.me.application.state, got.me.application.id], ['cancelled', 'Ведущий заболел', 'closed', app2.id]);

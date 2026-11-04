@@ -105,7 +105,7 @@ const run = {
     const { sql, params } = queuePageSql(input, SUBMITTED_KEYS,
       `select c.id, c.gesture, c.submitted_at, c.asset_id, c.photo_asset_id, p.id profile_id, p.handle
        from feture.photo_check c join feture.profile p on p.id = c.profile_id
-       where c.state = 'submitted' and ($1::uuid is null or c.account_id <> $1)`, [ownerSelf(roles) ? null : account.id]); // the owner sees their own too
+       where c.state = 'submitted' and p.state <> 'deleted' and ($1::uuid is null or c.account_id <> $1)`, [ownerSelf(roles) ? null : account.id]); // the owner sees their own too
     const rows = await q.query(sql, params);
     const page = pageInfo(rows, SUBMITTED_KEYS, input.limit);
     const ctx = { viewerProfileId: account.person_profile_id ?? account.id, place: /** @type {const} */ ('own'), showExplicit: true, staff: true };
