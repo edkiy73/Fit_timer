@@ -2,9 +2,9 @@ import {Fragment,useCallback,useEffect,useLayoutEffect,useRef,useState,type CSSP
 import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Archive,ArchiveRestore,Ban,Bell,BellOff,Calendar,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Film,Flag,Image as ImageIcon,Inbox,Info,Lock,LockOpen,MessageCircle,Plus,Search,SendHorizontal,Sparkles,Undo2,User,UserCheck,Users,X,type LucideIcon} from 'lucide-react';
+import {Archive,ArchiveRestore,Ban,Bell,BellOff,Calendar,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Film,Flag,Image as ImageIcon,Inbox,Info,Lock,LockOpen,MessageCircle,Search,SendHorizontal,Sparkles,Undo2,User,UserCheck,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {useBack,ActingAv,Actions,Alert,ChatList,ChatPane,ChatPick,ChatRequest,ChatRow,CoupleTag,NewMatch,NewMatches,Av,Bar,Btn,Card,Check as CheckBox,Chip,Chips,Empty,Field,FilePick,Group,IconBtn,Layer,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Spacer,Text,TextArea,ToggleRow,Typing,VideoBadge,VideoPlayer,View,type Voice,VoiceBubble,VoiceRecorder} from './kit';
+import {ActingAv,Actions,AddBtn,Alert,Av,Bar,Btn,Card,ChatList,ChatPane,ChatPick,ChatRequest,ChatRow,Check as CheckBox,Chip,Chips,CoupleTag,Empty,Field,FilePick,Group,IconBtn,Layer,NewMatch,NewMatches,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Spacer,Text,TextArea,ToggleRow,type Voice,Typing,useBack,VideoBadge,VideoPlayer,View,VoiceBubble,VoiceRecorder} from './kit';
 import {VIDEO_TYPES} from './kit/media';
 import {Uploader,type SendPhoto,type SendVideo,type Uploaded} from './kit/Uploader';
 import {useSendPhoto,useSendVideo,useSendVoice} from './media-upload';
@@ -702,7 +702,7 @@ function ChatView({id,to}:{id:string,to:string}){
    {blocked&&<button type="button" className="ib-block" aria-label={t('fe.rq.no.title')} onClick={()=>toast(ruleText(draft?.rule),{type:'err'})}/>}
    {limitCounter('chatMessage',text)}
    {replyTo&&quoteOf(replyTo)&&<div className="reply-target chat-reply">{quote(replyTo,true)}<IconBtn icon={X} size="sm" label={t('fe.chx.cancelReply')} onClick={()=>{setReplyTo(null);input.current?.focus({preventScroll:true});}}/></div>}
-   <IconBtn icon={Plus} kind="ghost" label={t('fe.chx.attach')} disabled={blocked||!meta||!!out?.pending||!!reqBusy} onClick={()=>{setSheetErr('');setSheet('attach');}}/>
+   <AddBtn label={t('fe.chx.attach')} disabled={blocked||!meta||!!out?.pending||!!reqBusy} onClick={()=>{setSheetErr('');setSheet('attach');}}/>
    {couple&&acting?.kind==='couple'&&<ActingAv p={acting} size="xs"/>}
    <TextArea ref={input} bare grow={GROW} rows={1} maxLength={softMax('chatMessage')} value={text} onChange={e=>{setText(e.target.value);if(e.target.value.trim())typed();}}
     disabled={blocked} placeholder={blocked?t('fe.rq.no.title'):couple?t('fe.chx.messagePhCouple'):t('fe.chx.messagePh')} aria-label={couple?t('fe.chx.messagePhCouple'):t('fe.chx.message')} title={t('fe.chx.enterHint')} enterKeyHint="enter"

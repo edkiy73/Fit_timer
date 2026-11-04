@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Bookmark,Calendar,Eye,Globe,Inbox,Newspaper,Settings,UserRound,Users,X} from 'lucide-react';
 import {feErrorMessage} from '../feture/fe-api';
-import {Av,Bar,Btn,Card,Empty,Group,IconBtn,Row,Skel,View} from './kit';
+import {AddBtn,Av,Bar,Btn,Card,Empty,Group,IconBtn,Row,Skel,View} from './kit';
 import {useFe,useLive,useShown} from './session';
 import {BellButton,countsRes} from './inbox';
 import {StaffEntry} from './staff';
@@ -106,7 +106,7 @@ export function MeNewScreen(){
 
 /** One section of the new «Я»: «Мой профиль», «Галерея», «Приватная часть» — the current blocks, one level down. */
 export function MeNewSection(){
- const {section}=useParams();const {state,acting,call}=useFe();const {t,locale}=useI18n();
+ const {section}=useParams();const {state,acting,call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
  const {p,settings,error,load}=useMe();
  const [options,setOptions]=useState<z.infer<typeof option>[]>([]);const [places,setPlaces]=useState<Place[]>([]);
  useEffect(()=>{if(section==='profile')call('catalog.get',{},catalogRes,{asAccount:true}).then(r=>{setOptions(r.options);setPlaces(r.places??[]);}).catch(()=>{});},[call,section]);
@@ -116,11 +116,11 @@ export function MeNewSection(){
  const title=section==='gallery'?t('fe.mx.gal'):section==='private'?t('fe.m2.private'):t('fe.m2.profile');
  const label=(kind:string,code:string)=>{const o=options.find(x=>x.kind===kind&&x.code===code);return o?(locale==='en'?o.en:o.ru):code;};
  return <>
-  <Bar title={title} back="/n/me/new"/>
+  <Bar title={title} back="/n/me/new">{section==='gallery'&&<AddBtn label={t('fe.mx.gal.upload')} onClick={()=>navigate('/n/feed/new?x=media')}/>}</Bar>
   <View refresh={load}>
    {error&&!p?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!p||!settings?(section==='profile'?<MeSkel/>:<Skel kind="card" rows={2}/>)
-    :section==='gallery'?<MeGallery profileId={p.id} couple={cp} title={t('fe.mx.gal')}/>
+    :section==='gallery'?<MeGallery profileId={p.id} couple={cp} title={t('fe.mx.gal')} own/>
     :section==='private'?<PrivateLayer profileId={p.id} on={settings.privateOn!==false} requestsFrom={settings.requestsFrom??'all'} onChanged={load} askHere={false} accessHere={false}/>
     :<>
      <PhotosBlock p={p} settings={settings} onChanged={load}/>

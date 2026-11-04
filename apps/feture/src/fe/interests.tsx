@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,EyeOff,KeyRound,MessageCircle,Pencil,Plus,Sparkles,Trash2,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {AddCard,Alert,AnswerScale,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,Note,Progress,Row,SearchInput,SectionLabel,Sheet,Skel,View} from './kit';
+import {AddBtn,AddCard,Alert,AnswerScale,Bar,Btn,Card,Chip,Chips,Empty,Group,IconBtn,Note,Progress,Row,SearchInput,SectionLabel,Sheet,Skel,View} from './kit';
 import {useFe,usePartnerApproves,useShown} from './session';
 import {when} from './feed';
 import {topicMatches} from './topic-search';
@@ -165,7 +165,7 @@ export function InterestsScreen(){
  const toAdd=()=>{setNotice('');setPicking(true);};
  return <>
   <Bar title={t(couple?'fe.int.screenCouple':'fe.int.screen')} back="/n/me">
-   <IconBtn icon={Plus} label={t('fe.int.add')} onClick={toAdd}/>
+   <AddBtn label={t('fe.int.add')} onClick={toAdd}/>
   </Bar>
   <View className="nodock">
    {notice&&<Alert kind="ok" noIcon>{notice}</Alert>}

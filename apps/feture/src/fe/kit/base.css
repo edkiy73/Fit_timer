@@ -3414,6 +3414,8 @@
 .v21 .composer .ibtn.add,
 .v21 .myev .ibtn.add,
 .v21 .ibtn.add{width:44px;height:44px;min-height:44px;aspect-ratio:auto;border-radius:var(--r)}
+/* in a header the «+» is one of the header's buttons (owner 05.11.2026): round and their size, only the colour is ours */
+.v21 .bar .ibtn.add{width:40px;height:40px;min-height:40px;border-radius:50%}
 .v21 .myev{align-items:center}
 /* V21 (GEN-003): the review tool is a slim tab on the right edge, out of the way of product buttons */
 .v21 .qa-fab{left:auto!important;right:0!important;bottom:38%!important;width:20px!important;height:52px!important;border-radius:var(--r-s) 0 0 var(--r-s)!important;border-right:0!important;writing-mode:vertical-rl;font-size:var(--fs-micro)!important;letter-spacing:.06em;opacity:.6}

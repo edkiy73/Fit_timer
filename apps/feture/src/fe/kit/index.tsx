@@ -25,6 +25,12 @@ export const IconBtn=forwardRef<HTMLButtonElement,ButtonHTMLAttributes<HTMLButto
   {badge==='dot'?<b className="k-badge dot" aria-hidden="true"/>:badge?<b className="k-badge" aria-hidden="true">{badge>99?'99+':badge}</b>:null}</button>;
 });
 
+/** The one «+» of the app (owner 05.11.2026): create or add, always our accent colour, wherever it stands (a header,
+ * a group). Every «+» is this button, never an IconBtn with a Plus of its own. */
+export function AddBtn({label,...rest}:Omit<ButtonHTMLAttributes<HTMLButtonElement>,'children'>&{label:string,size?:''|'sm'}){
+ return <IconBtn icon={Plus} kind="add" label={label} {...rest}/>;
+}
+
 /** A screen header with an optional second line (`SubBar` of the community screens). */
 export function SubBar({title,sub,back=true,onBack,children}:{title:string,sub?:string|null|undefined,back?:string|true|false,onBack?:()=>void,children?:ReactNode}){
  const {t}=useI18n();const goBack=useBack(typeof back==='string'?back:undefined);

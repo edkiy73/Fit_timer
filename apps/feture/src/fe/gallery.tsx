@@ -326,7 +326,8 @@ function CoverSheet({profileId,album:al,onClose,onSet}:{profileId:string,album:A
 /* ---------- the gallery block of «Я» ---------- */
 
 /** `galleryOwn20()`: «Все» and the albums as cards (four to a line), «+ Альбом»; empty — one row to the first upload. */
-export function MeGallery({profileId,couple,title}:{profileId:string,couple:boolean,title:string}){
+/** `own`: the block is a whole screen (its header says «Галерея» and holds the «+»), so no title and no «Загрузить» here. */
+export function MeGallery({profileId,couple,title,own}:{profileId:string,couple:boolean,title:string,own?:boolean}){
  const {call,peek}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
  const [data,setData]=useShown<{albums:Album[],all:z.infer<typeof galleryRes>}|null>('gal.me:'+profileId,()=>{const a=peek('album.list',{profileId},albumsRes),g=peek('gallery.list',{profileId},galleryRes);return a&&g?{albums:a.items,all:g}:null;});const [tick,setTick]=useState(0);const [creating,setCreating]=useState(false);
  useEffect(()=>{let live=true;
@@ -337,9 +338,9 @@ export function MeGallery({profileId,couple,title}:{profileId:string,couple:bool
  if(!data)return null;
  const pics=data.all.items.map(x=>tileSrc(x.media,'thumb')).filter((s):s is string=>!!s);
  return <>
-  {!data.all.items.length&&!data.albums.length?<Group className="gal20" id="meGal" title={title}>
+  {!data.all.items.length&&!data.albums.length?<Group className="gal20" id="meGal" title={own?undefined:title}>
     <AddCard icon={ImageIcon} title={t('fe.mx.gal.first')} sub={couple?t('fe.mx.gal.firstSubCouple'):t('fe.mx.gal.firstSub')} onClick={upload}/></Group>
-   :<Group className="gal20" id="meGal" title={title} action={<button type="button" onClick={upload}>{t('fe.mx.gal.upload')}</button>}><AlbumRow wrap label={t('fe.gal.albums')}>
+   :<Group className="gal20" id="meGal" title={own?undefined:title} action={own?undefined:<button type="button" onClick={upload}>{t('fe.mx.gal.upload')}</button>}><AlbumRow wrap label={t('fe.gal.albums')}>
     <AlbumCard title={t('fe.mx.gal.all')} count={data.all.items.length+(data.all.next?'+':'')} mosaic={pics} icon={ImageIcon} onClick={()=>go()}/>
     {data.albums.map(x=><AlbumCard key={x.id} title={x.title} count={x.count} cover={tileSrc(x.cover,'thumb')} locked={x.visibility==='followers'?t('fe.gal.followersOnly'):undefined} onClick={()=>go(x.id)}/>)}
     <AlbumCard title={t('fe.gal.album')} icon={Plus} label={t('fe.gal.new')} onClick={()=>setCreating(true)}/>
