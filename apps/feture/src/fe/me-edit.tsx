@@ -76,7 +76,7 @@ export function MeEditScreen(){
  const set=(patch:Partial<Draft>)=>setD(v=>v?{...v,...patch}:v);
  const show=(k:Exclude<Only,null>)=>!only||only===k;
  // Kit validation layer: the fields on screen, by the server's rules (contracts/_text.mjs).
- const checks=useChecks({...(show('basics')?{...(d?.name.trim()?{name:'profileName' as const}:{}),bio:'bio' as const}:{}),...(show('priv')&&!cp&&d?.privOn?{privText:'privateText' as const}:{})},
+ const checks=useChecks({...(show('basics')?{...(d?.name.trim()?{name:'profileName' as const}:{}),bio:'bio' as const}:{}),...(show('priv')&&d?.privOn?{privText:'privateText' as const}:{})},
   {name:d?.name??'',bio:d?.bio??'',privText:d?.privText??''});
  // Opened by a link (no app history behind it), back and «Сохранить» return to «Я» instead of leaving the app.
  const home='/n/me'+(only==='priv'?'?layer=priv':'');const canBack=((history.state as {idx?:number}|null)?.idx??0)>0;
@@ -116,8 +116,8 @@ export function MeEditScreen(){
    if(JSON.stringify(d.photos.map(x=>x.id))!==JSON.stringify(base.photos.map(x=>x.id))){const r=await call('profile.photosSet',{opId:newOpId(),assetIds:d.photos.map(x=>x.id)},ok);pending||=!!r.pending;}
    if(d.privOn!==base.privOn&&!d.privOn)await call('private.setOn',{opId:newOpId(),on:false,confirm:true},ok);
    if(d.privOn!==base.privOn&&d.privOn){const r=await call('private.setOn',{opId:newOpId(),on:true},ok);pending||=!!r.pending;}
-   if(!cp&&d.privOn&&d.privText.trim()!==base.privText)await call('private.setText',{opId:newOpId(),text:d.privText.trim()},ok);
-   if(!cp&&d.privOn&&JSON.stringify(d.privMedia.map(x=>x.id))!==JSON.stringify(base.privMedia.map(x=>x.id)))await call('private.setMedia',{opId:newOpId(),assetIds:d.privMedia.map(x=>x.id)},ok);
+   if(d.privOn&&d.privText.trim()!==base.privText)await call('private.setText',{opId:newOpId(),text:d.privText.trim()},ok);
+   if(d.privOn&&JSON.stringify(d.privMedia.map(x=>x.id))!==JSON.stringify(base.privMedia.map(x=>x.id)))await call('private.setMedia',{opId:newOpId(),assetIds:d.privMedia.map(x=>x.id)},ok);
    toast(pending?t('fe.me.pending'):only==='media'?t('fe.mx.ed.photosSaved'):t(cp?'fe.me.savedUs':'fe.me.saved'),{type:'ok'});
    leave();
   }catch(e){if(e instanceof FeError&&e.fields?.includes('handle')){setNickErr(t('fe.reg.nick.taken'));setTimeout(shakeFirstErr);}else if(!checks.fromServer(e,{text:'privText'}))setFailure(feErrorMessage(e,t));}finally{setBusy(false);}
@@ -200,11 +200,11 @@ export function MeEditScreen(){
      {show('priv')&&<section className={'vault'+(d.privOn?'':' off')} id="privEdit">
       <VaultHead title={t('fe.priv.title')} label={t('fe.priv.title')} on={d.privOn} onToggle={()=>d.privOn&&base?.privOn?setAskOff(true):set({privOn:!d.privOn})}/>
       {d.privOn&&<div className="vault-b">
-       {!cp&&<Group title={t('fe.mx.ed.privText')}><Card form>
+       <Group title={t('fe.mx.ed.privText')}><Card form>
         <Field name="privText" error={checks.error('privText')}><TextArea rows={5} {...checks.input('privText')} value={d.privText} placeholder={t('fe.mx.ed.privPh')} aria-label={t('fe.mx.ed.privText')} onChange={e=>set({privText:e.target.value})}/><Counter n={textLength(d.privText)} max={FIELD.privateText.max}/></Field>
-       </Card></Group>}
-       {!cp&&<Group title={t('fe.mx.ed.privMedia')} action={<Note as="span">{d.privMedia.length}/{PRIV_MAX}</Note>}>
-        {d.privMedia.length?slots('privMedia',d.privMedia,PRIV_MAX):<AddCard icon={Camera} title={t('fe.mp.mediaAdd')} sub={t('fe.mp.mediaAddSub')} disabled={!!uploading} busy={uploading==='privMedia'} onClick={()=>pick('privMedia')}/>}</Group>}
+       </Card></Group>
+       <Group title={t('fe.mx.ed.privMedia')} action={<Note as="span">{d.privMedia.length}/{PRIV_MAX}</Note>}>
+        {d.privMedia.length?slots('privMedia',d.privMedia,PRIV_MAX):<AddCard icon={Camera} title={t('fe.mp.mediaAdd')} sub={t('fe.mp.mediaAddSub')} disabled={!!uploading} busy={uploading==='privMedia'} onClick={()=>pick('privMedia')}/>}</Group>
       </div>}
      </section>}
      {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
