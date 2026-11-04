@@ -5,6 +5,10 @@ import * as z from 'zod';
 import { id, opId, queuePaging } from './platform.mjs';
 import { field } from './_text.mjs';
 
+import { RESTRICT_PRESETS, RESTRICT_SCOPES } from './_restrict.mjs';
+
+export { RESTRICT_PRESETS, RESTRICT_SCOPES };
+
 export const moderationCommands = {
   'staff.reportQueue': { profile: false, write: false, input: z.strictObject({ ...queuePaging }) },
   'staff.reportDecide': {
@@ -52,6 +56,8 @@ export const moderationCommands = {
     profile: false, write: true,
     input: z.strictObject({
       opId, profileId: id, on: z.boolean(),
+      // What it limits; none given = «Стандартное».
+      scope: z.array(z.enum(RESTRICT_SCOPES)).min(1).max(RESTRICT_SCOPES.length).transform(v => [...new Set(v)]).optional(),
       rule: z.enum(['minors', 'threats', 'private_material', 'spam', 'illegal', 'community_rules', 'appeal_granted']),
       note: field('staffNote').default(''),
       // A timed measure ends on its own after this many days; none = until staff lift it.
@@ -67,7 +73,13 @@ export const moderationCommands = {
   },
   'appeal.create': {
     profile: true, write: true, rate: { kind: 'appeal.create', max: 10, window: '1 day' },
-    input: z.strictObject({ opId, targetType: z.enum(['post', 'reply', 'community', 'event', 'profile']), targetId: id, body: field('appeal') }),
+    input: z.strictObject({ opId, targetType: z.enum(['post', 'reply', 'community', 'event', 'profile', 'media', 'revision']), targetId: id, body: field('appeal') }),
+  },
+  // A suspended account (audit item 2): its decision — rule, until when, may it be appealed — and the appeal itself.
+  'account.suspension': { profile: false, write: false, input: z.strictObject({}) },
+  'appeal.suspension': {
+    profile: false, write: true, rate: { kind: 'appeal.create', max: 10, window: '1 day' },
+    input: z.strictObject({ opId, body: field('appeal') }),
   },
   'staff.appealQueue': { profile: false, write: false, input: z.strictObject({ ...queuePaging }) },
   'staff.appealDecide': { profile: false, write: true, input: z.strictObject({ opId, appealId: id, grant: z.boolean(), note: field('staffNote').default('') }) },

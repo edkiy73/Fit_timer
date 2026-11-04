@@ -1,6 +1,6 @@
 // @ts-check
 import { randomUUID } from 'node:crypto';
-import { resolveAccount } from './accounts.mjs';
+import { resolveAccount, SUSPENDED_OPEN } from './accounts.mjs';
 import { FeError, fail } from './errors.mjs';
 import { once } from './ops.mjs';
 import { actingProfile } from './profiles.mjs';
@@ -158,6 +158,7 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
         }
         // The second step (optional factor, staff): a sign-in without a right code reaches nothing but the code check.
         if (!SIGNIN_OPEN.has(action) && await signinBlocked(db, account)) fail(403, 'second_factor', { rule: 'signin' });
+        if (account.state === 'suspended' && !SUSPENDED_OPEN.has(action)) fail(403, 'account_suspended');
       } catch (error) { await admitted(); throw error; }
       await admitted();
       const profileId = header(req, 'x-fe-profile');

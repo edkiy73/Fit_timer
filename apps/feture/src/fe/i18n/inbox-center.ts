@@ -48,6 +48,7 @@ export const ru = {
   'fe.ibx.report.removed': 'Нарушение подтвердилось, материал удалён',
   'fe.ibx.report.kept': 'Нарушений не нашли',
   'fe.ibx.f2.material': 'Материал',
+  'fe.ibx.f2.limits': 'Что нельзя',
   'fe.ibx.report.unavailable': 'Материал больше недоступен — жалобу закрыли',
   'fe.ibx.appeal.open': 'На рассмотрении',
   'fe.ibx.appeal.granted': 'Принято — решение пересмотрели',
@@ -57,6 +58,8 @@ export const ru = {
   'fe.ibx.target.community': 'Сообщество',
   'fe.ibx.target.event': 'Событие',
   'fe.ibx.target.profile': 'Профиль',
+  'fe.ibx.target.media': 'Файл',
+  'fe.ibx.target.revision': 'Правка публикации',
 } as const;
 
 export const en = {
@@ -107,6 +110,7 @@ export const en = {
   'fe.ibx.report.removed': 'The violation was confirmed, the content was removed',
   'fe.ibx.report.kept': 'No violation was found',
   'fe.ibx.f2.material': 'Content',
+  'fe.ibx.f2.limits': 'Not allowed',
   'fe.ibx.report.unavailable': 'The content is no longer available — the report was closed',
   'fe.ibx.appeal.open': 'Under review',
   'fe.ibx.appeal.granted': 'Accepted — the decision was reviewed',
@@ -116,4 +120,6 @@ export const en = {
   'fe.ibx.target.community': 'A community',
   'fe.ibx.target.event': 'An event',
   'fe.ibx.target.profile': 'Your profile',
+  'fe.ibx.target.media': 'A file',
+  'fe.ibx.target.revision': 'An edit of a post',
 } as const;

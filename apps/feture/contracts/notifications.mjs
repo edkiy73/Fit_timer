@@ -129,13 +129,13 @@ const RAW = /** @type {Record<string, any>} */ ({
   revisionApproved: { kind: 'result', filter: 'posts', icon: 'Check', tone: 'g', card: 'result', text: T('Правка прошла проверку и видна в ленте', 'Your edit passed review and is in the feed'),
     normal: T('Правка прошла проверку', 'Your edit passed review'), dest: 'post', gone: GONE_POST },
   revisionRejected: { kind: 'result', filter: 'posts', icon: 'Shield', tone: 'l', card: 'result', text: T('Правка не прошла проверку', 'Your edit didn’t pass review'),
-    normal: T('Правка не прошла проверку', 'Your edit didn’t pass review'), dest: 'post', gone: GONE_POST },
+    normal: T('Правка не прошла проверку', 'Your edit didn’t pass review'), dest: 'moderation' }, // its card: the reason and «Обжаловать» (audit item 9)
   postReturned: { kind: 'result', filter: 'posts', icon: 'TriangleAlert', tone: 'l', card: 'result', text: T('Публикация вернулась с проверки — посмотри, что поправить', 'Your post came back from review — see what to fix'),
     normal: T('Публикация вернулась с проверки', 'Your post came back from review'), dest: 'postEdit', gone: GONE_POST },
   mediaDecided: { kind: 'result', filter: 'posts', icon: 'Image', tone: 'g', card: 'summary', text: T('Файл проверен', 'Your file was reviewed'),
     normal: T('Файл проверен', 'Your file was reviewed'), dest: 'object', collapse: 'type' },
   'mediaDecided.approved': { text: T('Файл одобрен', 'Your file was approved'), normal: T('Файл одобрен', 'Your file was approved') },
-  'mediaDecided.rejected': { icon: 'Shield', tone: 'l', text: T('Файл не прошёл проверку', 'Your file didn’t pass review'), normal: T('Файл не прошёл проверку', 'Your file didn’t pass review') },
+  'mediaDecided.rejected': { icon: 'Shield', tone: 'l', text: T('Файл не прошёл проверку', 'Your file didn’t pass review'), normal: T('Файл не прошёл проверку', 'Your file didn’t pass review'), dest: 'moderation' },
 
   // ---- moderation decisions about the person: their own decision card (src/fe/inbox.tsx NoteScreen) ----
   contentRemoved: { important: true, kind: 'result', filter: 'posts', icon: 'Shield', tone: 'l', card: 'safety', text: T('Модераторы удалили твою публикацию', 'Moderators removed your post'),
@@ -224,6 +224,8 @@ const RAW = /** @type {Record<string, any>} */ ({
   'pair.deleted': { cat: 'pair', filter: 'pair', icon: 'Users', tone: '', text: T('{couple} · Пара удалена', '{couple} · The couple was deleted'),
     normal: T('Пара удалена', 'The couple was deleted'), email: 'now-if-unread', dest: 'couple', gone: GONE_PAIR },
   // One pause, one row per side (couples.mjs couple.stop): not a «сузил видимость» next to it.
+  'pair.unavailable': { cat: 'pair', filter: 'pair', icon: 'Users', tone: '', text: T('{couple} · Пара сейчас недоступна', '{couple} · The couple is unavailable for now'),
+    normal: T('Пара сейчас недоступна', 'The couple is unavailable for now'), dest: 'me' },
   'pair.stopped': { cat: 'pair', filter: 'pair', icon: 'Users', tone: '', text: T('{couple} · Пара на паузе', '{couple} · The couple is paused'),
     normal: T('Пара на паузе', 'The couple is paused'), email: 'now-if-unread', dest: 'coupleRestore', gone: GONE_PAIR },
   'pair.restored': { cat: 'pair', filter: 'pair', icon: 'Users', tone: 'g', text: T('{couple} · Пара восстановлена', '{couple} · The couple was restored'),

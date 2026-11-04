@@ -72,11 +72,16 @@ export function mediaHandlers(db, deps) {
       await db.tx(async q => {
         const [m] = await q.query(`select owner_profile_id, uploaded_by, state from feture.media_asset where id = $1`, [id(item)]);
         if (!m || m.state !== 'blocked') return;
-        await q.query(`update feture.account set state = 'suspended', suspension_rule = 'csam', updated_at = now() where id = $1 and state = 'active'`, [m.uploaded_by]);
-        await q.query(
-          `update feture.profile set state = 'suspended', restore_until = null, paused_at = null, updated_at = now()
-           where state in ('active', 'paused') and (id = $1 or id = (select person_profile_id from feture.account where id = $2))`,
-          [m.owner_profile_id, m.uploaded_by]);
+        // The same way as a suspension by staff (the couple goes too, private access closes), with no end: one that was
+        // timed becomes until lifted, so it never runs out by itself (audit item 8).
+        const [acc] = await q.query(`select a.person_profile_id pid, p.state from feture.account a join feture.profile p on p.id = a.person_profile_id where a.id = $1`, [m.uploaded_by]);
+        if (acc && ['active', 'paused'].includes(acc.state)) await setSuspended(q, acc.pid, true, 'csam', null);
+        else if (acc?.state === 'suspended') {
+          await q.query(`update feture.profile set suspended_until = null where id = $1`, [acc.pid]);
+          await q.query(`update feture.account set suspension_rule = 'csam', updated_at = now() where id = $1`, [m.uploaded_by]);
+        }
+        // A file of a couple the uploader no longer acts as: that couple is stopped as well.
+        await q.query(`update feture.profile set state = 'suspended', restore_until = null, paused_at = null, updated_at = now() where id = $1 and state in ('active', 'paused')`, [m.owner_profile_id]);
         await enqueue(q, 'moderation.csamCase', m.owner_profile_id, { assetId: id(item), account: m.uploaded_by });
         await alertStaff(q, 'csam', item.payload?.by ? { by: item.payload.by } : {});
       });
@@ -94,6 +99,7 @@ export function mediaHandlers(db, deps) {
            r.target_type = 'media' and r.target_id = $1
            or r.target_type = 'post' and exists (select 1 from feture.media_attachment a where a.target_type = 'post' and a.target_id = r.target_id and a.asset_id = $1)
            or r.target_type = 'conversation' and exists (select 1 from feture.message m where m.media_asset_id = $1 and m.id = any(r.message_ids)))
+         union all select 1 from feture.appeal ap where ap.target_type = 'media' and ap.target_id = $1 and ap.state = 'open' -- an appeal waits (audit item 9)
          limit 1`, [id(item)]).catch(() => []);
       if (held) {
         await db.tx(q => enqueue(q, 'media.purge', item.profile_id ?? null, { assetId: id(item) }, { delaySeconds: 24 * 3600 }));

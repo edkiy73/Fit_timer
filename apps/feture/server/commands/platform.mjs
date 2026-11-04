@@ -2,7 +2,7 @@
 import { platformCommands } from '../../contracts/platform.mjs';
 import { cancelApproval, decideApproval, getApproval, listApprovals } from '../approvals.mjs';
 import { avatarSrc, commitUpload, removeAsset, uploadIntent } from '../media/assets.mjs';
-import { myProfiles } from '../profiles.mjs';
+import { myProfiles, requireUnrestricted, restrictionOf } from '../profiles.mjs';
 
 /** @typedef {import('../handler.mjs').Command} Command */
 
@@ -22,10 +22,16 @@ const run = {
         ? { url: cfg.realtime.url, key: cfg.realtime.key, ...(cfg.realtime.transport ? { transport: cfg.realtime.transport } : {}), channels: topics } : null,
       // Web push: only the public VAPID key (null while the server has no keys: the client offers nothing).
       push: cfg.push?.webKey ? { webKey: cfg.push.webKey } : null,
+      // A restriction in force on the person (it covers their couples too): what it limits and until when, for the
+      // notice on «Лента» and «Я» (audit item 6).
+      restriction: await restrictionOf(q, account.person_profile_id ?? null),
     };
   },
   'profile.mine': async (q, { account, cfg }) => ({ profiles: await cardsWithAvatars(q, cfg, await myProfiles(q, account.id)) }),
-  'media.uploadIntent': (q, { acting, cfg, input }) => uploadIntent(q, need(acting), cfg.media, input),
+  'media.uploadIntent': async (q, { acting, cfg, input }) => {
+    await requireUnrestricted(q, need(acting), 'uploads');
+    return uploadIntent(q, need(acting), cfg.media, input);
+  },
   'media.commit': (q, { acting, cfg, input }) => commitUpload(q, need(acting), cfg.media, input.assetId),
   'media.remove': (q, { acting, input }) => removeAsset(q, need(acting), input.assetId),
   'decide.approvals': async (q, { acting }) => ({ items: await listApprovals(q, need(acting)) }),

@@ -38,9 +38,9 @@ async function endpoint(q, linkId, acting) {
 
 /** Proposes a link (also the apply of an approved couple proposal). @param {Q} q @param {Acting} acting @param {any} c */
 async function doPropose(q, acting, c) {
-  await requireUnrestricted(q, acting);
+  await requireUnrestricted(q, acting, 'links');
   const t = await otherProfile(q, acting, c.profileId);
-  if ((await q.query('select feture.restricted($1) r', [t.id]))[0].r) fail(404, 'not_found');
+  if ((await q.query(`select feture.restricted_in($1, 'links') r`, [t.id]))[0].r) fail(404, 'not_found');
   // Counting and inserting under a lock per profile, so parallel proposals cannot pass the limit of 30.
   for (const p of [acting.profileId, t.id].sort()) await q.query(`select pg_advisory_xact_lock(hashtextextended('fe-links:' || $1, 0))`, [p]);
   if (t.related) fail(422, 'rule_violation', { rule: 'own_partner' });
@@ -71,9 +71,9 @@ async function doPropose(q, acting, c) {
 
 /** Accepts a pending link (also the apply of an approved couple acceptance). @param {Q} q @param {Acting} acting @param {string} linkId @param {string} vis */
 async function doAccept(q, acting, linkId, vis) {
-  await requireUnrestricted(q, acting);
+  await requireUnrestricted(q, acting, 'links');
   const l = await endpoint(q, linkId, acting);
-  if ((await q.query('select feture.restricted($1) r', [l.other]))[0].r) fail(409, 'conflict', { rule: 'unavailable' });
+  if ((await q.query(`select feture.restricted_in($1, 'links') r`, [l.other]))[0].r) fail(409, 'conflict', { rule: 'unavailable' });
   if (l.me !== 'b' || l.state !== 'pending') fail(409, 'conflict', { rule: 'not_pending' });
   await q.query(`update feture.profile_link set state = 'ok', b_vis = $2, confirmed_at = now(), updated_at = now() where id = $1`, [l.id, vis]);
   await readAbout(q, { profile: acting.profileId, kind: 'task', objectType: 'link', objectId: l.id });
@@ -163,11 +163,12 @@ function group(r) {
 const run = {
   async 'people.search'(q, { acting: a, input, cfg }) {
     const viewer = need(a);
+    await requireUnrestricted(q, viewer, 'search');
     const prefix = input.q.toLowerCase().replace(/[\\%_]/g, (/** @type {string} */ m) => '\\' + m);
     const rows = await q.query(
       `select p.id, ${acceptsMention('p', '$1')} mentionable from feture.profile p
        where p.state = 'active' and p.id <> $1 and (lower(p.handle) like $2 || '%' or lower(p.name) like $2 || '%') and not feture.blocked($1, p.id)
-         and not feture.restricted(p.id)
+         and not feture.restricted_in(p.id, 'search')
        order by (lower(p.handle) = $3) desc, (${qaProfile('p.id')} and not ${qaProfile('$1')}), lower(p.handle) limit 20`, [viewer.profileId, prefix, input.q.toLowerCase()]);
     // `mentionable`: whether an @mention by the acting profile reaches the person (their «Кто может упоминать»), so the
     // mention picker can say «без уведомления» before the post goes out.
@@ -203,7 +204,7 @@ const run = {
 
   async 'link.propose'(q, { acting: a, input }) {
     const acting = need(a);
-    await requireUnrestricted(q, acting);
+    await requireUnrestricted(q, acting, 'links');
     const { opId: _, ...c } = input;
     if (needsPartner(acting, 'link.propose')) {
       await otherProfile(q, acting, c.profileId);
@@ -236,7 +237,7 @@ const run = {
   async 'link.proposeChange'(q, { acting: a, input }) {
     // The current link stays until the other side confirms the new kind.
     const acting = need(a);
-    await requireUnrestricted(q, acting);
+    await requireUnrestricted(q, acting, 'links');
     const l = await endpoint(q, input.linkId, acting);
     if (l.state !== 'ok') fail(409, 'conflict', { rule: 'not_confirmed' });
     if (l.change && l.change.by !== acting.profileId) fail(409, 'conflict', { rule: 'change_pending' }); // answer theirs first

@@ -84,7 +84,8 @@ export function feErrorMessage(error:unknown,t:(key:string)=>string):string{
  const e=error instanceof FeError?error:null;
  if(!e)return t('fe.error.generic');
  // A refusal the server explains (`rule`) reads in its own words, whatever the error code (src/fe/i18n/errors.ts).
- if(e.rule){const k='fe.rule.'+e.rule;const m=t(k);if(m!==k)return m.replace('{date}',e.until?dayMonth(e.until):'');}
+ // A text with a {date} has a «.forever» twin for a refusal without an end (a restriction until lifted).
+ if(e.rule){const k='fe.rule.'+e.rule;const f=k+'.forever';const m=!e.until&&t(f)!==f?t(f):t(k);if(m!==k)return m.replace('{date}',e.until?dayMonth(e.until):'');}
  const k='fe.error.'+e.code;const m=t(k);
  return m!==k?m:t('fe.error.generic');
 }

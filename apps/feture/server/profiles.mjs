@@ -38,11 +38,26 @@ export async function actingProfile(q, accountId, profileId, { write, allowPause
   });
 }
 
-/** A restricted profile (S4 §4) may not start anything new with other people: likes, access requests, messages, links.
- * A person's restriction covers the couples they act as. @param {Q} q @param {Acting} acting */
-export async function requireUnrestricted(q, acting) {
-  const [{ r }] = await q.query('select feture.restricted($1) r', [acting.profileId]);
-  if (r) fail(403, 'forbidden', { rule: 'restricted' });
+/** The restriction in force on a person profile — what it limits and until when — or null.
+ * @param {Q} q @param {string | null} personId @returns {Promise<{scope: string[] | null, until: string | null} | null>} */
+export async function restrictionOf(q, personId) {
+  if (!personId) return null;
+  const [r] = await q.query(
+    `select restriction_scope scope, restricted_until until from feture.profile
+     where id = $1 and restricted_at is not null and (restricted_until is null or restricted_until > now())`, [personId]);
+  return r ? { scope: r.scope ?? null, until: r.until ? new Date(r.until).toISOString() : null } : null;
+}
+
+/** A restricted profile (S4 §4, audit item 6) may not do what its restriction names (`point`, one of RESTRICT_SCOPES in
+ * contracts/moderation.mjs). A person's restriction covers the couples they act as. The refusal says until when.
+ * @param {Q} q @param {Acting} acting @param {import('../contracts/_restrict.mjs').RestrictScope} point */
+export async function requireUnrestricted(q, acting, point) {
+  const [{ r }] = await q.query('select feture.restricted_in($1, $2) r', [acting.profileId, point]);
+  if (!r) return;
+  const [{ until }] = await q.query(
+    `select max(x.restricted_until) until from feture.profile x where x.id = $1 or x.id in (select a.person_profile_id from feture.profile_member m
+       join feture.account a on a.id = m.account_id where m.profile_id = $1 and m.state = 'active')`, [acting.profileId]);
+  fail(403, 'forbidden', { rule: 'restricted', ...(until ? { until: new Date(until).toISOString() } : {}) });
 }
 
 /** Profiles the account may act as, for «Действовать как». @param {Q} q @param {string} accountId */

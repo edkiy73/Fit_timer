@@ -1,7 +1,7 @@
 // @ts-check
 import { ACTIVITY_KINDS, DISPUTE_LIMITS, postFields, postsCommands } from '../../contracts/posts.mjs';
 import { likePattern, writeCursor } from '../search.mjs';
-import { acceptsMention, popularScore, qaHidden } from '../sql-rules.mjs';
+import { acceptsMention, activeActor, popularScore, qaHidden } from '../sql-rules.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { alertStaff } from '../staff-alert.mjs';
 import { enqueue } from '../outbox.mjs';
@@ -16,6 +16,7 @@ import { hasPhotoCheck } from './verification.mjs';
 import { articlePlate } from '../../contracts/_plates.mjs';
 import { dropHiddenPostPhotos, settleAvatar } from './photos.mjs';
 import { readAbout } from '../notify.mjs';
+import { requireUnrestricted } from '../profiles.mjs';
 
 /** Slice B: posts and what hangs on them (S1 §8, extract/feed-content.md).
  * Rules: text without media publishes at once (Q1); media waits until every file is checked; explicit media only in
@@ -53,6 +54,7 @@ function asDiscussion(f, communityId) {
  * read-only; a couple when it or both partners are members). @param {Q} q @param {string | null | undefined} communityId @param {Acting} acting */
 async function requireCommunityWriter(q, communityId, acting) {
   if (!communityId) return;
+  await requireUnrestricted(q, acting, 'communities');
   const [c] = await q.query(`select state from feture.community where id = $1`, [communityId]);
   if (!c || c.state !== 'published' || !(await canWrite(q, communityId, acting))) fail(403, 'forbidden', { rule: 'community_members_only' });
 }
@@ -589,9 +591,9 @@ async function postDtos(q, rows, viewer, media, showExplicit) {
     q.query('select post_id, option from feture.poll_vote where post_id = any($1::uuid[]) and profile_id = $2', [ids, viewer.profileId]),
     q.query(
       `select pid id,
-              (select count(*)::int from feture.reaction where target_type = 'post' and target_id = pid) likes,
+              (select count(*)::int from feture.reaction x where x.target_type = 'post' and x.target_id = pid and ${activeActor('x.profile_id')}) likes,
               exists (select 1 from feture.reaction where target_type = 'post' and target_id = pid and profile_id = $2) liked,
-              (select count(*)::int from feture.reply r where r.post_id = pid and r.state = 'published' and not feture.blocked($2, r.author_profile_id)) replies,
+              (select count(*)::int from feture.reply r where r.post_id = pid and r.state = 'published' and not feture.blocked($2, r.author_profile_id) and ${activeActor('r.author_profile_id')}) replies,
               exists (select 1 from feture.saved_item where profile_id = $2 and kind = 'post' and target_id = pid::text) saved
        from unnest($1::uuid[]) pid`, [ids, viewer.profileId]),
     q.query(
@@ -688,6 +690,7 @@ const run = {
 
   async 'post.publish'(q, { acting: a, input }) {
     const acting = need(a);
+    await requireUnrestricted(q, acting, 'posts');
     const [p] = await q.query(`select state, created_by, rev, type, title, body, audience, community_id, removed_reason from feture.post where id = $1 and owner_profile_id = $2`, [input.postId, acting.profileId]);
     if (!p) fail(404, 'not_found');
     // A couple's archived post is brought back by either partner, with the same approval as a new one.
@@ -705,6 +708,7 @@ const run = {
   },
 
   async 'post.edit'(q, { acting: a, input }) {
+    await requireUnrestricted(q, need(a), 'posts');
     return editPost(q, need(a), input.postId, input.rev, input.post);
   },
 
@@ -955,6 +959,7 @@ const run = {
 
   async 'reaction.set'(q, { acting: a, input }) {
     const viewer = need(a);
+    if (input.on) await requireUnrestricted(q, viewer, 'reactions'); // taking one back is always possible
     const postId = input.targetType === 'post' ? input.targetId
       : (await q.query(`select post_id from feture.reply where id = $1 and state = 'published'`, [input.targetId]))[0]?.post_id;
     if (!postId) fail(404, 'not_found');
@@ -977,6 +982,7 @@ const run = {
 
   async 'poll.vote'(q, { acting: a, input }) {
     const viewer = need(a);
+    if (input.option !== null) await requireUnrestricted(q, viewer, 'reactions');
     const p = await visiblePost(q, input.postId, viewer);
     if (p.community_id) await requireCommunityWriter(q, p.community_id, viewer); // only members vote in a community
     const [poll] = await q.query('select options from feture.poll where post_id = $1', [input.postId]);
@@ -998,6 +1004,7 @@ const run = {
 
   async 'reply.create'(q, { acting: a, input }) {
     const viewer = need(a);
+    await requireUnrestricted(q, viewer, 'comments');
     const p = await visiblePost(q, input.postId, viewer);
     if (p.state !== 'published') fail(409, 'conflict', { state: p.state });
     if (p.community_id) await requireCommunityWriter(q, p.community_id, viewer);
@@ -1046,20 +1053,22 @@ const run = {
     await visiblePost(q, input.postId, viewer);
     const rows = await q.query(
       `select r.id, r.parent_id, r.state, r.body, r.created_at, r.edited_at, r.rev, r.author_profile_id = $2 mine,
-         feture.blocked($2, r.author_profile_id) hidden,
+         feture.blocked($2, r.author_profile_id) hidden, not ${activeActor('r.author_profile_id')} inactive,
          ${qaHidden('r.author_profile_id', '$2')} and not exists (select 1 from feture.reply c where c.parent_id = r.id and c.state = 'published'
            and not ${qaHidden('c.author_profile_id', '$2')}) qa_out,
          (select json_build_object('id', p.id, 'kind', p.kind, 'handle', p.handle, 'name', p.name, 'avatarAssetId', p.avatar_asset_id) from feture.profile p where p.id = r.author_profile_id and p.state = 'active') author,
-         (select count(*)::int from feture.reaction x where x.target_type = 'reply' and x.target_id = r.id) likes,
+         (select count(*)::int from feture.reaction x where x.target_type = 'reply' and x.target_id = r.id and ${activeActor('x.profile_id')}) likes,
          exists (select 1 from feture.reaction x where x.target_type = 'reply' and x.target_id = r.id and x.profile_id = $2) liked,
-         exists (select 1 from feture.reply c where c.parent_id = r.id and c.state = 'published') has_replies,
+         exists (select 1 from feture.reply c where c.parent_id = r.id and c.state = 'published' and ${activeActor('c.author_profile_id')}) has_replies,
          (select coalesce(json_agg(json_build_object('id', mp.id, 'handle', mp.handle)), '[]'::json) from feture.mention m join feture.profile mp on mp.id = m.profile_id
           where m.source_type = 'reply' and m.source_id = r.id and not m.removed and mp.state = 'active' and not feture.blocked($2, mp.id)) mentions
        from feture.reply r where r.post_id = $1 and r.state <> 'removed' order by r.created_at`, [input.postId, viewer.profileId]);
     // Deleted without live replies disappear; with replies they stay as a stub; blocked authors show as hidden.
     const items = [];
     // e2e persona replies vanish for everyone else (a stub stays only above someone else's answer).
-    for (const r of rows.filter(x => (x.state === 'published' || x.has_replies) && !x.qa_out)) {
+    // A reply of a suspended person or a paused couple (audit item 5, В6): gone without live answers, a stub «Комментарий
+    // скрыт» above them — never the text or the author; back as it was once lifted.
+    for (const r of rows.filter(x => ((x.state === 'published' && !x.inactive) || x.has_replies) && !x.qa_out)) {
       let author = null;
       if (r.author) {
         const { avatarAssetId, ...rest } = r.author;
@@ -1067,7 +1076,7 @@ const run = {
       }
       items.push({
         id: r.id, parentId: r.parent_id, createdAt: r.created_at, editedAt: r.edited_at, likes: r.likes,
-        ...(r.state === 'deleted' ? { deleted: true } : r.hidden ? { hidden: true } : { body: r.body, author, mine: r.mine, liked: r.liked, rev: r.mine ? r.rev : undefined, mentions: typeof r.mentions === 'string' ? JSON.parse(r.mentions) : r.mentions }),
+        ...(r.state === 'deleted' ? { deleted: true } : r.hidden ? { hidden: true } : r.inactive ? { unavailable: true } : { body: r.body, author, mine: r.mine, liked: r.liked, rev: r.mine ? r.rev : undefined, mentions: typeof r.mentions === 'string' ? JSON.parse(r.mentions) : r.mentions }),
       });
     }
     return { items };

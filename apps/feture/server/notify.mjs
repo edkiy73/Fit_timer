@@ -57,6 +57,7 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   'couple.created': { type: 'pair.created' },
   'couple.deleted': { type: 'pair.deleted' },
   'couple.stopped': { type: 'pair.stopped' },
+  'couple.unavailable': { type: 'pair.unavailable' },
   'couple.restored': { type: 'pair.restored' },
   'couple.restoreRequested': { type: 'pair.restoreRequested' },
   'couple.narrowed': { type: 'pair.narrowed' },
@@ -98,7 +99,7 @@ export const SILENT_TOPICS = Object.freeze(['access.revoked', 'access.declined',
 /** Payload fields kept in `data` (codes and ids only, never free text; `device` / `place` of a new sign-in are Core's
  * device family and the edge network's «city|CC», never anything a person typed). `postId`, `replyId`, `communityId`:
  * what the destination resolver needs (a reply to highlight, the community of a removed discussion). */
-const KEEP = ['device', 'place', 'what', 'change', 'reason', 'state', 'kind', 'resolution', 'rule', 'targetType', 'targetId', 'answer', 'outcome', 'changes', 'approves', 'ticketId', 'days', 'until', 'target', 'purpose', 'count', 'role', 'grant',
+const KEEP = ['scope', 'device', 'place', 'what', 'change', 'reason', 'state', 'kind', 'resolution', 'rule', 'targetType', 'targetId', 'answer', 'outcome', 'changes', 'approves', 'ticketId', 'days', 'until', 'target', 'purpose', 'count', 'role', 'grant',
   'postId', 'replyId', 'communityId', 'eventId', 'draftId'];
 /** Results of a decision about the person's own report, claim or material (moderation, hosts): they reach the person even
  * when the material is gone or hidden since — the right to hear one's own decision is not the right to open the

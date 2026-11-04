@@ -44,8 +44,14 @@ export async function resolveAccount(db, pepper, core) {
   return checkState(row);
 }
 
-/** @param {AccountRow} row */
+/** A suspended account still signs in, for the few things SUSPENDED_OPEN lists (audit item 2); a deleted one never.
+ * @param {AccountRow} row */
 function checkState(row) {
-  if (row.state !== 'active') fail(403, 'account_unavailable');
+  if (row.state !== 'active' && row.state !== 'suspended') fail(403, 'account_unavailable');
   return row;
 }
+
+/** What a suspended account may do (audit item 2): see the decision, appeal it, write to support, take its data, delete
+ * itself, enter its sign-in code. Everything else answers `account_suspended`. */
+export const SUSPENDED_OPEN = new Set(['account.suspension', 'appeal.suspension', 'support.create', 'support.mine', 'support.reply',
+  'account.export', 'account.delete', 'account.factorSignIn', 'platform.maintenance']);

@@ -79,7 +79,7 @@ const jointBase=(d:Decision)=>d.kind==='jointReturned'?'jointReturned':'joint';
 const approvalKind=(d:Decision)=>d.approvalKind??(!(DECIDE_KINDS as readonly string[]).includes(d.kind)?d.kind:undefined);
 const decideEntry=(d:Decision):Entry|null=>isJoint(d)?entryFor('decide.'+jointBase(d),{kind:approvalKind(d)}):entryFor('decide.'+d.kind,{label:d.label});
 const decideKind=(d:Decision):Kind=>decideEntry(d)?.filter??'other';
-const MODERATION=['contentRemoved','reportResolved','profileSuspended','profileRestricted','profileRestored','profileUnrestricted','appealDecided'];
+const MODERATION=['contentRemoved','reportResolved','profileSuspended','profileRestricted','profileRestored','profileUnrestricted','appealDecided','revisionRejected','mediaDecided'];
 
 /** A reason code as a label people read («Спам», «Угрозы и шантаж»): sentence case from the dictionary; a code this
  * app does not know yet says «Нарушение правил», never the raw value. */
@@ -382,11 +382,13 @@ export function InboxNoteScreen(){
   const outcome=n.type==='reportResolved'?(d.resolution==='removed'?t('fe.ibx.report.removed'):d.resolution==='kept'?t('fe.ibx.report.kept'):d.resolution==='unavailable'?t('fe.ibx.report.unavailable'):null):null;
   const appeal=r.appeal&&r.appeal!=='none'&&r.appeal!=='available'?t('fe.ibx.appeal.'+r.appeal):null;
   const material=r.material?(r.material.excerpt?'«'+r.material.excerpt+'»':'')+(r.material.at?' · '+day(r.material.at):''):null;
-  const facts:[string,ReactNode][]=[[t('fe.ibx.f2.what'),what],[t('fe.ibx.f2.material'),material||null],[t('fe.ibx.f2.reason'),rule],[t('fe.ibx.f2.term'),term],[t('fe.ibx.f2.effect'),effect],
+  // What a restriction limits (audit item 6), in the notice's words.
+  const limits=n.type==='profileRestricted'&&Array.isArray(d.scope)?(d.scope as unknown[]).filter((x):x is string=>typeof x==='string').map(x=>t('fe.rst.pt.'+x)).join(', '):null;
+  const facts:[string,ReactNode][]=[[t('fe.ibx.f2.what'),what],[t('fe.ibx.f2.material'),material||null],[t('fe.ibx.f2.limits'),limits||null],[t('fe.ibx.f2.reason'),rule],[t('fe.ibx.f2.term'),term],[t('fe.ibx.f2.effect'),effect],
    [t('fe.ibx.f2.outcome'),outcome],[t('fe.ibx.f2.appeal'),appeal],[t('fe.ibx.f2.when'),when(n.at,locale)]];
   const profile=n.addressee??(state.status==='ready'?state.boot.profiles.find(p=>p.kind==='person')?.id:null)??null;
-  const target=n.type==='profileRestricted'?{type:'profile' as const,id:profile}:typeof d.targetType==='string'&&typeof d.targetId==='string'&&['post','reply','community','event'].includes(d.targetType)
-   ?{type:d.targetType as 'post'|'reply'|'community'|'event',id:d.targetId}:null;
+  const target=n.type==='profileRestricted'?{type:'profile' as const,id:profile}:typeof d.targetType==='string'&&typeof d.targetId==='string'&&['post','reply','community','event','media','revision'].includes(d.targetType)
+   ?{type:d.targetType as 'post'|'reply'|'community'|'event'|'media'|'revision',id:d.targetId}:null;
   const icon=e?ICONS[e.icon]??Shield:Shield;
   return <>
    <SafetyDecision icon={icon} tone={(e?.tone??'l') as NoteTone} title={title} facts={facts}>

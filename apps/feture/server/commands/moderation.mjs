@@ -1,5 +1,5 @@
 // @ts-check
-import { moderationCommands } from '../../contracts/moderation.mjs';
+import { moderationCommands, RESTRICT_PRESETS } from '../../contracts/moderation.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { journal, requireStaff } from './staff.mjs';
@@ -31,6 +31,21 @@ const OWNER_ONLY_LIFT = new Set(['minors', 'illegal', 'csam']);
 const DAY = 24 * 60 * 60 * 1000;
 // Queue order (S4 §2): minors first, then threats, private material, spam, the rest.
 const PRIORITY = `case reason when 'minor' then 0 when 'threat' then 2 when 'private' then 3 when 'spam' then 5 else 6 end`;
+
+/** Applies a proposed edit of a post (staff approval, a granted appeal). The version must still meet the publication
+ * rules: every file checked, nothing explicit in public — otherwise nothing changes and the reason comes back.
+ * @param {Q} q @param {any} r a post_revision row with owner_profile_id and post_state @returns {Promise<true | 'media' | 'explicit'>} */
+async function applyRevision(q, r) {
+  const f = r.payload;
+  const media = f.mediaIds.length ? await q.query(
+    `select state, explicitness from feture.media_asset where id = any($1) and owner_profile_id = $2`, [f.mediaIds, r.owner_profile_id]) : [];
+  if (media.length !== f.mediaIds.length || media.some(m => m.state !== 'approved')) return 'media';
+  if (['all', 'followers'].includes(f.audience) && media.some(m => m.explicitness !== 'safe')) return 'explicit';
+  const oldMedia = (await q.query(`select asset_id from feture.media_attachment where target_type = 'post' and target_id = $1`, [r.post_id])).map(x => x.asset_id);
+  await applyEdit(q, r.post_id, { profileId: r.owner_profile_id, accountId: r.submitted_by }, f, oldMedia);
+  if (r.post_state === 'review') await settlePublication(q, r.post_id);
+  return true;
+}
 
 /** Takes live content down by a staff decision (a report, a legal notice): a post is removed, a reply too, a community
  * or an event is hidden; disputes on the post close, pending event applications close, a community's waiting change
@@ -93,8 +108,14 @@ export async function setSuspended(q, profileId, suspend, rule, until = null) {
       const [x] = await q.query(`select kind, state from feture.profile where id = $1`, [id]);
       if (x.kind === 'couple' && x.state !== 'suspended') {
         const partners = await q.query(`select account_id from feture.profile_member where profile_id = $1 and state = 'active'`, [id]);
-        await narrowCouple(q, Object.freeze({ accountId: partners[0].account_id, profileId: id, kind: 'couple', state: x.state, partnerAccountId: partners[1]?.account_id ?? null, partnerApproves: false, writable: true }), 'suspended');
+        await narrowCouple(q, Object.freeze({ accountId: partners[0].account_id, profileId: id, kind: 'couple', state: x.state, partnerAccountId: partners[1]?.account_id ?? null, partnerApproves: false, writable: true }), 'suspended', { notify: false });
         await closeAll(q, id, 'couple_stopped');
+        // The partner (never the suspended person) learns only that the couple is unavailable; nothing at all for
+        // suspected child abuse (audit item 8, В1).
+        if (p.kind === 'person' && rule !== 'csam') {
+          const [{ acc }] = await q.query(`select id acc from feture.account where person_profile_id = $1`, [p.id]);
+          for (const m of partners) if (m.account_id !== acc) await enqueue(q, 'couple.unavailable', id, { for: m.account_id });
+        }
       }
       await q.query(`update feture.profile set state = 'suspended', restore_until = null, paused_at = null, updated_at = now() where id = $1 and state <> 'suspended'`, [id]);
     } else {
@@ -353,18 +374,13 @@ const run = {
       // Approving a revision made on an older version would overwrite later edits: refused as stale.
       const [{ rev: now }] = await q.query('select rev from feture.post where id = $1', [r.post_id]);
       if (r.base_rev !== null && r.base_rev !== now) fail(409, 'conflict', { rule: 'stale_revision' });
-      const f = r.payload;
-      // The approved version must still meet the publication rules: every file checked, nothing explicit in public.
-      const media = f.mediaIds.length ? await q.query(
-        `select state, explicitness from feture.media_asset where id = any($1) and owner_profile_id = $2`, [f.mediaIds, r.owner_profile_id]) : [];
-      if (media.length !== f.mediaIds.length || media.some(m => m.state !== 'approved')) fail(409, 'conflict', { rule: 'media_not_ready' });
-      if (['all', 'followers'].includes(f.audience) && media.some(m => m.explicitness !== 'safe')) fail(422, 'rule_violation', { rule: 'explicit_in_public' });
-      const oldMedia = (await q.query(`select asset_id from feture.media_attachment where target_type = 'post' and target_id = $1`, [r.post_id])).map(x => x.asset_id);
-      await applyEdit(q, r.post_id, { profileId: r.owner_profile_id, accountId: r.submitted_by }, f, oldMedia);
-      if (r.post_state === 'review') await settlePublication(q, r.post_id);
+      const ready = await applyRevision(q, r);
+      if (ready === 'media') fail(409, 'conflict', { rule: 'media_not_ready' });
+      if (ready === 'explicit') fail(422, 'rule_violation', { rule: 'explicit_in_public' });
     }
     await q.query(`update feture.post_revision set state = $2, decided_at = now() where id = $1`, [r.id, input.decision === 'approve' ? 'approved' : 'rejected']);
-    await enqueue(q, input.decision === 'approve' ? 'revision.approved' : 'revision.rejected', r.owner_profile_id, { postId: r.post_id, rule: input.rule ?? null });
+    await enqueue(q, input.decision === 'approve' ? 'revision.approved' : 'revision.rejected', r.owner_profile_id,
+      { postId: r.post_id, rule: input.rule ?? null, ...(input.decision === 'approve' ? {} : { targetType: 'revision', targetId: r.id }) });
     await journal(q, account.id, 'revision.' + input.decision, 'post', r.post_id, { revisionId: r.id, rule: input.rule ?? null });
     return { state: input.decision === 'approve' ? 'approved' : 'rejected' };
   },
@@ -405,22 +421,19 @@ const run = {
     }
     const until = input.on && input.days ? new Date(Date.now() + input.days * DAY) : null;
     // One that already ran out (the worker has not lifted it yet) counts as none; no end (until lifted) never ran out.
+    // What it limits (audit item 6): the chosen points, «Стандартное» when none were chosen.
+    const scope = input.on ? input.scope ?? [...RESTRICT_PRESETS.standard] : null;
     const rows = await q.query(
-      `update feture.profile set restricted_at = $2, restriction_rule = $3, restricted_until = $5, updated_at = now()
+      `update feture.profile set restricted_at = $2, restriction_rule = $3, restricted_until = $5, restriction_scope = $6, updated_at = now()
        where id = $1 and (restricted_at is null or coalesce(restricted_until <= now(), false)) = $4 returning id`,
-      [input.profileId, input.on ? new Date() : null, input.on ? input.rule : null, input.on, until]);
+      [input.profileId, input.on ? new Date() : null, input.on ? input.rule : null, input.on, until, scope]);
     if (!rows[0]) fail(409, 'conflict', { rule: input.on ? 'already_restricted' : 'not_restricted' });
-    if (input.on) {
-      // The person and the couples they act as.
-      const sides = `select $1::uuid union select m.profile_id from feture.profile_member m join feture.account a on a.id = m.account_id
-                     where a.person_profile_id = $1 and m.state = 'active'`;
-      await q.query(`update feture.access_grant set revoked_at = now() where viewer_profile_id in (${sides}) and revoked_at is null`, [input.profileId]);
-      await q.query(`update feture.access_request set state = 'closed', closed_reason = 'revoked', decided_at = now() where requester_profile_id in (${sides}) and state = 'pending'`, [input.profileId]);
-    }
+    // Access given to them and their own requests are not revoked or closed: they are frozen while it lasts (access.mjs
+    // grantedScopes, feture.restricted_in 'access') and work again once it is lifted (audit item 27, В2).
     const days = until ? { days: input.days, until: until.toISOString() } : {};
-    await enqueue(q, input.on ? 'profile.restricted' : 'profile.unrestricted', input.profileId, { rule: input.rule, ...days });
-    await journal(q, account.id, input.on ? 'restrict.on' : 'restrict.off', 'profile', input.profileId, { rule: input.rule, ...days, note: input.note });
-    return { restricted: input.on, until: until?.toISOString() ?? null };
+    await enqueue(q, input.on ? 'profile.restricted' : 'profile.unrestricted', input.profileId, { rule: input.rule, ...days, ...(scope ? { scope } : {}) });
+    await journal(q, account.id, input.on ? 'restrict.on' : 'restrict.off', 'profile', input.profileId, { rule: input.rule, ...days, ...(scope ? { scope } : {}), note: input.note });
+    return { restricted: input.on, until: until?.toISOString() ?? null, scope };
   },
 
   async 'staff.profileMeasures'(q, { account, input }) {
@@ -481,6 +494,36 @@ const run = {
     }
   },
 
+  async 'account.suspension'(q, { account }) {
+    // What a suspended person sees instead of the app: the rule, until when, the appeal. Suspected child abuse (В1):
+    // only «нарушение закона», no appeal here — support only.
+    const [a] = await q.query(
+      `select a.state, a.suspension_rule rule, a.person_profile_id pid, p.suspended_until until from feture.account a
+       left join feture.profile p on p.id = a.person_profile_id where a.id = $1`, [account.id]);
+    if (!a || a.state !== 'suspended') return { suspended: false };
+    const csam = a.rule === 'csam';
+    return {
+      suspended: true, rule: csam ? 'law' : a.rule ?? null, until: a.until ? new Date(a.until).toISOString() : null,
+      appeal: csam || !a.pid ? 'none' : await appealState(q, a.pid, 'account', a.pid),
+    };
+  },
+
+  async 'appeal.suspension'(q, { account, input }) {
+    const [a] = await q.query(`select state, suspension_rule rule, person_profile_id pid from feture.account where id = $1`, [account.id]);
+    if (!a || a.state !== 'suspended' || !a.pid || a.rule === 'csam') fail(409, 'conflict', { rule: 'nothing_to_appeal' });
+    const t = await appealTarget(q, a.pid, 'account', a.pid);
+    if (!t?.hit || !t.decision) fail(409, 'conflict', { rule: 'nothing_to_appeal' });
+    try {
+      const [r] = await q.query(`insert into feture.appeal (account_id, profile_id, target_type, target_id, body, staff_action_id) values ($1, $2, 'account', $2, $3, $4) returning id`,
+        [account.id, a.pid, input.body, t.decision.id]);
+      await enqueue(q, 'moderation.appeal', a.pid, { appealId: r.id });
+      return { id: r.id, state: 'open' };
+    } catch (error) {
+      if (isUniqueViolation(error)) fail(409, 'conflict', { rule: 'appeal_open' });
+      throw error;
+    }
+  },
+
   async 'staff.appealQueue'(q, { account, input }) {
     await requireStaff(q, account, ['owner', 'lead']);
     const { sql, params } = queuePageSql(input, CREATED_KEYS,
@@ -525,7 +568,8 @@ const run = {
 /** Staff decisions that may be appealed, per target. */
 const APPEALABLE = {
   post: ['report.remove', 'dispute.remove', 'notice.removed'], reply: ['report.remove', 'notice.removed'], community: ['report.remove', 'community.reject', 'notice.removed'],
-  event: ['report.remove', 'event.hide', 'event.reject', 'notice.removed'], profile: ['restrict.on'],
+  event: ['report.remove', 'event.hide', 'event.reject', 'notice.removed'], profile: ['restrict.on'], account: ['sanction.suspend'],
+  media: ['media.reject'], revision: ['revision.reject'],
 };
 /** Who owns a target and whether a decision still holds on it. */
 const APPEAL_OWN = {
@@ -534,6 +578,11 @@ const APPEAL_OWN = {
   community: `select owner_profile_id o, state in ('hidden', 'rejected') hit from feture.community where id = $1`,
   event: `select organizer_profile_id o, state in ('hidden', 'rejected') hit from feture.event where id = $1`,
   profile: `select id o, restricted_at is not null hit from feture.profile where id = $1`,
+  // A suspension (audit items 2, 9): the person profile, its decision journalled on the profile.
+  account: `select id o, state = 'suspended' hit from feture.profile where id = $1`,
+  // A rejected photo, clip or voice file; a rejected edit of a post (audit item 9).
+  media: `select owner_profile_id o, state = 'rejected' hit from feture.media_asset where id = $1`,
+  revision: `select p.owner_profile_id o, r.state = 'rejected' hit from feture.post_revision r join feture.post p on p.id = r.post_id where r.id = $1`,
 };
 
 /** A target of the profile that may be appealed: whether the decision still holds, the staff decision under appeal.
@@ -544,9 +593,13 @@ async function appealTarget(q, profileId, type, id) {
   if (!own) return null;
   const [t] = await q.query(own, [id]);
   if (!t || t.o !== profileId) return null;
-  const [d] = await q.query(
-    `select id from feture.staff_action where target_type = $1 and target_id = $2 and action = any($3) order by created_at desc limit 1`,
-    [type, id, APPEALABLE[/** @type {keyof typeof APPEALABLE} */ (type)]]);
+  // A revision's decision is journalled on its post (detail.revisionId); a suspension's on the person profile.
+  const [d] = type === 'revision'
+    ? await q.query(`select s.id from feture.staff_action s join feture.post_revision r on r.post_id = s.target_id
+        where r.id = $1 and s.target_type = 'post' and s.action = 'revision.reject' and s.detail->>'revisionId' = $1::text order by s.created_at desc limit 1`, [id])
+    : await q.query(
+      `select id from feture.staff_action where target_type = $1 and target_id = $2 and action = any($3) order by created_at desc limit 1`,
+      [type === 'account' ? 'profile' : type, id, APPEALABLE[/** @type {keyof typeof APPEALABLE} */ (type)]]);
   return { hit: t.hit, decision: d ?? null };
 }
 
@@ -612,6 +665,29 @@ async function restoreTarget(q, type, id, from) {
     }
     const back = from === 'cancelled' ? 'cancelled' : 'published';
     return (await q.query(`update feture.event set state = $2, reject_reason = null, rev = rev + 1, updated_at = now() where id = $1 and state = 'hidden' returning id`, [id, back])).length > 0;
+  }
+  if (type === 'media') {
+    // A file back in review: once it passes, it shows again where it was used (audit item 9).
+    const rows = await q.query(`update feture.media_asset set state = 'needs_review', reject_reason = null where id = $1 and state = 'rejected' returning owner_profile_id`, [id]);
+    if (rows[0]) await enqueue(q, 'moderation.mediaReview', rows[0].owner_profile_id, { assetId: id });
+    return rows.length > 0;
+  }
+  if (type === 'revision') {
+    // The edit applies only to the version it was made on: if the post changed since, it cannot come back.
+    const [r] = await q.query(
+      `select r.*, p.owner_profile_id, p.state post_state, p.rev now from feture.post_revision r join feture.post p on p.id = r.post_id where r.id = $1 for update of r, p`, [id]);
+    if (!r || r.state !== 'rejected' || !['published', 'review'].includes(r.post_state) || (r.base_rev !== null && r.base_rev !== r.now)) return false;
+    if ((await applyRevision(q, r)) !== true) return false;
+    await q.query(`update feture.post_revision set state = 'approved', decided_at = now() where id = $1`, [r.id]);
+    return true;
+  }
+  if (type === 'account') {
+    // A suspension that loses its appeal is lifted like by staff; the person is told «Профиль снова доступен».
+    const [p] = await q.query(`select state from feture.profile where id = $1`, [id]);
+    if (p?.state !== 'suspended') return false;
+    await setSuspended(q, id, false, 'appeal_granted');
+    await enqueue(q, 'profile.restored', id, { rule: 'appeal_granted' });
+    return true;
   }
   return (await q.query(`update feture.profile set restricted_at = null, restriction_rule = null, restricted_until = null, updated_at = now() where id = $1 and restricted_at is not null returning id`, [id])).length > 0;
 }

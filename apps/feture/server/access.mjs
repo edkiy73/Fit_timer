@@ -23,7 +23,9 @@ export async function grantedScopes(q, ownerProfileId, viewer) {
      join feture.profile v on v.id = g.viewer_profile_id
      where g.owner_profile_id = $1 and g.viewer_profile_id = $2 and g.revoked_at is null
        and (g.until is null or g.until > now()) and $3 = any(g.viewer_account_ids) and s.private_on
-       and p.state = 'active' and v.state = 'active'`,
+       and p.state = 'active' and v.state = 'active'
+       -- frozen while the viewer is restricted in access (audit item 27): back by itself once it is lifted
+       and not feture.restricted_in(g.viewer_profile_id, 'access')`,
     [ownerProfileId, viewer.profileId, viewer.accountId]);
   return row?.scopes ?? [];
 }

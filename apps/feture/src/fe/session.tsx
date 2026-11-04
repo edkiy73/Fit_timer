@@ -17,6 +17,8 @@ const profileCard=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:
  * has none. (The server also sends `key` and `transport` for older app builds; they are not needed here.) */
 const realtimeCfg=z.object({url:z.url(),channels:z.record(z.uuid(),z.string().regex(/^fe:[A-Za-z0-9_-]{22,}$/))});
 export const bootstrapSchema=z.object({ok:z.literal(true),account:z.object({id:z.uuid(),locale:z.string(),onboarded:z.boolean()}),profiles:z.array(profileCard),realtime:realtimeCfg.nullable().optional(),
+ /** A restriction in force on the person (audit item 6): what it limits and until when. */
+ restriction:z.object({scope:z.array(z.string()).nullable(),until:z.string().nullable()}).nullable().optional(),
  /** Web push: the server's public VAPID key; null while the server sends none. */
  push:z.object({webKey:z.string().regex(/^[A-Za-z0-9_-]{80,100}$/)}).nullable().optional()});
 export type ProfileCard=z.infer<typeof profileCard>;

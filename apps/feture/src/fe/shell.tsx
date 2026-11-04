@@ -30,6 +30,7 @@ import './kit/base.css';
 import './kit/tokens.css';
 import './kit/kit.css';
 import './kit/loading.css';
+import {SuspendedScreen} from './suspended';
 import './shell.css';
 
 /** The desktop context column (context.tsx): its code and its reads only when the window is wide enough. */
@@ -151,7 +152,9 @@ function FeGate(){
  // A code from the app before anything else (the account turned the second factor on).
  if(state.status==='factor')return <SigninFactor/>;
  if(state.status==='error'){
-  // A closed account (blocked, deleted, on hold) is not a glitch: no endless retry, and a way out to another account.
+  // A suspended account: its decision, the appeal and support (audit item 2).
+  if(state.error instanceof FeError&&state.error.code==='account_suspended')return <Center><SuspendedScreen/></Center>;
+  // A closed account (deleted, on hold) is not a glitch: no endless retry, and a way out to another account.
   const closed=state.error instanceof FeError&&state.error.code==='account_unavailable';
   return <Center><Empty icon={closed?Ban:X} role="alert" title={closed?t('fe.error.closedTitle'):t('fe.error.title')} text={closed?t('fe.error.closedText'):feErrorMessage(state.error,t)}>
    {!closed&&<Btn kind="soft" onClick={reload}>{t('fe.retry')}</Btn>}

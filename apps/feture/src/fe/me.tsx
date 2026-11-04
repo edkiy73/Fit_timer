@@ -52,6 +52,7 @@ export const MAX_PHOTOS=6;
 const STAT_HINT_KEY='feture.fe.statHintOff';
 
 // AudTag and Ask live in me-parts.tsx: screens that only need them do not pull the whole «Я» tab into the first load.
+import {RestrictionNotice} from './restriction';
 import {Ask,AudTag} from './me-parts';
 export {Ask,AudTag};
 
@@ -125,6 +126,7 @@ export function MeTab(){
   </Bar>
   <div ref={scroller} className="view me18 me-x01"><PullRefresh target={scroller} onRefresh={()=>{load();pullCounts();}}>
    <div className="wrap">
+    <RestrictionNotice/>
     {todo>0&&<Card list><Row className="me-todo" icon={Inbox} tone="l" title={t('fe.mx.todo')} badge={todo} onClick={()=>navigate('/n/inbox')}/></Card>}
     <div className="me18-seg me4"><LayerSeg value={layer} onChange={setLayer} dots={layerDots}/></div>
    </div>
