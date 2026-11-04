@@ -326,8 +326,8 @@ export function ActAsSheet({onClose}:{onClose:()=>void}){
   for(const d of r.items){const k=d.addressee??'me';n[k]=(n[k]??0)+1;}setWaits(n);}).catch(()=>{});},[call]);
  if(state.status!=='ready'||!acting)return null;
  const profiles=state.boot.profiles.filter(p=>p.state!=='deleted');
- const person=profiles.find(p=>p.kind==='person');const couple=profiles.find(p=>p.kind==='couple');
- const cards=[person,couple].filter((x):x is NonNullable<typeof x>=>!!x);
+ const person=profiles.find(p=>p.kind==='person');const couple=profiles.find(p=>p.kind==='couple'&&!p.ended);const archive=profiles.find(p=>p.kind==='couple'&&p.ended);
+ const cards=[person,couple,archive].filter((x):x is NonNullable<typeof x>=>!!x);
  const open=(id:string)=>{setActing(id);onClose();navigate('/n/me');};
  const pick=(id:string)=>{
   if(id===acting.id){open(id);return;}
@@ -339,7 +339,7 @@ export function ActAsSheet({onClose}:{onClose:()=>void}){
   <ActorCards label={t('fe.c6.actAs')}>
    {cards.map(x=>{const n=(waits[x.id]??0)+(x.kind==='person'?(waits.me??0):0);const on=x.id===acting.id;
     return <ActorCard key={x.id} selected={on} av={<Av name={x.name||x.handle||'?'} seed={x.id} src={x.avatar}/>} name={x.name||x.handle||'?'}
-     dot={n>0} sub={n>0?t('fe.c6.waits',{n}):x.kind==='couple'?t('fe.me.coupleProfile'):t('fe.me.personalProfile')}
+     dot={n>0} sub={n>0?t('fe.c6.waits',{n}):x.ended?t('fe.me.coupleArchive'):x.kind==='couple'?t('fe.me.coupleProfile'):t('fe.me.personalProfile')}
      onPick={()=>pick(x.id)} onOpen={()=>open(x.id)} openLabel={on?t('fe.c6.openProfile'):x.kind==='couple'?t('fe.c6.openCouple'):t('fe.c6.openMine')}/>;})}
   </ActorCards>
  </Sheet>;

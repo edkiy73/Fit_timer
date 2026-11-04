@@ -33,7 +33,8 @@ export interface UpdatePlugin {
   getDistribution(): Promise<{channel: 'direct' | 'store'; versionCode: number; versionName: string}>;
   openExternal(options: {url: string}): Promise<void>;
   downloadUpdate(options: {url: string; expectedVersionCode: number}): Promise<{status: string; error?: string}>;
-  getUpdateState(): Promise<{status: string; progress?: number; running?: boolean; error?: string}>;
+  /** `expectedVersionCode`: a leftover APK of another version is dropped instead of reported «ready». */
+  getUpdateState(options?: {expectedVersionCode?: number}): Promise<{status: string; progress?: number; running?: boolean; error?: string}>;
   installUpdate(options: {expectedVersionCode: number}): Promise<{status: string; error?: string}>;
   cancelUpdate(): Promise<void>;
 }

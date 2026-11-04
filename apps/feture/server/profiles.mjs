@@ -67,10 +67,10 @@ export async function requireUnrestricted(q, acting, point) {
 /** Profiles the account may act as, for «Действовать как». @param {Q} q @param {string} accountId */
 export async function myProfiles(q, accountId) {
   return q.query(
-    `select p.id, p.kind, p.handle, p.name, p.state, p.avatar_asset_id
+    `select p.id, p.kind, p.handle, p.name, p.state, p.avatar_asset_id, p.ended_at is not null ended
      from feture.profile_member m join feture.profile p on p.id = m.profile_id
      where m.account_id = $1 and m.state = 'active' and p.state in ('active', 'paused')
-     order by (p.kind = 'person') desc, p.created_at`,
+     order by (p.kind = 'person') desc, p.ended_at is not null, p.created_at`,
     [accountId]);
 }
 

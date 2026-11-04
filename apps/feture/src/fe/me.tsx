@@ -118,7 +118,7 @@ export function MeTab(){
  return <>
   {/* Owner 29.10.2026: the same floating header as every tab — the avatar left of the name, glass round buttons. */}
   <Bar title={name} lead={<Av name={name} seed={acting.id} src={avatarSrc}/>}
-   sub={couple?(acting.kind==='couple'?t('fe.me.weCouple'):t('fe.me.iPersonal')):t('fe.me.personalProfile')}
+   sub={couple?(acting.kind==='couple'?(acting.ended?t('fe.me.coupleArchive'):t('fe.me.weCouple')):t('fe.me.iPersonal')):t('fe.me.personalProfile')}
    {...(couple?{onTitle:()=>setSwitching(true),titleLabel:t('fe.mx.whose')}:{})}>
    <StaffEntry/>
    <BellButton/>

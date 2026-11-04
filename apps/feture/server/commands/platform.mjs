@@ -53,7 +53,7 @@ async function cardsWithAvatars(q, cfg, rows) {
 
 /** @param {any} p */
 function profileCard(p) {
-  return { id: p.id, kind: p.kind, handle: p.handle, name: p.name, state: p.state, avatarAssetId: p.avatar_asset_id };
+  return { id: p.id, kind: p.kind, handle: p.handle, name: p.name, state: p.state, avatarAssetId: p.avatar_asset_id, ...(p.ended ? { ended: true } : {}) };
 }
 
 /** @template T @param {T | null} acting @returns {T} */

@@ -92,7 +92,7 @@ export function BlockedScreen(){
  const {call,peek,acting,state}=useFe();const {t,locale}=useI18n();const toast=useToast();
  const [items,setItems]=useShown<Blocked[]|null>('set.blocks',()=>peek('blocks.list',{},blockedRes)?.items??null);const [error,setError]=useState<unknown>(null);
  // The account's other profile (person ↔ couple): its blocks say who is «blocked for both of you».
- const other=state.status==='ready'?state.boot.profiles.find(p=>p.state!=='deleted'&&p.id!==acting?.id&&(p.kind==='couple')!==(acting?.kind==='couple')):undefined;
+ const other=state.status==='ready'?state.boot.profiles.find(p=>p.state!=='deleted'&&!p.ended&&p.id!==acting?.id&&(p.kind==='couple')!==(acting?.kind==='couple')):undefined;
  const [otherIds,setOtherIds]=useState<Set<string>>(new Set());
  const [ask,setAsk]=useState<Blocked|null>(null);const [busy,setBusy]=useState('');const [failure,setFailure]=useState('');
  const couple=acting?.kind==='couple';
