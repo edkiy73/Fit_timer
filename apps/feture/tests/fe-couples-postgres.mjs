@@ -6,10 +6,12 @@ import { platform } from '../server/commands/platform.mjs';
 import { me } from '../server/commands/me.mjs';
 import { access } from '../server/commands/access.mjs';
 import { couples } from '../server/commands/couples.mjs';
+import { social } from '../server/commands/social.mjs';
+import { readFileSync } from 'node:fs';
 import { runJobs } from '../server/jobs.mjs';
 import { setup as baseSetup, op } from './fe-helpers.mjs';
 
-const setup = () => baseSetup({ commands: { ...platform, ...me, ...access, ...couples } });
+const setup = () => baseSetup({ commands: { ...platform, ...me, ...access, ...couples, ...social } });
 
 test('invitations: exact nickname, one outgoing, visible decline, withdraw, both must be free', async () => {
   const { pg, db, call, person } = await setup();
@@ -37,7 +39,10 @@ test('invitations: exact nickname, one outgoing, visible decline, withdraw, both
     const ok = await call('ua', null, { action: 'couple.inviteAnswer', opId: op(), inviteId: toAlex.id, accept: true });
     assert.equal(ok.state, 'accepted');
     assert.equal((await call('ua', null, { action: 'couple.inviteAnswer', opId: op(), inviteId: fromNoa.id, accept: true })).status, 409);
-    assert.equal((await call('uc', null, { action: 'couple.invite', opId: op(), handle: 'Kira' })).rule, 'partner_in_couple');
+    // Already in a couple reads like not found (owner 04.11.2026: an invitation never tells who is in a couple).
+    assert.deepEqual(Object.entries(await call('uc', null, { action: 'couple.invite', opId: op(), handle: 'Kira' })).filter(([k]) => k !== 'requestId').sort(),
+      Object.entries(await call('uc', null, { action: 'couple.invite', opId: op(), handle: 'nobody_here' })).filter(([k]) => k !== 'requestId').sort());
+    assert.equal((await call('uc', null, { action: 'couple.invite', opId: op(), handle: 'Kira' })).status, 404);
     assert.equal((await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'Noa' })).rule, 'already_in_couple');
     const [{ n }] = await db.query(`select count(*)::int n from feture.profile where kind = 'couple'`);
     assert.equal(n, 1);
@@ -198,6 +203,14 @@ test('couple nick (owner 29.10.2026): suggested from the partners’ nicks, uniq
     const pair = (await call('ub', null, { action: 'couple.inviteAnswer', opId: op(), inviteId: inv.id, accept: true })).profileId;
     let c = (await call('ub', pair, { action: 'couple.get' })).couple;
     assert.deepEqual([c.handle, c.name, c.chosenName], ['anya_max2', 'Anya и Max', '']);
+    // The one invited signed up first: the nick follows the name's order (who signed up first), not who invited.
+    const lea = await person('ul', 'Lea');
+    await person('uz', 'Zoe');
+    await db.query(`update feture.profile set created_at = now() - interval '1 day' where id = $1`, [lea]);
+    const inv2 = await call('uz', null, { action: 'couple.invite', opId: op(), handle: 'Lea' });
+    const pair2 = (await call('ul', null, { action: 'couple.inviteAnswer', opId: op(), inviteId: inv2.id, accept: true })).profileId;
+    const c2 = (await call('ul', pair2, { action: 'couple.get' })).couple;
+    assert.deepEqual([c2.handle, c2.name], ['lea_zoe', 'Lea и Zoe']);
     // A partner's name change shows in the couple's default name.
     const pa = (await call('ua', a, { action: 'profile.get', profileId: a })).profile;
     await call('ua', a, { action: 'profile.update', opId: op(), rev: pa.rev, name: 'Аня' });
@@ -243,5 +256,32 @@ test('stage 4: an invitation nobody answered expires and its inviter is told onc
     const inviters = (await db.query(`select id from feture.profile where handle in ('Alex', 'Noa')`)).map(r => r.id).sort();
     assert.deepEqual(rows.map(r => r.person_profile_id).sort(), inviters, 'only the inviters');
     assert.equal((await call('ua', null, { action: 'couple.invites' })).outgoing[0].state, 'expired');
+  } finally { await pg.close(); }
+});
+
+test('a partner is never blocked (audit item 42): from the personal profile or the couple, also while paused; follow stays; old blocks are removed', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    const a = await person('ua', 'Anya'), b = await person('ub', 'Max'), c = await person('uc', 'Noa');
+    const inv = await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'Max' });
+    const pair = (await call('ub', null, { action: 'couple.inviteAnswer', opId: op(), inviteId: inv.id, accept: true })).profileId;
+    const block = (user, prof, target) => call(user, prof, { action: 'block.set', opId: op(), profileId: target, on: true });
+    assert.equal((await block('ua', a, b)).rule, 'partner_block');
+    assert.equal((await block('ua', pair, b)).rule, 'partner_block');
+    assert.equal((await block('ub', b, a)).rule, 'partner_block');
+    assert.equal((await call('ua', a, { action: 'follow.set', opId: op(), profileId: b, on: true })).following, true);
+    assert.equal((await call('ua', a, { action: 'profile.get', profileId: b })).profile.partner, true);
+    assert.equal((await call('uc', c, { action: 'profile.get', profileId: b })).profile.partner, false);
+    // Someone else is blocked as before.
+    assert.equal((await block('ua', a, c)).blocked, true);
+    // A paused couple: still partners.
+    await db.query(`update feture.profile set state = 'paused', paused_at = now(), restore_until = now() + interval '30 days' where id = $1`, [pair]);
+    assert.equal((await block('ua', a, b)).rule, 'partner_block');
+    // Blocks made before the rule are removed by the migration; others stay.
+    const [{ id: acc }] = await db.query('select id from feture.account where person_profile_id = $1', [a]);
+    await db.query(`insert into feture.block (blocker_profile_id, blocked_profile_id, acted_by) values ($1, $2, $4), ($3, $2, $4)`, [a, b, pair, acc]);
+    await pg.exec(readFileSync(new URL('../supabase/migrations/20261104100000_fe_audit_stage1.sql', import.meta.url), 'utf8'));
+    const left = await db.query('select blocker_profile_id, blocked_profile_id from feture.block');
+    assert.deepEqual(left.map(r => [r.blocker_profile_id, r.blocked_profile_id]), [[a, c]]);
   } finally { await pg.close(); }
 });

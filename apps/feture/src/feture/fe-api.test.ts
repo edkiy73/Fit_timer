@@ -32,6 +32,10 @@ it('maps server failures to FeError with rule and fields, and words them',async(
  const t=(k:string)=>({'fe.rule.age_check_required':'Сначала подтверди возраст.','fe.error.generic':'Не получилось.'} as Record<string,string>)[k]??k;
  expect(feErrorMessage(error,t)).toBe('Сначала подтверди возраст.');
  expect(feErrorMessage(new FeError('weird_code'),t)).toBe('Не получилось.');
+ // A refusal with a rule reads in its own words whatever the code (a conflict, a 403); an unknown rule falls back to the code.
+ const t2=(k:string)=>({'fe.rule.ended':'Чат завершён.','fe.error.conflict':'Данные изменились.','fe.error.generic':'Не получилось.'} as Record<string,string>)[k]??k;
+ expect(feErrorMessage(new FeError('conflict',409,'ended'),t2)).toBe('Чат завершён.');
+ expect(feErrorMessage(new FeError('conflict',409,'something_new'),t2)).toBe('Данные изменились.');
 });
 
 it('never sends with a session that is no longer current',async()=>{

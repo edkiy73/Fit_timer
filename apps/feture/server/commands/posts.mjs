@@ -1188,7 +1188,11 @@ const run = {
       if (msgs.length !== input.messageIds.length) fail(400, 'invalid_input', { fields: ['messageIds'] });
       ownerProfile = c.other; snapshot = { messages: msgs.map(m => ({ seq: Number(m.seq), body: m.body, media: m.media, at: m.created_at })) };
     }
-    if (ownerProfile === viewer.profileId) fail(422, 'rule_violation', { rule: 'own_content' });
+    // «Своё» is any profile this person acts as: their own and their couple's, whichever one reports.
+    const [{ own }] = await q.query(
+      `select $1::uuid = $3::uuid or exists (select 1 from feture.profile_member where profile_id = $1 and account_id = $2 and state = 'active') own`,
+      [ownerProfile, viewer.accountId, viewer.profileId]);
+    if (own) fail(422, 'rule_violation', { rule: 'own_content' });
     // One open report per target and reporter. Repeating it never fails the transaction; for a chat, newly selected
     // messages are added to the evidence.
     const [r] = await q.query(

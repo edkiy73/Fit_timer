@@ -7,6 +7,7 @@ import { mediaDto } from '../media/assets.mjs';
 import { photosFor } from './photos.mjs';
 import { photoVerifiedOf } from './verification.mjs';
 import { PREMIUM_SQL, ageOn } from './faces.mjs';
+import { partnerOf } from '../sql-rules.mjs';
 import { grantedScopes } from '../access.mjs';
 import { enqueue } from '../outbox.mjs';
 import { narrowCouple, needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
@@ -148,7 +149,8 @@ async function profileView(q, viewer, profileId, media) {
        d.height, d.smoking, d.alcohol, d.kids, d.langs, d.zodiac,
        pl.id city_id, pl.name_ru city_ru, pl.name_en city_en, pl.state city_state,
        a.birth_date, ${PREMIUM_SQL} premium,
-       exists (select 1 from feture.profile_member m where m.profile_id = p.id and m.account_id = $2 and m.state = 'active') own
+       exists (select 1 from feture.profile_member m where m.profile_id = p.id and m.account_id = $2 and m.state = 'active') own,
+       ${partnerOf('p.id', '$2::uuid')} partner
      from feture.profile p
      left join feture.profile_details d on d.profile_id = p.id
      left join feture.place pl on pl.id = d.city_id
@@ -177,7 +179,7 @@ async function profileView(q, viewer, profileId, media) {
     if (asset) avatar = await mediaDto(media, asset, { viewerProfileId: viewer.profileId, place: 'public', showExplicit: false, staff: false }).catch(() => null);
   }
   return {
-    id: p.id, kind: p.kind, handle: p.handle, name: p.name || p.handle, own,
+    id: p.id, kind: p.kind, handle: p.handle, name: p.name || p.handle, own, partner: p.partner,
     bio: p.bio ?? '',
     age: p.kind === 'person' && p.birth_date && (own || p.show_age) ? ageOn(String(p.birth_date instanceof Date ? p.birth_date.toISOString().slice(0, 10) : p.birth_date)) : null,
     city,

@@ -439,6 +439,8 @@ const run = {
     const acting = need(a);
     const e = await ownEvent(q, input.eventId, acting);
     if (e.state !== 'published') fail(409, 'conflict', { state: e.state });
+    // A past event is not cancelled: nobody is to be told «отменено» about something that already happened.
+    if (new Date(e.ends_at).getTime() <= Date.now()) fail(409, 'conflict', { rule: 'event_over' });
     await q.query(`update feture.event set state = 'cancelled', cancel_reason = nullif($2, ''), cancelled_at = now(), rev = rev + 1, updated_at = now() where id = $1`, [e.id, input.reason]);
     await q.query(`update feture.event_application set state = 'closed', decided_at = now(), rev = rev + 1 where event_id = $1 and state = 'pending'`, [e.id]);
     await closePending(q, `a.kind in ('event.rsvp', 'event.apply', 'event.update') and a.target_id = $1`, [e.id], 'stale', { by: acting.accountId, hooks: false });

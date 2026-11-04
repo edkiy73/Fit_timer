@@ -6,7 +6,7 @@ import { enqueue } from '../outbox.mjs';
 import { lockPair } from './discover.mjs';
 import { endConversations } from './chats.mjs';
 import { withFaces } from './faces.mjs';
-import { acceptsMention } from '../sql-rules.mjs';
+import { acceptsMention, partnerOf } from '../sql-rules.mjs';
 
 /** Slice B social graph: blocks, follows, article subscriptions, feed hides, saved items (S1 §7).
  * A block belongs to the profile that made it and ends that profile's ties with the other side; visibility is
@@ -74,6 +74,9 @@ async function cutPair(q, blocker, blocked) {
  * @param {Q} q @param {Acting} acting @param {string} target @param {'partner' | 'me'} [alsoFor] */
 export async function blockProfile(q, acting, target, alsoFor) {
   await socialTarget(q, acting, target);
+  // A partner is never blocked, from the personal profile or from the couple.
+  const [{ partner }] = await q.query(`select ${partnerOf('$1::uuid', '$2::uuid')} partner`, [target, acting.accountId]);
+  if (partner) fail(422, 'rule_violation', { rule: 'partner_block' });
   const targets = [acting.profileId];
   if (alsoFor) {
     // «И для пары / И для меня»: the account's other profile, explicitly.

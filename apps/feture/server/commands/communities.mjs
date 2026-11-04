@@ -144,9 +144,20 @@ async function keptOut(q, c, profileId) {
   return { out, banned };
 }
 
+/** A community name is taken by another community: its name now, or a rename of it waiting for staff.
+ * @param {Q} q @param {string} name @param {string | null} [except] the community being edited */
+async function nameTaken(q, name, except = null) {
+  const [{ taken }] = await q.query(
+    `select exists (select 1 from feture.community where state <> 'deleted' and id is distinct from $2
+       and (lower(name) = lower($1) or lower(pending_change->>'name') = lower($1))) taken`, [name, except]);
+  return taken;
+}
+const NAME_TAKEN = /** @type {const} */ ({ rule: 'name_taken', fields: ['name'] });
+
 /** @param {Q} q @param {string} ownerProfileId @param {string} accountId @param {any} f */
 async function createCommunity(q, ownerProfileId, accountId, f) {
   await checkCommunityRefs(q, ownerProfileId, accountId, f);
+  if (await nameTaken(q, f.name)) fail(409, 'conflict', NAME_TAKEN);
   let c;
   try {
     [c] = await q.query(
@@ -154,7 +165,7 @@ async function createCommunity(q, ownerProfileId, accountId, f) {
        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning id`,
       [ownerProfileId, accountId, f.name, f.description, f.topics, f.privacy, f.privacy === 'open' ? null : (f.joinQuestion ?? null), f.rules, f.placeId ?? null, f.coverAssetId ?? null, f.plate]);
   } catch (error) {
-    if (isUniqueViolation(error)) fail(409, 'conflict', { field: 'name' });
+    if (isUniqueViolation(error)) fail(409, 'conflict', NAME_TAKEN);
     throw error;
   }
   await q.query(`insert into feture.community_member (community_id, profile_id, role, listed) values ($1, $2, 'owner', true)`, [c.id, ownerProfileId]);
@@ -269,6 +280,7 @@ const run = {
   async 'community.create'(q, { acting: a, input }) {
     const acting = need(a);
     const { opId: _, ...f } = input;
+    if (await nameTaken(q, f.name)) fail(409, 'conflict', NAME_TAKEN);
     if (needsPartner(acting, 'community.create')) {
       return { pending: await requestApproval(q, acting, { kind: 'community.create', targetType: 'community:' + f.name.toLowerCase(), targetId: null, change: f, summary: [f.name] }) };
     }
@@ -282,6 +294,8 @@ const run = {
     if (c.rev !== input.rev) fail(409, 'conflict', { rev: c.rev });
     const { opId: _, communityId: __, rev: ___, ...f } = input;
     await checkCommunityRefs(q, c.owner_profile_id, acting.accountId, f);
+    // A new name must be free now, among other communities' names and their renames waiting for staff too.
+    if (f.name !== undefined && f.name.toLowerCase() !== String(c.name).toLowerCase() && await nameTaken(q, f.name, c.id)) fail(409, 'conflict', NAME_TAKEN);
     if (f.privacy === 'open') f.joinQuestion = null; // an open community has no join question
     /** @type {Record<string, unknown>} */
     const now = /** @type {Record<string, unknown>} */ ({}), later = /** @type {Record<string, unknown>} */ ({});
@@ -646,6 +660,11 @@ const run = {
       // A cover is public everywhere: it must have passed its checks and be safe.
       const [a] = await q.query(`select 1 from feture.media_asset where id = $1 and owner_profile_id = $2 and purpose = 'community' and state = 'approved' and explicitness = 'safe'`, [next.cover_asset_id, c.owner_profile_id]);
       if (!a) fail(422, 'rule_violation', { rule: 'cover_not_approved' });
+    }
+    // A rename approved after another community took the name: staff reject this change instead.
+    if (input.decision === 'approve' && typeof c.pending_change?.name === 'string') {
+      const [{ n }] = await q.query(`select count(*)::int n from feture.community where lower(name) = lower($1) and state <> 'deleted' and id <> $2`, [c.pending_change.name, c.id]);
+      if (n) fail(409, 'conflict', NAME_TAKEN);
     }
     if (c.state === 'in_review') {
       await q.query(

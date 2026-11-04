@@ -58,6 +58,8 @@ export const moderationCommands = {
       days: z.union([z.literal(1), z.literal(3), z.literal(7), z.literal(30)]).optional(),
     }),
   },
+  // «Меры» in the staff area: what is in force for a profile found by @nick, so it can be lifted.
+  'staff.profileMeasures': { profile: false, write: false, input: z.strictObject({ handle: z.string().trim().min(1).max(40) }) },
   'staff.placeQueue': { profile: false, write: false, input: z.strictObject({ ...queuePaging }) },
   'staff.placeDecide': {
     profile: false, write: true,

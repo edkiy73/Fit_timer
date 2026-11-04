@@ -78,8 +78,9 @@ async function formCouple(q, fromAccount, toAccount) {
      where a.id = any($1) for share of a, p) x where x.state = 'active' and x.pstate = 'active'`, [[fromAccount, toAccount]]);
   if (active !== 2) fail(409, 'conflict', { rule: 'unavailable' });
   const nicks = await q.query(
+    // The same order as the couple's «Имя и Имя» (feture.profile name trigger): who signed up first.
     `select p.handle from feture.account a join feture.profile p on p.id = a.person_profile_id where a.id = any($1)
-     order by array_position($1, a.id)`, [[fromAccount, toAccount]]);
+     order by p.created_at, p.id`, [[fromAccount, toAccount]]);
   // The couple's name stays empty: everyone sees «Имя и Имя» of the partners until they choose one (trigger).
   let couple;
   try {
@@ -186,7 +187,8 @@ const run = {
       `select exists (select 1 from feture.couple_invite where from_account = $1 and to_account = $2 and state = 'declined'
          and answered_at > now() - interval '7 days') declined`, [account.id, target.account_id]);
     if (declined) fail(422, 'rule_violation', { rule: 'invite_cooldown' });
-    if (await currentCouple(q, target.account_id)) fail(422, 'rule_violation', { rule: 'partner_in_couple' });
+    // Already in a couple answers like not found: an invitation never tells who is in a couple.
+    if (await currentCouple(q, target.account_id)) fail(404, 'not_found');
     try {
       const [inv] = await q.query(`insert into feture.couple_invite (from_account, to_account) values ($1, $2) returning id`, [account.id, target.account_id]);
       await enqueue(q, 'couple.invited', null, { inviteId: inv.id, for: target.account_id, from: me.person_profile_id });

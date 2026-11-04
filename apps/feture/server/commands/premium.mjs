@@ -357,7 +357,7 @@ const run = {
     const { sql, params } = queuePageSql(input, SUBMITTED_KEYS,
       `select c.id, c.method, c.gesture, c.submitted_at, p.id profile_id, p.handle
        from feture.age_check c join feture.account a on a.id = c.account_id join feture.profile p on p.id = a.person_profile_id
-       where c.state = 'submitted' and ($1::uuid is null or c.account_id <> $1)`, [ownerSelf(roles) ? null : account.id]); // the owner sees their own too
+       where c.state = 'submitted' and a.state <> 'deleted' and ($1::uuid is null or c.account_id <> $1)`, [ownerSelf(roles) ? null : account.id]); // the owner sees their own too
     const rows = await q.query(sql, params);
     const page = pageInfo(rows, SUBMITTED_KEYS, input.limit);
     const items = rows.map(r => ({

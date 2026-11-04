@@ -361,7 +361,7 @@ export const ru = {
   "fe.pair.rule.already_in_couple": "Ты уже в паре.",
   "fe.pair.rule.invite_cooldown": "Этого человека можно пригласить снова позже.",
   "fe.pair.rule.invite_pending": "У тебя уже есть приглашение, которое ждёт ответа.",
-  "fe.pair.rule.partner_in_couple": "Этот человек уже в паре.",
+  "fe.pair.rule.invite_unavailable": "Пригласить этого человека не получится.",
   "fe.pair.rule.paused_couple_exists": "Сначала реши, что делать с остановленной парой.",
   "fe.pair.rule.registration_required": "Этот человек ещё не завершил регистрацию.",
   "fe.pair.rule.restricted": "Сейчас приглашать нельзя.",

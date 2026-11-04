@@ -364,6 +364,13 @@ export function useFe(){
  return value;
 }
 
+/** Every profile this account acts as (its own and its couple's), whichever one acts now: «своё» — never reported,
+ * blocked or the like (the server refuses the same). */
+export function useOwnProfiles():ReadonlySet<string>{
+ const {state}=useFe();
+ return useMemo(()=>new Set(state.status==='ready'?state.boot.profiles.filter(p=>p.state!=='deleted').map(p=>p.id):[]),[state]);
+}
+
 const approvalRes=z.object({ok:z.literal(true),couple:z.object({members:z.array(z.object({me:z.boolean(),approvesPartner:z.boolean().optional()}).passthrough())}).passthrough()});
 /** Acting as the couple: true when the partner approves the couple's changes (their `approvesPartner`), so a button
  * says it goes to the partner before it is pressed. False as a person or while unknown — the server's `pending`

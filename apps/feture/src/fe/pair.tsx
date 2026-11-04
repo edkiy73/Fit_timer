@@ -178,7 +178,11 @@ function PairMain({onOpen}:{onOpen:(id:string)=>void}){
       <Field id="fe-pair-nick" label={t('fe.pair.partnerNick')} hint={t('fe.pair.nickHint')}><div className="inwrap"><AtSign/><Input id="fe-pair-nick" value={nick} onChange={e=>setNick(e.target.value.replace(/^@/,''))} placeholder="nickname" autoCapitalize="off" spellCheck={false} maxLength={20}/></div></Field>
       {lookup.hit?<Row av={<Av name={nameOf(lookup.hit)} seed={lookup.hit.id} src={thumb(lookup.hit)} size="sm"/>} title={<Who name={nameOf(lookup.hit)} nick={lookup.hit.handle}/>} end={<Pill tone="ok" icon={Check}>{t('fe.pq.found')}</Pill>}/>
        :lookup.issue?<Note>{t('fe.pq.issue.'+lookup.issue)}</Note>:null}
-      <Btn disabled={busy||!lookup.hit} onClick={()=>act(async()=>{await call('couple.invite',{opId:op.current,handle:nick.trim(),...(couple&&fresh?{replacePaused:true}:{})},ok,{asAccount:true});op.current=newOpId();setNick('');if(couple&&fresh)reload();})}>{t('fe.pair.invite')}</Btn>
+      <Btn disabled={busy||!lookup.hit} onClick={()=>act(async()=>{
+       // Not found, blocked or already in a couple read the same (the server answers alike).
+       try{await call('couple.invite',{opId:op.current,handle:nick.trim(),...(couple&&fresh?{replacePaused:true}:{})},ok,{asAccount:true});}
+       catch(e){if(e instanceof FeError&&e.code==='not_found')throw new FeError('not_found',404,'invite_unavailable');throw e;}
+       op.current=newOpId();setNick('');if(couple&&fresh)reload();})}>{t('fe.pair.invite')}</Btn>
      </Card>}
     {!out&&!(couple&&fresh)&&<Group title={t('fe.c6.link.group')} foot={t('fe.c6.link.foot')}>
      <Stack gap={3}>{inv.link&&<Card list><Row icon={LinkIcon} title={t('fe.c6.link.live')}

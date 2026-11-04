@@ -136,3 +136,64 @@ test('review fixes: no suspension through reports, rank rules, suspension covers
     assert.equal(queue.find(x => x.targetId === p.id).reported.body, 'Фото.'); // evidence snapshot taken at report time
   } finally { await pg.close(); }
 });
+
+test('«Меры»: a restriction until lifted can be lifted; staff find what is in force by @nick, never their own', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    const boss = await person('uo', 'Boss'), mod = await person('um', 'Mira'), a = await person('ua', 'Alex');
+    await db.query(`insert into feture.staff_role (account_id, role) select id, 'owner' from feture.account where person_profile_id = $1`, [boss]);
+    await call('uo', null, { action: 'staff.grant', opId: op(), handle: 'Mira', role: 'moderator', grant: true });
+    assert.equal((await call('ua', null, { action: 'staff.profileMeasures', handle: 'Alex' })).status, 403);
+    assert.equal((await call('um', null, { action: 'staff.profileMeasures', handle: 'Mira' })).status, 403);
+    assert.equal((await call('um', null, { action: 'staff.profileMeasures', handle: 'nobody' })).status, 404);
+    let m = await call('um', null, { action: 'staff.profileMeasures', handle: '@alex' });
+    assert.deepEqual([m.profileId, m.restricted, m.suspended], [a, null, null]);
+
+    // Until lifted (no end): the lift used to find nothing (`null <= now()`).
+    assert.equal((await call('um', null, { action: 'staff.restrict', opId: op(), profileId: a, on: true, rule: 'spam' })).restricted, true);
+    m = await call('um', null, { action: 'staff.profileMeasures', handle: 'Alex' });
+    assert.deepEqual(m.restricted, { rule: 'spam', until: null });
+    assert.equal((await call('um', null, { action: 'staff.restrict', opId: op(), profileId: a, on: true, rule: 'spam' })).rule, 'already_restricted');
+    assert.equal((await call('um', null, { action: 'staff.restrict', opId: op(), profileId: a, on: false, rule: 'spam' })).restricted, false);
+    const [row] = await db.query('select restricted_at from feture.profile where id = $1', [a]);
+    assert.equal(row.restricted_at, null);
+    assert.equal((await call('um', null, { action: 'staff.restrict', opId: op(), profileId: a, on: false, rule: 'spam' })).rule, 'not_restricted');
+    // A timed one that ran out (the worker has not lifted it yet) shows as none.
+    await call('um', null, { action: 'staff.restrict', opId: op(), profileId: a, on: true, rule: 'spam', days: 1 });
+    await db.query(`update feture.profile set restricted_until = now() - interval '1 minute' where id = $1`, [a]);
+    assert.equal((await call('um', null, { action: 'staff.profileMeasures', handle: 'Alex' })).restricted, null);
+    await db.query(`update feture.profile set restricted_at = null, restricted_until = null, restriction_rule = null where id = $1`, [a]);
+
+    // A suspension shows with its rule and end; a lead or the owner lifts it.
+    await call('um', null, { action: 'staff.sanction', opId: op(), profileId: a, decision: 'suspend', rule: 'threats', days: 7 });
+    m = await call('um', null, { action: 'staff.profileMeasures', handle: 'Alex' });
+    assert.equal(m.suspended.rule, 'threats');
+    assert.ok(m.suspended.until);
+    assert.equal((await call('um', null, { action: 'staff.sanction', opId: op(), profileId: a, decision: 'lift', rule: 'threats' })).status, 403);
+    assert.equal((await call('uo', null, { action: 'staff.sanction', opId: op(), profileId: a, decision: 'lift', rule: 'threats' })).state, 'active');
+    assert.equal((await call('um', null, { action: 'staff.profileMeasures', handle: 'Alex' })).suspended, null);
+  } finally { await pg.close(); }
+});
+
+test('«Пожаловаться» on one’s own: never on one’s couple from the personal profile, nor on one’s personal profile from the couple', async () => {
+  const { pg, call, person, coupleOf } = await setup();
+  try {
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), c = await person('uc', 'Noa');
+    const pair = await coupleOf([a, b]);
+    const pub = async (user, prof, body) => {
+      const d = await call(user, prof, { action: 'post.saveDraft', opId: op(), post: draft(body) });
+      await call(user, prof, { action: 'post.publish', opId: op(), postId: d.id });
+      return d.id;
+    };
+    const ours = await pub('ua', pair, 'Пост пары');
+    const mine = await pub('ua', a, 'Мой пост');
+    const report = (user, prof, targetType, targetId) =>
+      call(user, prof, { action: 'report.create', opId: op(), targetType, targetId, reason: 'spam', details: 'Подробности для модератора' });
+    for (const [user, prof, type, id] of [['ua', a, 'post', ours], ['ub', b, 'post', ours], ['ub', b, 'profile', pair], ['ua', pair, 'post', mine], ['ua', pair, 'profile', a]]) {
+      assert.equal((await report(user, prof, type, id)).rule, 'own_content', `${user} ${type}`);
+    }
+    // Someone else still reports either.
+    assert.equal((await report('uc', c, 'post', ours)).status, 200);
+    assert.equal((await report('uc', c, 'profile', a)).status, 200);
+  } finally { await pg.close(); }
+});

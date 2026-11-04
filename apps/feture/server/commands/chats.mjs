@@ -301,7 +301,8 @@ async function requestQuota(q, profileId) {
 }
 
 /** Why the acting profile may not send `t` a request now (null: it may), and where they know each other from.
- * Order: who they are (related, restricted, adults), a recent «Прекратить общение», the recipient's «Кто может мне
+ * Order: who they are (related, restricted, adults), a recent «Прекратить общение» or block (an unblock does not
+ * reset the wait, either way), the recipient's «Кто может мне
  * писать», then the sender's daily limit. @param {Q} q @param {Acting} acting @param {{id: string, related: boolean}} t */
 async function chatRequestBlocker(q, acting, t) {
   const context = await requestContext(q, acting.profileId, t.id);
@@ -312,7 +313,7 @@ async function chatRequestBlocker(q, acting, t) {
        not exists (select 1 from feture.profile_member m join feture.account a on a.id = m.account_id
          where m.profile_id in ($1, $2) and m.state = 'active' and (a.state <> 'active' or a.birth_date is null or a.birth_date > current_date - interval '18 years')) adults,
        exists (select 1 from feture.conversation c where c.profile_a = least($1::uuid, $2::uuid) and c.profile_b = greatest($1::uuid, $2::uuid)
-         and c.state = 'ended' and c.ended_reason = 'unmatch' and c.ended_at > now() - make_interval(days => $3)) ended,
+         and c.state = 'ended' and c.ended_reason in ('unmatch', 'block') and c.ended_at > now() - make_interval(days => $3)) ended,
        (select messages_from from feture.profile_settings where profile_id = $2) messages_from`, [acting.profileId, t.id, REQUEST_LIMITS.reaskDays]);
   /** @param {string} rule */
   const no = rule => ({ rule, context, quota: null });

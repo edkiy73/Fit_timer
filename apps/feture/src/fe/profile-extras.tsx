@@ -6,7 +6,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Ban,Check,Crown,ChevronLeft,ChevronRight,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,KeyRound,Link as LinkIcon,Lock,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
 import {ActingAv,Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,LoadMore,Note,PersonName,PhotoBars,PhotoTrack,PullRefresh,Row,Seg,Skel,Stack,Text,ToggleRow,View,coupleNames,plate} from './kit';
-import {onReadsDropped,useFe,useKeyChange,useShown} from './session';
+import {onReadsDropped,useFe,useKeyChange,useOwnProfiles,useShown} from './session';
 import {ReportSheet} from './report';
 import {faceFields,NameBadges} from './faces';
 import {PostCard,postSchema,type Post} from './feed';
@@ -52,6 +52,7 @@ export {Sheet};
 /* ---------- the person card shared by PersonScreen and «Как видят» ---------- */
 const media=z.object({src:z.record(z.string(),z.string()).nullable(),pending:z.boolean().optional()}).passthrough();
 export const personProfile=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),bio:z.string(),
+ /** My partner (one couple with me): never blocked (audit item 42). */partner:z.boolean().optional(),
  age:z.number().nullable(),city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),photos:z.array(media),details:z.record(z.string(),z.unknown()),photoVerified:z.boolean().optional(),premium:z.boolean().optional()}).passthrough();
 export const personProfileRes=z.object({ok:z.literal(true),profile:personProfile});
 export type PersonProfile=z.infer<typeof personProfile>;
@@ -77,6 +78,23 @@ const followersRes=z.object({ok:z.literal(true),items:z.array(followRow)});
 const FOLLOW_PAGE=50;
 const withProfile=z.object({ok:z.literal(true),items:z.array(z.object({profile:z.object({id:z.uuid()}).passthrough()}).passthrough())});
 const likeRes=z.object({ok:z.literal(true),state:z.string().optional(),conversationId:z.uuid().optional()}).passthrough();
+const withdrawRes=z.object({ok:z.literal(true),withdrawn:z.boolean().optional()}).passthrough();
+/** «Отозвать симпатию» from a profile or «Люди → исходящие». A like that became a match is not taken back (the server
+ * answers withdrawn: false): the person is told it is a match and how to end it, with the chat one tap away. */
+export function useTakeBackLike(){
+ const {call,acting}=useFe();const toast=useToast();const {t}=useI18n();const writeTo=useWriteTo();const us=acting?.kind==='couple';
+ return useCallback(async(profileId:string,undo:()=>void):Promise<'withdrawn'|'matched'|'none'>=>{
+  const r=await call('like.withdraw',{opId:newOpId(),profileId},withdrawRes);
+  if(r.withdrawn===false){
+   const m=await call('matches.list',{},withProfile).catch(()=>null);
+   if(!m?.items.some(x=>x.profile.id===profileId))return 'none';
+   toast(t(us?'fe.px.lkd.matchedUs':'fe.px.lkd.matched'),{type:'info',action:{label:t('fe.px.lkd.openChat'),fn:()=>void writeTo.open(profileId)}});
+   return 'matched';
+  }
+  toast(t(us?'fe.px.lkd.withdrawnUs':'fe.px.lkd.withdrawn'),{action:{label:t('fe.mx.undo'),fn:undo}});
+  return 'withdrawn';
+ },[call,toast,t,us,writeTo]);
+}
 export type Relation={followers:number,following:number,iFollow:boolean,liked:boolean,mutual:boolean};
 /** Counts are the length of the lists P10 opens (the server gives the newest 50; more shows as «50+»). */
 export const countWord=(n:number)=>n>=FOLLOW_PAGE?FOLLOW_PAGE+'+':String(n);
@@ -146,8 +164,9 @@ export function PersonActions({p,rel,setRel,inert}:{p:PersonProfile,rel:Relation
  // «Отправлено» tapped again takes the like back; «Отменить» in the toast sends it again (V21 unlikeP).
  const relike=async()=>{try{const r=await call('like.send',{opId:newOpId(),profileId:p.id,source:'profile'},likeRes);
   if(r.state==='matched'){setRel(x=>x&&{...x,mutual:true});setMatch(r.conversationId?{conversationId:r.conversationId}:{});}else setRel(x=>x&&{...x,liked:true});}catch(e){toast(pxError(e,t),{type:'err'});}};
+ const takeBack=useTakeBackLike();
  const unlike=async()=>{if(busy)return;setBusy('like');
-  try{await call('like.withdraw',{opId:newOpId(),profileId:p.id},ok);setRel(x=>x&&{...x,liked:false});toast(t(asUs?'fe.px.lkd.withdrawnUs':'fe.px.lkd.withdrawn'),{action:{label:t('fe.mx.undo'),fn:()=>void relike()}});}catch(e){toast(pxError(e,t),{type:'err'});}finally{setBusy('');}};
+  try{const r=await takeBack(p.id,()=>void relike());setRel(x=>x&&{...x,liked:false,mutual:x.mutual||r==='matched'});}catch(e){toast(pxError(e,t),{type:'err'});}finally{setBusy('');}};
  // «Написать» (owner 29.10.2026): their chat, or the chat composer as a message request — with or without a mutual like.
  const writeTo=useWriteTo();const write=()=>void writeTo.open(p.id);
  const likeBtn=rel?.mutual?<Btn icon={MessageCircle} onClick={inert?undefined:write} disabled={inert}>{t(asUs&&!inert?'fe.px.act.writeUs':'fe.px.act.write')}</Btn>
@@ -648,9 +667,10 @@ function EndConnection({profileId,name,mutual,onClose,onDone}:{profileId:string,
 
 /** The ⋯ menu of another person's profile (ACT.profileMenu) and its sheets. `blocked` is kept by the screen: a
  * blocked profile no longer loads, so the screen shows its own blocked state with «Разблокировать». */
-export function PersonMenu({profileId,name,handle,step,setStep,blocked,setBlocked,rel,onRel}:{profileId:string,name:string,/** A person's nick: «Подарить Premium» (couples have none to gift to). */ handle?:string|null|undefined,step:MenuStep,setStep:(s:MenuStep)=>void,
+export function PersonMenu({profileId,name,handle,partner,step,setStep,blocked,setBlocked,rel,onRel}:{profileId:string,name:string,partner?:boolean|undefined,/** A person's nick: «Подарить Premium» (couples have none to gift to). */ handle?:string|null|undefined,step:MenuStep,setStep:(s:MenuStep)=>void,
  blocked:boolean,setBlocked:(b:boolean)=>void,rel?:Relation|null|undefined,onRel?:(()=>void)|undefined}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();const [busy,setBusy]=useState(false);
+ const own=useOwnProfiles().has(profileId);
  const [link,setLink]=useState<{state:'ok'|'sent'|'in',view:LinkView}|null>(null);const [hidden,setHidden]=useState<boolean|null>(null);
  useEffect(()=>{if(step!=='menu'||blocked)return;call('links.mine',{},linksMineRes).then(r=>{const f=(l:LinkView[])=>l.find(x=>x.other.id===profileId);
   const c=f(r.confirmed),s=f(r.sent),i=f(r.incoming);setLink(c?{state:'ok',view:c}:s?{state:'sent',view:s}:i?{state:'in',view:i}:null);}).catch(()=>{});
@@ -674,8 +694,8 @@ export function PersonMenu({profileId,name,handle,step,setStep,blocked,setBlocke
    {hidden!==null&&(hidden?row(Eye,t('fe.px.menu.unhide'),hide):row(EyeOff,t('fe.px.menu.hide'),hide,t('fe.px.menu.hideSub')))}
    {(rel?.liked||rel?.mutual)&&row(X,t('fe.px.menu.end'),()=>setStep('end'),t(rel.mutual?'fe.px.menu.endMatch':'fe.px.menu.endLike'))}
    {handle&&row(Crown,t('fe.w8.gift.menu'),()=>setStep('gift'))}
-   {row(Flag,t('fe.px.menu.report'),()=>setStep('report'),undefined,true)}
-   {row(Ban,t('fe.px.menu.block'),()=>setStep('block'),t('fe.px.menu.blockSub'),true)}
+   {!own&&row(Flag,t('fe.px.menu.report'),()=>setStep('report'),undefined,true)}
+   {!own&&!partner&&row(Ban,t('fe.px.menu.block'),()=>setStep('block'),t('fe.px.menu.blockSub'),true)}
   </>}
  </Card></Sheet>;
  if(step==='end')return <EndConnection profileId={profileId} name={name} mutual={!!rel?.mutual} onClose={close} onDone={msg=>{close();toast(msg);onRel?.();}}/>;

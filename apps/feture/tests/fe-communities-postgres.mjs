@@ -46,7 +46,7 @@ test('created communities wait for staff; catalog; names unique; major edits wai
     assert.equal(r.state, 'in_review');
     assert.equal((await call('ub', b, { action: 'community.get', communityId: r.id })).status, 404);
     assert.equal((await call('ua', a, { action: 'community.get', communityId: r.id })).community.state, 'in_review');
-    assert.equal((await call('ub', b, { action: 'community.create', opId: op(), name: 'УЗЛЫ И РАЗГОВОРЫ', privacy: 'open', ...base })).field, 'name');
+    assert.equal((await call('ub', b, { action: 'community.create', opId: op(), name: 'УЗЛЫ И РАЗГОВОРЫ', privacy: 'open', ...base })).rule, 'name_taken');
     const queue = (await call('um', null, { action: 'staff.communityQueue' })).items;
     assert.ok(queue.some(x => x.id === r.id));
     // Staff decide on what they saw: an edit after the card was opened needs a fresh look.
@@ -457,5 +457,33 @@ test('stage 4: new members of an open club — one summary row a day to each hos
     assert.deepEqual(rows.map(r => r.who).sort(), [a, c].sort(), 'the owner and the host');
     assert.ok(rows.every(r => r.data.count === 2 && r.object_id === open), JSON.stringify(rows));
     assert.equal((await db.query(`select 1 from feture.outbox where topic = 'push.deliver' and payload->>'notificationId' = any($1)`, [rows.map(r => r.id)])).length, 0, 'no push');
+  } finally { await pg.close(); }
+});
+
+test('a taken name is refused up front: on create, on rename (published or in review), against renames waiting for staff; staff cannot approve a rename into a taken name', async () => {
+  const { pg, call, a, b, make, decide } = await world();
+  try {
+    await make('ua', a, { name: 'Первое', privacy: 'open' });
+    const second = await make('ub', b, { name: 'Второе', privacy: 'open' });
+    const third = await make('ub', b, { name: 'Третье', privacy: 'open' });
+    const created = await call('ub', b, { action: 'community.create', opId: op(), ...base, privacy: 'open', name: 'первое' });
+    assert.deepEqual([created.status, created.rule], [409, 'name_taken']);
+    const get = async id => (await call('ub', b, { action: 'community.get', communityId: id })).community;
+    // A published community: the rename waits for staff, but only if the name is free.
+    let r = await call('ub', b, { action: 'community.update', opId: op(), communityId: second, rev: (await get(second)).rev, name: 'ПЕРВОЕ' });
+    assert.deepEqual([r.status, r.rule], [409, 'name_taken']);
+    r = await call('ub', b, { action: 'community.update', opId: op(), communityId: second, rev: (await get(second)).rev, name: 'Новое имя' });
+    assert.deepEqual(r.review, ['name']);
+    // Another rename into the name waiting for staff is refused too; renaming oneself to one's own name is not a change.
+    r = await call('ub', b, { action: 'community.update', opId: op(), communityId: third, rev: (await get(third)).rev, name: 'новое имя' });
+    assert.equal(r.rule, 'name_taken');
+    assert.equal((await call('ub', b, { action: 'community.update', opId: op(), communityId: third, rev: (await get(third)).rev, name: 'третье' })).status, 200);
+    // In review: the name changes now, and is checked the same way.
+    const fresh = await call('ua', a, { action: 'community.create', opId: op(), ...base, privacy: 'open', name: 'Свежее' });
+    const g = (await call('ua', a, { action: 'community.get', communityId: fresh.id })).community;
+    assert.equal((await call('ua', a, { action: 'community.update', opId: op(), communityId: fresh.id, rev: g.rev, name: 'Второе' })).rule, 'name_taken');
+    // The name the rename waits for is taken meanwhile (here: directly, as by an older version): staff reject instead.
+    await pg.query(`update feture.community set name = 'Новое имя' where id = $1`, [fresh.id]);
+    assert.equal((await decide(second)).rule, 'name_taken');
   } finally { await pg.close(); }
 });

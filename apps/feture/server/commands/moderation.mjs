@@ -379,10 +379,10 @@ const run = {
       if (OWNER_ONLY_LIFT.has(rule) && !roles.some(r => r === 'owner' || r === 'lead')) fail(403, 'forbidden');
     }
     const until = input.on && input.days ? new Date(Date.now() + input.days * DAY) : null;
-    // One that already ran out (the worker has not lifted it yet) counts as none.
+    // One that already ran out (the worker has not lifted it yet) counts as none; no end (until lifted) never ran out.
     const rows = await q.query(
       `update feture.profile set restricted_at = $2, restriction_rule = $3, restricted_until = $5, updated_at = now()
-       where id = $1 and (restricted_at is null or restricted_until <= now()) = $4 returning id`,
+       where id = $1 and (restricted_at is null or coalesce(restricted_until <= now(), false)) = $4 returning id`,
       [input.profileId, input.on ? new Date() : null, input.on ? input.rule : null, input.on, until]);
     if (!rows[0]) fail(409, 'conflict', { rule: input.on ? 'already_restricted' : 'not_restricted' });
     if (input.on) {
@@ -396,6 +396,22 @@ const run = {
     await enqueue(q, input.on ? 'profile.restricted' : 'profile.unrestricted', input.profileId, { rule: input.rule, ...days });
     await journal(q, account.id, input.on ? 'restrict.on' : 'restrict.off', 'profile', input.profileId, { rule: input.rule, ...days, note: input.note });
     return { restricted: input.on, until: until?.toISOString() ?? null };
+  },
+
+  async 'staff.profileMeasures'(q, { account, input }) {
+    await requireStaff(q, account, MODERATORS);
+    const [p] = await q.query(
+      `select p.id, p.kind, p.handle, p.name, p.state, p.suspended_until, p.restriction_rule,
+         case when p.restricted_at is not null and coalesce(p.restricted_until > now(), true) then p.restricted_at end restricted_at,
+         p.restricted_until, (select a.suspension_rule from feture.account a where a.person_profile_id = p.id) suspension_rule
+       from feture.profile p where lower(p.handle) = lower($1) and p.kind in ('person', 'couple') and p.state <> 'deleted'`, [input.handle.replace(/^@/, '')]);
+    if (!p) fail(404, 'not_found');
+    await targetOwner(q, account.id, 'profile', p.id);
+    return {
+      profileId: p.id, kind: p.kind, handle: p.handle, name: p.name,
+      restricted: p.restricted_at ? { rule: p.restriction_rule, until: p.restricted_until } : null,
+      suspended: p.state === 'suspended' ? { rule: p.suspension_rule, until: p.suspended_until } : null,
+    };
   },
 
   async 'staff.placeQueue'(q, { account, input }) {

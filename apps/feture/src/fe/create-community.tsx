@@ -191,7 +191,7 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
   return diff;
  };
  const fail=(e:unknown)=>{
-  if(e instanceof FeError&&e.code==='conflict'&&!edit){setErr({name:t('fe.cc.err.nameTaken')});shakeFirstErr();}
+  if(e instanceof FeError&&e.rule==='name_taken'){setErr({name:t('fe.cc.err.nameTaken')});shakeFirstErr();}
   else if(e instanceof FeError&&e.code==='conflict'){setStale(true);setFailure(feErrorMessage(e,t));}
   else if(e instanceof FeError&&e.code==='invalid_input'&&e.fields?.length){
    const map:Record<string,keyof Errors>={name:'name',description:'desc',topics:'topics',joinQuestion:'q0',rules:'rules',placeId:'where'};
