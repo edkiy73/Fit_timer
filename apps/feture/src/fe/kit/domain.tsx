@@ -1,6 +1,6 @@
 import React,{useEffect,useRef,useState,type CSSProperties,type ReactNode} from 'react';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Check,ChevronLeft,X,Clock,Heart,Image as ImageIcon,Lock,MessageCircle,Pencil,Plus,Ticket,UserRound,Users,type LucideIcon} from 'lucide-react';
+import {Check,ChevronLeft,X,Clock,Heart,Image as ImageIcon,Lock,MessageCircle,Pencil,Plus,Ticket,Users,type LucideIcon} from 'lucide-react';
 import {Alert,Av,Btn,Card,IconBtn,Note,Row,Sheet,Skel,Stack,Switch,plate,useBack} from './index';
 import {VideoPlayer} from './av';
 import './domain.css';
