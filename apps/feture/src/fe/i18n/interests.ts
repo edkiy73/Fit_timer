@@ -43,7 +43,6 @@ export const ru = {
   'fe.int.check': 'Проверь ответы',
   'fe.int.checkHint': 'Готово: {n}. Нажми на интерес, чтобы поправить.',
   'fe.int.saveAll': 'Сохранить',
-  'fe.int.addedN': 'Интересы добавлены',
   'fe.int.empty.title': 'Пока пусто',
   'fe.int.empty.text': 'Выбери интересы и настрой, как они тебе откликаются.',
   'fe.int.empty.textCouple': 'Добавьте общие интересы. Личные ответы не копируются.',
@@ -69,8 +68,6 @@ export const ru = {
   'fe.int.ed.remove': 'Удалить',
   'fe.int.ed.removeSure': 'Точно удалить',
   'fe.int.ed.close': 'Закрыть',
-  'fe.int.saved': 'Сохранено',
-  'fe.int.removed': 'Удалено',
   'fe.int.pending': 'Изменение ждёт согласия партнёра',
 } as const;
 
@@ -118,7 +115,6 @@ export const en = {
   'fe.int.check': 'Check your answers',
   'fe.int.checkHint': '{n} ready. Tap an interest to change it.',
   'fe.int.saveAll': 'Save',
-  'fe.int.addedN': 'Interests added',
   'fe.int.empty.title': 'Empty for now',
   'fe.int.empty.text': 'Choose interests and set how they feel to you.',
   'fe.int.empty.textCouple': 'Add couple interests. Personal answers are not copied.',
@@ -144,7 +140,5 @@ export const en = {
   'fe.int.ed.remove': 'Remove',
   'fe.int.ed.removeSure': 'Yes, remove',
   'fe.int.ed.close': 'Close',
-  'fe.int.saved': 'Saved',
-  'fe.int.removed': 'Removed',
   'fe.int.pending': 'The change is waiting for your partner’s approval',
 } as const;
