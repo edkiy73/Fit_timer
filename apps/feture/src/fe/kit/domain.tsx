@@ -184,26 +184,30 @@ export function AnswerScale<M extends string,L extends string=string>({value,onC
  const n=typeof value==='number'?value:null;
  const [open,setOpen]=useState<L|null>(null);
  const [drag,setDrag]=useState<{id:L,x:number,y:number,moved:boolean,over:number|null}|null>(null);
+ // The press that opened a lane must not land on the number that appears under the finger (owner 05.11.2026: it blinked).
+ const opened=useRef(0);
  const cellAt=(x:number,y:number,id:L)=>{const el=document.elementFromPoint(x,y)?.closest<HTMLElement>('[data-k]');return el&&el.dataset.lane===id?Number(el.dataset.k):null;};
  const pick=(k:number,id:L)=>{setOpen(null);setDrag(null);onLane?.(k,id);};
+ // The lane holding the answer stays open with its number marked (owner 05.11.2026: no folded «Получать · 8» button).
+ const shown=open??(lane&&n?lane:null);
  // In a lane only the chosen number is marked (owner 05.11.2026); the single scale still fills up to it.
  const scale=(aria:string,on:(k:number)=>boolean,act:(k:number)=>void,id?:L)=><div className="ans-scale" role="radiogroup" aria-label={aria}>
   {[1,2,3,4,5,6,7,8,9,10].map(k=><button key={k} type="button" data-k={k} data-lane={id} className={[!id&&on(k)&&n&&k<=n?'fill':'',on(k)&&n===k?'on':'',drag&&drag.id===id&&drag.over===k?'held':''].filter(Boolean).join(' ')}
-   role="radio" aria-checked={on(k)&&n===k} onClick={()=>act(k)}>{k}</button>)}
+   role="radio" aria-checked={on(k)&&n===k} onClick={()=>{if(id&&Date.now()-opened.current<450)return;act(k);}}>{k}</button>)}
  </div>;
  return <>
-  {lanes&&onLane?<div className={'ans-rows'+(open?' busy':'')+(lane&&n&&!open?' chosen':'')}
+  {lanes&&onLane?<div className={'ans-rows'+(shown?' busy':'')}
     onPointerMove={e=>{if(!drag)return;const moved=drag.moved||Math.abs(e.clientX-drag.x)>8||Math.abs(e.clientY-drag.y)>8;setDrag({...drag,moved,over:cellAt(e.clientX,e.clientY,drag.id)});}}
     onPointerUp={e=>{if(!drag)return;const k=cellAt(e.clientX,e.clientY,drag.id);if(drag.moved&&k)pick(k,drag.id);else setDrag(null);}}
     onPointerCancel={()=>setDrag(null)}>
    {/* the lane keeps its frame when it opens: its name floats up onto the border, the 1–10 fills the inside */}
-   {lanes.map(l=>{const isOpen=open===l.id,mine=lane===l.id&&!!n;
-    return <div key={l.id} className={'ans-row'+(isOpen?' open':'')+(mine?' on':'')}>
+   {lanes.map(l=>{const isOpen=shown===l.id;
+    return <div key={l.id} className={'ans-row'+(isOpen?' open':'')}>
      <span className="ans-row-l">{l.label}</span>
      {isOpen?scale(label+': '+l.label,()=>lane===l.id,k=>pick(k,l.id),l.id)
-      :<button type="button" className="ans-row-b" aria-label={l.label+(mine?', '+n:'')} aria-expanded={false}
-        onPointerDown={e=>{try{e.currentTarget.closest('.ans-rows')?.setPointerCapture(e.pointerId);}catch{/* gone */}setOpen(l.id);setDrag({id:l.id,x:e.clientX,y:e.clientY,moved:false,over:null});}}
-        onClick={e=>{if(e.detail===0)setOpen(l.id);}}>{mine?<b>{n}</b>:null}</button>}
+      :<button type="button" className="ans-row-b" aria-label={l.label} aria-expanded={false}
+        onPointerDown={e=>{try{e.currentTarget.closest('.ans-rows')?.setPointerCapture(e.pointerId);}catch{/* gone */}opened.current=Date.now();setOpen(l.id);setDrag({id:l.id,x:e.clientX,y:e.clientY,moved:false,over:null});}}
+        onClick={e=>{if(e.detail===0)setOpen(l.id);}}/>}
     </div>;})}
   </div>:scale(label,()=>true,k=>onChange(k))}
   <div className={'ans-marks'+(open?' dim':'')}>{marks.map(m=><button key={m.id} type="button" className={'ans-m'+(m.taboo?' taboo':'')+(m.soft?' soft':'')+(value===m.id?' on':'')} aria-pressed={value===m.id} onClick={()=>{setOpen(null);onChange(m.id);}}><m.icon/><span>{m.label}</span></button>)}</div>

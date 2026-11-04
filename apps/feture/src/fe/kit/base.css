@@ -540,21 +540,20 @@
 .v21 .ans-scale button.on{background:var(--accent);color:#fff}
 .v21 .ans-marks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
 /* with lanes the marks are as tall as a lane (owner 05.11.2026) */
-/* while a lane is open the rest fade; once a lane holds the answer, the others' names go quiet (owner 05.11.2026) */
+/* the open lane (being picked, or holding the answer) stays bright, the other lanes fade; the marks fade only while picking */
 .v21 .ans-rows .ans-row,.v21 .ans-marks .ans-m{transition:opacity .18s var(--ease)}
 .v21 .ans-rows.busy .ans-row:not(.open),.v21 .ans-marks.dim .ans-m{opacity:.4}
-.v21 .ans-rows.chosen .ans-row:not(.on) .ans-row-l{color:var(--mute)}
 .v21 .ans-rows~.ans-marks .ans-m{min-height:76px}
 /* lanes: one full-width button per lane; the open one is the 1–10 scale in its place (tap, or hold and slide) */
 .v21 .ans-rows{display:grid;gap:8px;touch-action:none;-webkit-user-select:none;user-select:none}
 .v21 .ans-row{position:relative;height:76px;border-radius:var(--r-m);background:var(--surf);box-shadow:inset 0 0 0 1px var(--line2)}
-.v21 .ans-row.on{box-shadow:inset 0 0 0 2px var(--accent)}
 .v21 .ans-row-b{position:absolute;inset:0;width:100%;display:flex;align-items:center;justify-content:flex-end;padding:0 16px;border:0;border-radius:inherit;background:none;color:var(--ink)}
-.v21 .ans-row-b b{font-size:var(--fs-body);font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
 /* one height open or closed (owner 05.11.2026: nothing stretches); open — the name shrinks into the top-left corner
    inside the frame, the 1–10 under it: 44 px cells (a thumb on a 360 px phone), 8 px on every side */
 .v21 .ans-row-l{position:absolute;left:16px;top:38px;transform:translateY(-50%);font-size:var(--fs-body);font-weight:600;line-height:1.2;color:var(--ink);pointer-events:none;z-index:1;transition:top .18s var(--ease),font-size .18s var(--ease),color .18s var(--ease)}
-.v21 .ans-row.open{padding:24px 8px 8px}.v21 .ans-row.open .ans-row-l{left:10px;top:13px;font-size:var(--fs-micro);color:var(--mute)}.v21 .ans-row.open.on .ans-row-l{color:var(--accent)}
+.v21 .ans-row.open{padding:24px 8px 8px}.v21 .ans-row.open .ans-row-l{left:10px;top:13px;font-size:var(--fs-micro);color:var(--mute)}
+/* no tap flash and no fade-in on the numbers that appear under the finger */
+.v21 .ans-rows button{-webkit-tap-highlight-color:transparent}.v21 .ans-row.open .ans-scale button{transition:none}
 .v21 .ans-row.open .ans-scale{gap:3px}.v21 .ans-row.open .ans-scale button{height:44px;border-radius:var(--r-xs);box-shadow:none;background:var(--raise)}
 .v21 .ans-row.open .ans-scale button.fill{background:color-mix(in srgb,var(--accent) 22%,var(--surf))}.v21 .ans-row.open .ans-scale button.on,.v21 .ans-row.open .ans-scale button.held{background:var(--accent);color:#fff}
 .v21 .ans-scale button.held{background:var(--accent);color:#fff;box-shadow:none}
