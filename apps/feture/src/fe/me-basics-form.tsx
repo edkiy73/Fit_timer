@@ -36,8 +36,8 @@ export function BasicsForm({p,places,onSaved}:{p:Profile,places:Place[],onSaved:
  </Group>;
 }
 
-/** The «Основное» form in a sheet; `focusBio` puts the cursor in «О себе» (the «Добавить описание» step on «Я»). */
-export function BasicsSheet({p,places,onClose,onSaved,focusBio}:{p:Profile,places:Place[],onClose:()=>void,onSaved:()=>void,focusBio?:boolean}){
+/** The «Основное» form in a sheet; `bioOnly` — just «О себе» with the cursor in it (the «Добавить описание» step on «Я»). */
+export function BasicsSheet({p,places,onClose,onSaved,bioOnly}:{p:Profile,places:Place[],onClose:()=>void,onSaved:()=>void,bioOnly?:boolean}){
  const {call}=useFe();const {t,locale}=useI18n();const toast=useToast();const id=useId();const cp=p.kind==='couple';
  const [base,setBase]=useState(()=>draftOf(p));const [d,setD]=useState(base);
  useEffect(()=>{const b=draftOf(p);setBase(b);setD(b);},[p]);
@@ -70,9 +70,10 @@ export function BasicsSheet({p,places,onClose,onSaved,focusBio}:{p:Profile,place
   catch(e){if(e instanceof FeError&&e.fields?.includes('handle'))setNickErr(t('fe.reg.nick.taken'));else setFailure(feErrorMessage(e,t));}
   finally{setBusy(false);}
  };
- return <Sheet title={t('fe.me.basics')} onClose={onClose} dirty={dirty&&!busy}
+ return <Sheet title={bioOnly?t('fe.mx.ed.about'):t('fe.me.basics')} onClose={onClose} dirty={dirty&&!busy}
   foot={<Btn onClick={()=>void save()} disabled={!dirty||busy} busy={busy}>{t('fe.me.save')}</Btn>}>
   <Card form className="pe-form">
+   {!bioOnly&&<>
    <Field id={id+'n'} name="name" label={cp?t('fe.nn.nameUs'):t('fe.nn.name')} optional={t('fe.reg.optional')}
     hint={p.nameAt?t('fe.nn.nameAt',{date:dayMonth(p.nameAt)}):cp?t('fe.nn.nameHintUs'):t('fe.nn.nameHint')}>
     <Input id={id+'n'} value={d.name} maxLength={FIELD.profileName.max} disabled={!!p.nameAt} placeholder={cp?'':base.handle} onChange={e=>set({name:e.target.value})}/></Field>
@@ -82,8 +83,9 @@ export function BasicsSheet({p,places,onClose,onSaved,focusBio}:{p:Profile,place
      onChange={e=>{set({handle:e.target.value.replace(/^@/,'')});setNickErr('');}}/></div></Field>
    <PickField label={t('fe.mx.ed.city')} value={placeName(d.cityId)} placeholder={t('fe.mx.ed.noCity')} onClick={()=>setCity(true)}/>
    {!cp&&p.age&&<PickField label={t('fe.mb.age')} icon={Cake} value={d.showAge?t('fe.mb.ageShow',{n:String(p.age)}):t('fe.mb.ageHide')} placeholder="" onClick={()=>setAge(true)}/>}
-   <Field id={id+'b'} name="bio" label={t('fe.mx.ed.about')}>
-    <TextArea id={id+'b'} rows={4} autoFocus={focusBio} value={d.bio} maxLength={FIELD.bio.max} placeholder={t('fe.mx.ed.aboutPh')} onChange={e=>set({bio:e.target.value})}/><Counter n={textLength(d.bio)} max={FIELD.bio.max}/></Field>
+   </>}
+   <Field id={id+'b'} name="bio" label={bioOnly?undefined:t('fe.mx.ed.about')}>
+    <TextArea id={id+'b'} rows={bioOnly?6:4} autoFocus={bioOnly} aria-label={bioOnly?t('fe.mx.ed.about'):undefined} value={d.bio} maxLength={FIELD.bio.max} placeholder={t('fe.mx.ed.aboutPh')} onChange={e=>set({bio:e.target.value})}/><Counter n={textLength(d.bio)} max={FIELD.bio.max}/></Field>
    {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
   </Card>
   {city&&<PlacePicker places={places} current={d.cityId} clear={t('fe.mx.ed.noCity')} add={addPlace} onPick={x=>{set({cityId:x?.id??null});setCity(false);}} onClose={()=>setCity(false)}/>}
