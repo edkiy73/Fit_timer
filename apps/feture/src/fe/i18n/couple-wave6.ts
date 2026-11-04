@@ -82,8 +82,6 @@ export const ru = {
   'fe.c6.made.discoverSub': 'Пара скрыта из знакомств. Можно включить',
   'fe.c6.made.settings': 'Перейти в настройки пары',
   'fe.c6.made.done': 'Готово',
-
-  'fe.c6.dating': 'Знакомства',
   'fe.c6.vis.title': 'Пара в знакомствах',
   'fe.c6.vis.visible': 'Показываемся',
   'fe.c6.vis.hidden': 'Смотрим незаметно',
@@ -123,7 +121,6 @@ export const ru = {
   'fe.c6.trust.otherOff': 'Для твоих действий {name} решает отдельно — сейчас без подтверждения.',
   'fe.c6.trust.save': 'Сохранить',
   'fe.c6.trust.saved': 'Сохранено',
-  'fe.c6.safe.group': 'Безопасность',
   'fe.c6.safe.hide': 'Скрыть из знакомств',
   'fe.c6.safe.hideSub': 'Сразу выключить показ пары в подборке',
   'fe.c6.safe.hidden': 'Пара скрыта из знакомств',
@@ -257,8 +254,6 @@ export const en: typeof ru = {
   'fe.c6.made.discoverSub': 'The couple is hidden from Discover. You can turn it on',
   'fe.c6.made.settings': 'Open couple settings',
   'fe.c6.made.done': 'Done',
-
-  'fe.c6.dating': 'Dating',
   'fe.c6.vis.title': 'Couple in Discover',
   'fe.c6.vis.visible': 'Visible',
   'fe.c6.vis.hidden': 'Browsing hidden',
@@ -298,7 +293,6 @@ export const en: typeof ru = {
   'fe.c6.trust.otherOff': '{name} chooses for your actions — currently without approval.',
   'fe.c6.trust.save': 'Save',
   'fe.c6.trust.saved': 'Saved',
-  'fe.c6.safe.group': 'Safety',
   'fe.c6.safe.hide': 'Hide from Discover',
   'fe.c6.safe.hideSub': 'Turn off the couple’s visibility immediately',
   'fe.c6.safe.hidden': 'Couple hidden from Discover',
