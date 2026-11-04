@@ -17,7 +17,7 @@ const communities=()=>import('./fe/communities'),inbox=()=>import('./fe/inbox'),
  settingsLists=()=>import('./fe/settings-lists'),accountExtra=()=>import('./fe/account-extra'),chats=()=>import('./fe/chats'),people=()=>import('./fe/people'),
  profileExtras=()=>import('./fe/profile-extras'),meTab=()=>import('./fe/me'),meEdit=()=>import('./fe/me-edit'),mine=()=>import('./fe/mine'),access=()=>import('./fe/access'),
  links=()=>import('./fe/links'),browse=()=>import('./fe/browse'),interests=()=>import('./fe/interests'),staff=()=>import('./fe/staff'),ageCheck=()=>import('./fe/age-check'),
- photoCheck=()=>import('./fe/photo-check'),meNew=()=>import('./fe/me-new'),settingsNew=()=>import('./fe/settings-new'),feed=()=>import('./fe/feed'),createCommunity=()=>import('./fe/create-community'),createEvent=()=>import('./fe/create-event'),host=()=>import('./fe/host');
+ photoCheck=()=>import('./fe/photo-check'),meNew=()=>import('./fe/me-new'),settingsNew=()=>import('./fe/settings-new'),meV3=()=>import('./fe/me-v3'),feed=()=>import('./fe/feed'),createCommunity=()=>import('./fe/create-community'),createEvent=()=>import('./fe/create-event'),host=()=>import('./fe/host');
 const CommunitiesTab=screen(communities,'CommunitiesTab'),CommunityScreen=screen(communities,'CommunityScreen'),EventScreen=screen(communities,'EventScreen');
 const ChatsTab=screen(chats,'ChatsTab'),ChatScreen=screen(chats,'ChatScreen'),RequestsScreen=screen(chats,'RequestsScreen'),PeopleTab=screen(people,'PeopleTab'),PersonScreen=screen(people,'PersonScreen');
 const MeTab=screen(meTab,'MeTab'),MeEditScreen=screen(meEdit,'MeEditScreen'),MinePartScreen=screen(mine,'MinePartScreen'),MyPostsScreen=screen(mine,'MyPostsScreen'),SavedScreen=screen(mine,'SavedScreen');
@@ -30,6 +30,7 @@ const AccessScreen=screen(access,'AccessScreen'),LinksScreen=screen(links,'Links
 const FollowsScreen=screen(browse,'FollowsScreen'),GalleryScreen=screen(browse,'GalleryScreen'),SearchScreen=screen(browse,'SearchScreen'),TopicScreen=screen(browse,'TopicScreen');
 const InterestsScreen=screen(interests,'InterestsScreen'),StaffScreen=screen(staff,'StaffScreen');
 const AgeCheckScreen=screen(ageCheck,'AgeCheckScreen'),PhotoCheckScreen=screen(photoCheck,'PhotoCheckScreen');
+const MeV3Screen=screen(meV3,'MeV3Screen'),MeV3MineScreen=screen(meV3,'MeV3MineScreen');
 const MeNewScreen=screen(meNew,'MeNewScreen'),MeNewSection=screen(meNew,'MeNewSection'),SettingsNewScreen=screen(settingsNew,'SettingsNewScreen'),SettingsNewSection=screen(settingsNew,'SettingsNewSection');
 const PostScreen=screen(feed,'PostScreen'),ComposeScreen=screen(feed,'ComposeScreen'),EditPostScreen=screen(feed,'EditPostScreen');
 const CreateCommunityScreen=screen(createCommunity,'CreateCommunityScreen'),EditCommunityScreen=screen(createCommunity,'EditCommunityScreen');
@@ -141,7 +142,9 @@ export const routes: RouteObject[] = [
         {path:'chats/requests', element:<RequestsScreen />},
         {path:'chats/new/:to', element:<ChatScreen />},
         {path:'chats/:id', element:<ChatScreen />},
-        {path:'me', element:<MeNewScreen />}, // LOCAL PREVIEW ONLY — not committed
+        {path:'me', element:<MeV3Screen />}, // LOCAL PREVIEW ONLY — not committed
+        {path:'me/v3', element:<MeV3Screen />}, // the owner's account prototype, by address only until it replaces «Я»
+        {path:'me/v3/mine', element:<MeV3MineScreen />},
         {path:'me/new', element:<MeNewScreen />}, // the owner's new layout, by address only until it replaces «Я»
         {path:'me/new/:section', element:<MeNewSection />},
         {path:'me/preview', element:<MePreviewScreen />},
