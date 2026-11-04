@@ -121,7 +121,7 @@ export function MeNewSection(){
    {error&&!p?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!p||!settings?(section==='profile'?<MeSkel/>:<Skel kind="card" rows={2}/>)
     :section==='gallery'?<MeGallery profileId={p.id} couple={cp} title={t('fe.mx.gal')}/>
-    :section==='private'?<PrivateLayer profileId={p.id} on={settings.privateOn!==false} requestsFrom={settings.requestsFrom??'all'} onChanged={load} askHere={false}/>
+    :section==='private'?<PrivateLayer profileId={p.id} on={settings.privateOn!==false} requestsFrom={settings.requestsFrom??'all'} onChanged={load} askHere={false} accessHere={false}/>
     :<>
      <PhotosBlock p={p} settings={settings} onChanged={load}/>
      <BasicsForm p={p} places={places} onSaved={load}/>

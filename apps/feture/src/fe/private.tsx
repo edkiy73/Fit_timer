@@ -277,8 +277,9 @@ const ownSrc=(m:{src:Record<string,string>|null})=>m.src?(m.src.thumb??m.src.car
  * card; an interest is added right here with «По доступу» preset) — then one «Доступы» row (waiting requests counted)
  * that opens the one «Доступы» screen on «Открыто», where requests are answered and access changed. A couple's
  * part holds interests only. */
-export function PrivateLayer({profileId,on,requestsFrom,onChanged,askHere=true}:{profileId:string,on:boolean,requestsFrom:'all'|'matches'|'none',onChanged:()=>void,
- /** Off on the new «Я»: «Кто может просить доступ» lives in Settings → «Кто может…». */ askHere?:boolean}){
+export function PrivateLayer({profileId,on,requestsFrom,onChanged,askHere=true,accessHere=true}:{profileId:string,on:boolean,requestsFrom:'all'|'matches'|'none',onChanged:()=>void,
+ /** Off on the new «Я»: «Кто может просить доступ» lives in Settings → «Кто может…». */ askHere?:boolean,
+ /** Off on «Я» v3: «Доступы» is its own row next to «Приватная часть» (owner 05.11.2026: not twice). */ accessHere?:boolean}){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();const w=useAccessWords();
  const [mine,setMine]=useState<Priv|null>(null);const [reqs,setReqs]=useState<z.infer<typeof incoming>|null>(null);const [given,setGiven]=useState<GrantItem[]>([]);
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);
@@ -344,9 +345,9 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged,askHere=true}:
   </Group>
   </>}
   {/* Requests to me and who sees what live in the one «Доступы» screen (owner, 29.10.2026: no second copy here). */}
-  <Group id="privWho"><Card list><Row icon={KeyRound} title={t('fe.ac.entry')} badge={reqs.items.length||undefined}
+  {accessHere&&<Group id="privWho"><Card list><Row icon={KeyRound} title={t('fe.ac.entry')} badge={reqs.items.length||undefined}
    sub={reqs.items.length?t('fe.ac.entryWait',{n:reqs.items.length}):given.length?t('fe.ac.entryOpen',{n:given.length}):t(cp?'fe.ac.entrySubUs':'fe.ac.entrySub')}
-   onClick={()=>navigate('/n/me/access?tab=byme')}/></Card></Group>
+   onClick={()=>navigate('/n/me/access?tab=byme')}/></Card></Group>}
   </div>
   </section>
   {asking==='off'&&<Ask icon={Lock} danger title={t('fe.mx.pr.offTitle')} busy={busy}
