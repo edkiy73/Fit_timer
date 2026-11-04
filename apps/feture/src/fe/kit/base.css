@@ -453,6 +453,11 @@
 @keyframes kStepFwd{from{opacity:0;transform:translateX(20px)}}@keyframes kStepBack{from{opacity:0;transform:translateX(-20px)}}
 .v21 .k-step-in.fwd{animation:kStepFwd .26s cubic-bezier(.2,.8,.2,1) both}.v21 .k-step-in.back{animation:kStepBack .26s cubic-bezier(.2,.8,.2,1) both}
 @media (prefers-reduced-motion:reduce){.v21 .k-step-in{animation:none}}
+/* a step sheet keeps one height from step to step (its edges stay still while the content slides); the last block of the
+   body — the answer — sits at the bottom */
+.v21 .sheet.k-steps{height:min(86dvh,760px)}.v21 .sheet.k-steps .sh-b{display:flex;flex-direction:column}.v21 .sheet.k-steps .sh-b>:last-child{margin-top:auto}
+/* a mouse over a number of an open lane shows where the click lands */
+@media (hover:hover){.v21 .ans-row.open .ans-scale button:not(.on):hover{background:color-mix(in srgb,var(--accent) 28%,var(--surf));color:var(--ink)}}
 /* a form in a sheet has no plate of its own (Card `form`: fields sit on the page, 16 apart) — the sheet is the surface */
 .v21 .sheet .card.form-card{background:none;border-color:transparent;box-shadow:none;padding:0}
 .v21 .sheet.full{top:0;max-height:none;border-radius:0}

@@ -64,7 +64,7 @@ export function Sheet({title,sub,lead,head,search,onClose,children,foot,full,cla
  useModal(ref,asking?()=>{}:tryClose);
  return <Layer>
   <div className="scrim on" onClick={tryClose}/>
-  <div ref={ref} className={['sheet on',full?'full':'',className].filter(Boolean).join(' ')} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>
+  <div ref={ref} className={['sheet on',full?'full':'',step?'k-steps':'',className].filter(Boolean).join(' ')} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>
    <div className="grab"/>
    <div className="sh-h">{lead}<div key={step?.key} className={'sh-ht'+(step?' k-step-in '+step.way:'')}><h2>{title}</h2>{sub&&<p>{sub}</p>}</div>{head}<IconBtn icon={X} kind="ghost" size="sm" label={t('fe.px.close')} onClick={tryClose}/></div>
    {search&&<div className="sh-search">{search}</div>}
