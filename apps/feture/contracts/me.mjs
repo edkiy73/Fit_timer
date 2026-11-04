@@ -165,7 +165,8 @@ export const meCommands = {
       value: z.int().min(1).max(10).optional(),
       mark: z.enum(['discuss', 'hard']).optional(),
       dir: z.array(z.enum(['give', 'get', 'watch'])).max(3).optional(),
-      vis: z.enum(['public', 'granted', 'only']),
+      // Ignored: every interest is public (owner 05.11.2026); kept for clients that still send it.
+      vis: z.enum(['public', 'granted', 'only']).optional(),
     }).refine(v => (v.value === undefined) !== (v.mark === undefined), { message: 'value_or_mark', path: ['value'] })
       .refine(v => v.mark === undefined || !v.dir?.length, { message: 'dir_with_mark', path: ['dir'] }),
   },

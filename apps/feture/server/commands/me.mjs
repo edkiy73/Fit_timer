@@ -275,7 +275,8 @@ async function doInterestSet(q, profileId, _accountId, input) {
   const [t] = await q.query('select category_id from feture.topic where id = $1 and not hidden', [input.topicId]);
   if (!t) fail(400, 'invalid_input', { fields: ['topicId'] });
   if (input.dir?.length && t.category_id === 'limits') fail(400, 'invalid_input', { fields: ['dir'] });
-  const next = { value: input.value ?? null, mark: input.mark ?? null, dir: input.mark ? [] : (input.dir ?? []), vis: input.vis };
+  // Every interest is public (owner 05.11.2026); an old client's `vis` is ignored.
+  const next = { value: input.value ?? null, mark: input.mark ?? null, dir: input.mark ? [] : (input.dir ?? []), vis: 'public' };
   await q.query(
     `insert into feture.interest (profile_id, topic_id, value, mark, dir, vis) values ($1, $2, $3, $4, $5, $6)
      on conflict (profile_id, topic_id) do update set value = excluded.value, mark = excluded.mark, dir = excluded.dir, vis = excluded.vis, updated_at = now()`,
@@ -577,6 +578,7 @@ const run = {
   async 'interests.set'(q, { acting: a, input }) {
     const acting = need(a);
     const { opId: _, ...change } = input;
+    change.vis = 'public'; // interests are always public (owner 05.11.2026)
     // For a couple, a change that only closes (the interest becomes less visible) never waits for the partner.
     const VIS = ['only', 'granted', 'public'];
     const [prev] = acting.kind === 'couple'

@@ -203,9 +203,6 @@ export function MeEditScreen(){
        {!cp&&<Group title={t('fe.mx.ed.privText')}><Card form>
         <Field name="privText" error={checks.error('privText')}><TextArea rows={5} {...checks.input('privText')} value={d.privText} placeholder={t('fe.mx.ed.privPh')} aria-label={t('fe.mx.ed.privText')} onChange={e=>set({privText:e.target.value})}/><Counter n={textLength(d.privText)} max={FIELD.privateText.max}/></Field>
        </Card></Group>}
-       <Group title={<>{t('fe.mx.ed.privJars')}{jars.granted?' · '+jars.granted:''}</>} foot={t('fe.mx.ed.privJarsFoot')}
-        action={jars.granted>0&&<button type="button" onClick={()=>navigate('/n/me/interests?add=1&vis=granted')}><Plus/>{t('fe.mx.ed.add')}</button>}>
-        {jars.granted===0&&<AddCard icon={Sparkles} title={t('fe.int.add')} sub={t(cp?'fe.mp.jarsAddSubUs':'fe.mp.jarsAddSub')} onClick={()=>navigate('/n/me/interests?add=1&vis=granted')}/>}</Group>
        {!cp&&<Group title={t('fe.mx.ed.privMedia')} action={<Note as="span">{d.privMedia.length}/{PRIV_MAX}</Note>}>
         {d.privMedia.length?slots('privMedia',d.privMedia,PRIV_MAX):<AddCard icon={Camera} title={t('fe.mp.mediaAdd')} sub={t('fe.mp.mediaAddSub')} disabled={!!uploading} busy={uploading==='privMedia'} onClick={()=>pick('privMedia')}/>}</Group>}
       </div>}

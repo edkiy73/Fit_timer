@@ -2,13 +2,12 @@ import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {KeyRound,Camera,ChevronRight,Clock,Eye,Lock,LockOpen,PenLine,Send,ShieldCheck,Sparkles,Trash2,X} from 'lucide-react';
+import {KeyRound,Camera,ChevronRight,Clock,Eye,Lock,LockOpen,PenLine,Send,ShieldCheck,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {AddCard,Alert,Av,Btn,Card,CheckList,Chips,ChoiceChips,Counter,Empty,Field,FilePick,Group,MultiChips,Note,PersonLine,PhotoAdd,PhotoSlot,PhotoSlots,Pill,RequestCard,Row,SectionLabel,SelectRow,Sheet,Skel,Stack,TextArea,VaultHead,Veil} from './kit';
 import {Uploader} from './kit/Uploader';
 import {FIELD,textLength,useChecks} from './kit/validate';
 import {useSendPhoto} from './media-upload';
-import {InterestSheet,Jars,TopicPicker,sortJars,useInterests} from './interests';
 import {AgeCheckLink,agePath,useAgeResume} from './age-check';
 import {useFe} from './session';
 import {when} from './feed';
@@ -284,10 +283,9 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged,askHere=true,a
  const [mine,setMine]=useState<Priv|null>(null);const [reqs,setReqs]=useState<z.infer<typeof incoming>|null>(null);const [given,setGiven]=useState<GrantItem[]>([]);
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);
  const [asking,setAsking]=useState<'off'|null>(null);
- const [sheet,setSheet]=useState<{k:'desc'}|{k:'media',i:number}|{k:'jar',id:string}|{k:'pick'}|null>(null);
+ const [sheet,setSheet]=useState<{k:'desc'}|{k:'media',i:number}|null>(null);
  const [viewing,setViewing]=useState<number|null>(null);const [picked,setPicked]=useState<File[]|null>(null);
  const file=useRef<HTMLInputElement>(null);const sendPrivate=useSendPhoto('private');
- const jars=useInterests();
  const cp=acting?.kind==='couple';
  const load=useCallback(()=>{setError(null);Promise.all([call('private.get',{profileId},priv,{fresh:true}),call('access.lists',{tab:'incoming'},incoming,{fresh:true}),call('access.lists',{tab:'byme'},grantsRes,{fresh:true})])
   .then(([a,b,c])=>{setMine(a);setReqs(b);setGiven(c.items);}).catch(setError);},[call,profileId]);
@@ -303,8 +301,8 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged,askHere=true,a
  if(error)return <Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>;
  if(!mine||!reqs)return <Skel kind="card" rows={2}/>;
  // `interests` is the private part's own list (private.get); the profile's «По доступу» ones while a server without it answers.
- const media=mine.media??[];const txt=mine.text??'';const privJars=mine.interests??(jars.items??[]).filter(j=>j.vis==='granted');
- const empty=!txt&&!media.length&&!privJars.length;
+ const media=mine.media??[];const txt=mine.text??'';
+ const empty=!txt&&!media.length; // interests are always public now (owner 05.11.2026): the part holds words and media only
  // Adding the first thing to a switched-off part switches it on: an empty part has nothing to switch.
  const ensureOn=async()=>{if(on)return;try{await call('private.setOn',{opId:newOpId(),on:true},ok);}catch{/* the content is saved either way */}};
  const saveMedia=async(ids:string[],msg:string)=>{setBusy(true);
@@ -313,8 +311,6 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged,askHere=true,a
  const ids=media.map(m=>m.id).filter((x):x is string=>!!x);
  const sub=empty?t(cp?'fe.mp.sub.emptyUs':'fe.mp.sub.empty'):on?t(cp?'fe.mp.sub.onUs':'fe.mp.sub.on'):t('fe.mp.sub.off');
  const toggle=()=>{if(on)setAsking('off');else void act(()=>call('private.setOn',{opId:newOpId(),on:true},ok),t(cp?'fe.mx.pr.onDoneUs':'fe.mx.pr.onDone'));};
- const name=(id:string)=>{const x=jars.topics.find(o=>o.id===id);return x?(locale==='en'?x.en:x.ru):id;};
- const addJar=()=>setSheet({k:'pick'});
  const cur=sheet?.k==='media'?media[sheet.i]:undefined;
  return <>
   <section className={'vault'+(on&&!empty?'':' off')} id="privHead">
@@ -327,7 +323,6 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged,askHere=true,a
   {empty?<Card list>
    {!cp&&<Row icon={PenLine} title={t('fe.mp.desc')} sub={t('fe.mp.descAddSub')} onClick={()=>setSheet({k:'desc'})}/>}
    {!cp&&<Row icon={Camera} title={t('fe.mp.media')} sub={t('fe.mp.mediaAddSub')} disabled={busy} onClick={()=>file.current?.click()}/>}
-   <Row icon={Sparkles} title={t('fe.mp.jars')} sub={t(cp?'fe.mp.jarsAddSubUs':'fe.mp.jarsAddSub')} disabled={!jars.items} onClick={addJar}/>
   </Card>:<>
   {!cp&&<Group id="privDesc" title={t('fe.mp.desc')}>
    {txt?<Card className="blk-btn" label={t('fe.mx.editOf',{title:t('fe.mp.desc')})} onClick={()=>setSheet({k:'desc'})}><span className="blk-bio">{txt}</span><span className="chv"><ChevronRight/></span></Card>
@@ -339,10 +334,6 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged,askHere=true,a
      ...(media.length<PRIV_MAX?[<PhotoAdd key="add" disabled={busy} busy={busy} onClick={()=>file.current?.click()} label={t('fe.mp.mediaAdd')}/>]:[])]}</PhotoSlots>
     :<AddCard icon={Camera} title={t('fe.mp.mediaAdd')} sub={t('fe.mp.mediaAddSub')} disabled={busy} busy={busy} onClick={()=>file.current?.click()}/>}
   </Group>}
-  <Group id="privJars" title={<>{t('fe.mp.jars')}{privJars.length?' · '+privJars.length:''}</>} action={privJars.length?<button type="button" onClick={addJar}>{t('fe.mx.ed.add')}</button>:null}>
-   {privJars.length?<Jars list={sortJars(privJars)} topics={jars.topics} onOpen={id=>setSheet({k:'jar',id})}/>
-    :<AddCard icon={Sparkles} title={t('fe.mp.jarsAdd')} sub={t(cp?'fe.mp.jarsAddSubUs':'fe.mp.jarsAddSub')} disabled={!jars.items} onClick={addJar}/>}
-  </Group>
   </>}
   {/* Requests to me and who sees what live in the one «Доступы» screen (owner, 29.10.2026: no second copy here). */}
   {accessHere&&<Group id="privWho"><Card list><Row icon={KeyRound} title={t('fe.ac.entry')} badge={reqs.items.length||undefined}
@@ -362,10 +353,6 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged,askHere=true,a
    </Card>
   </Sheet>}
   {viewing!==null&&<PhotoViewer srcs={media.map(m=>m.src?.full??m.src?.card??ownSrc(m)).filter((x):x is string=>!!x)} index={viewing} onClose={()=>setViewing(null)}/>}
-  {sheet?.k==='pick'&&jars.items&&<TopicPicker cats={jars.cats} topics={jars.topics} have={new Set(jars.items.map(j=>j.topicId))} presetVis="granted"
-   onClose={()=>setSheet(null)} onDone={msg=>{setSheet(null);void ensureOn().then(()=>{toast(msg,{type:'ok'});jars.load();changed();});}}/>}
-  {sheet?.k==='jar'&&<InterestSheet key={sheet.id} topicId={sheet.id} topics={jars.topics} cats={jars.cats} current={jars.items?.find(j=>j.topicId===sheet.id)??privJars.find(j=>j.topicId===sheet.id)} defaultVis="granted"
-   onClose={()=>setSheet(null)} onDone={msg=>{setSheet(null);toast(msg,{type:'ok'});jars.load();changed();}}/>}
   <FilePick ref={file} accept="image/*" multiple onFiles={f=>setPicked([...f])}/>
   {picked&&<Uploader files={picked} aspects={['orig','4:5','1:1']} max={PRIV_MAX-media.length} send={sendPrivate} onClose={()=>setPicked(null)}
    onDone={got=>{setPicked(null);if(got.length)void saveMedia([...ids,...got.map(g=>g.id)],t('fe.mp.mediaSaved'));}}/>}
