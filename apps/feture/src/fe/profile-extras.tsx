@@ -54,6 +54,7 @@ export {Sheet};
 const media=z.object({src:z.record(z.string(),z.string()).nullable(),pending:z.boolean().optional()}).passthrough();
 export const personProfile=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),bio:z.string(),
  /** My partner (one couple with me): never blocked (audit item 42). */partner:z.boolean().optional(),
+ /** One of this account's own profiles (my person while acting as the couple, or the reverse): nothing to like, follow or write. */own:z.boolean().optional(),
  age:z.number().nullable(),city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),photos:z.array(media),details:z.record(z.string(),z.unknown()),photoVerified:z.boolean().optional(),premium:z.boolean().optional()}).passthrough();
 export const personProfileRes=z.object({ok:z.literal(true),profile:personProfile});
 export type PersonProfile=z.infer<typeof personProfile>;
@@ -434,26 +435,28 @@ export function cardRead(actingId:string,profileId:string){const hit=cardMemo.ge
 /** SC.P01 profileView: the floating ‹ and ⋯ sit on the photo and turn into a solid bar with the name past it
  * (PRF-007); hero, description, buttons, «что общего», then the body. `preview` is «Как видят» — everything drawn,
  * nothing pressable. */
-export function ProfilePage({p,preview,seg,onMore,menu,onRefresh,pre,gal,children}:{p:PersonProfile,/** Everything under the photo, read before the page is drawn: nothing pops in later. */ pre?:CardPre|undefined,gal?:GalleryData|null|undefined,preview?:'all'|'granted'|undefined,seg?:ReactNode,onMore?:(()=>void)|undefined,
+export function ProfilePage({p,preview,seg,bar,onMore,menu,onRefresh,pre,gal,children}:{p:PersonProfile,/** The screen's own header («Как видят»: back and the tabs, the same on every tab) instead of the one over the cover. */ bar?:ReactNode,/** Everything under the photo, read before the page is drawn: nothing pops in later. */ pre?:CardPre|undefined,gal?:GalleryData|null|undefined,preview?:'all'|'granted'|undefined,seg?:ReactNode,onMore?:(()=>void)|undefined,
  menu?:((rel:Relation|null,reload:()=>void)=>ReactNode)|undefined,/** Pull-to-refresh: reads the profile again. */ onRefresh?:(()=>unknown)|undefined,children?:ReactNode}){
  const {t}=useI18n();const navigate=useNavigate();const goPeople=useBack('/n/people');const [rel,setRel,reloadRel]=useRelation(p.id);const [view,setView]=useState<number|null>(null);
  const scroller=useRef<HTMLDivElement>(null);const name=personName(p);const inert=!!preview;const list=photosOf(p);
+ // My other profile (owner 05.11.2026: from the couple one could like, follow or write to oneself and get errors).
+ const self=!!p.own&&!preview;
  return <>
-  <header className="bar overlay pbar">
+  {bar??<header className="bar overlay pbar">
    {/* Back to where the profile was opened (the deck, «Симпатии», a list, search); opened by a link, to «Люди». */}
    <IconBtn icon={ChevronLeft} kind="glass" label={t('fe.back')} onClick={goPeople}/>
    <span className="k-grow"/>
-   {onMore&&<IconBtn icon={Ellipsis} kind="glass" aria-haspopup="dialog" label={t('fe.px.menu.more')} onClick={onMore}/>}
-  </header>
-  <div ref={scroller} className="view nodock top0 profile-page"><PullRefresh target={scroller} onRefresh={onRefresh&&(()=>{reloadRel();return onRefresh();})}>{seg}<div className="wrap">
+   {onMore&&!self&&<IconBtn icon={Ellipsis} kind="glass" aria-haspopup="dialog" label={t('fe.px.menu.more')} onClick={onMore}/>}
+  </header>}
+  <div ref={scroller} className={'view nodock profile-page'+(bar?'':' top0')}><PullRefresh target={scroller} onRefresh={onRefresh&&(()=>{reloadRel();return onRefresh();})}>{seg}<div className="wrap">
    <H level={1} className="sr-only" tabIndex={-1}>{name}</H>
    {children}
    <ProfileHero p={p} rel={rel} inert={inert} onOpen={setView}/>
    <PersonBio p={p}/>
-   {rel||inert?<PersonActions p={p} rel={rel} setRel={setRel} inert={inert}/>:<div className="pa-hold" aria-hidden="true"><i className="sk"/><i className="sk"/><i className="sk"/></div>}
+   {self?null:rel||inert?<PersonActions p={p} rel={rel} setRel={setRel} inert={inert}/>:<div className="pa-hold" aria-hidden="true"><i className="sk"/><i className="sk"/><i className="sk"/></div>}
    {/* Owner 29.10.2026: «Обо мне» under the bio and under the main buttons. */}
    <AboutGroup p={p} inert={inert}/>
-   {!preview&&<CompatSummary profileId={p.id} {...(pre?{pre:pre.compat}:{})}/>}
+   {!preview&&!self&&<CompatSummary profileId={p.id} {...(pre?{pre:pre.compat}:{})}/>}
    <ProfileBody p={p} inert={inert} preview={preview} onOpen={setView} {...(pre?{pre}:{})} {...(gal!==undefined?{gal}:{})}/>
   </div></PullRefresh></div>
   {view!==null&&<PhotoViewer srcs={list.map(m=>m.src?.full??mediaSrc(m)!)} index={view} onClose={()=>setView(null)}/>}
