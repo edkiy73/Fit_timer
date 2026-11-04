@@ -36,7 +36,8 @@ export function BasicsForm({p,places,onSaved}:{p:Profile,places:Place[],onSaved:
  </Group>;
 }
 
-function BasicsSheet({p,places,onClose,onSaved}:{p:Profile,places:Place[],onClose:()=>void,onSaved:()=>void}){
+/** The «Основное» form in a sheet; `focusBio` puts the cursor in «О себе» (the «Добавить описание» step on «Я»). */
+export function BasicsSheet({p,places,onClose,onSaved,focusBio}:{p:Profile,places:Place[],onClose:()=>void,onSaved:()=>void,focusBio?:boolean}){
  const {call}=useFe();const {t,locale}=useI18n();const toast=useToast();const id=useId();const cp=p.kind==='couple';
  const [base,setBase]=useState(()=>draftOf(p));const [d,setD]=useState(base);
  useEffect(()=>{const b=draftOf(p);setBase(b);setD(b);},[p]);
@@ -82,7 +83,7 @@ function BasicsSheet({p,places,onClose,onSaved}:{p:Profile,places:Place[],onClos
    <PickField label={t('fe.mx.ed.city')} value={placeName(d.cityId)} placeholder={t('fe.mx.ed.noCity')} onClick={()=>setCity(true)}/>
    {!cp&&p.age&&<PickField label={t('fe.mb.age')} icon={Cake} value={d.showAge?t('fe.mb.ageShow',{n:String(p.age)}):t('fe.mb.ageHide')} placeholder="" onClick={()=>setAge(true)}/>}
    <Field id={id+'b'} name="bio" label={t('fe.mx.ed.about')}>
-    <TextArea id={id+'b'} rows={4} value={d.bio} maxLength={FIELD.bio.max} placeholder={t('fe.mx.ed.aboutPh')} onChange={e=>set({bio:e.target.value})}/><Counter n={textLength(d.bio)} max={FIELD.bio.max}/></Field>
+    <TextArea id={id+'b'} rows={4} autoFocus={focusBio} value={d.bio} maxLength={FIELD.bio.max} placeholder={t('fe.mx.ed.aboutPh')} onChange={e=>set({bio:e.target.value})}/><Counter n={textLength(d.bio)} max={FIELD.bio.max}/></Field>
    {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
   </Card>
   {city&&<PlacePicker places={places} current={d.cityId} clear={t('fe.mx.ed.noCity')} add={addPlace} onPick={x=>{set({cityId:x?.id??null});setCity(false);}} onClose={()=>setCity(false)}/>}

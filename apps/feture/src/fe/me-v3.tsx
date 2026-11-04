@@ -16,7 +16,9 @@ import {usePremiumStatus} from './account-extra';
 import {onStatusAnswered} from './status-todo';
 import {useAccountSettings,useLogout} from './settings';
 import {useMe} from './me-new';
-import {MeSkel,PhotosBlock} from './me';
+import {MeSkel,PhotosBlock,catalogRes} from './me';
+import {BasicsSheet} from './me-basics-form';
+import type {Place} from './kit/Place';
 
 /** «Я» v3 (owner's account prototype, 05.11.2026), by address only (/n/me/v3) until the owner picks it: one header,
  * then two zones of the acting profile — «Профиль» (what others see) and «Приватность» (who reaches it). The account's
@@ -76,7 +78,10 @@ type MeData=ReturnType<typeof useMe>;
 
 /** «Профиль»: the two main actions, the photos, one next step, what the profile holds, the pair and «Моё». */
 function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['settings'],load:()=>void,cp:boolean,links:number|undefined}){
- const {t}=useI18n();const navigate=useNavigate();const go=(to:string)=>()=>navigate(to);
+ const {t}=useI18n();const navigate=useNavigate();const go=(to:string)=>()=>navigate(to);const {call}=useFe();
+ // «Добавить описание» opens the same «Основное» sheet as «Изменить» on «Мой профиль», over this screen.
+ const [bio,setBio]=useState(false);const [places,setPlaces]=useState<Place[]>([]);
+ const openBio=()=>{setBio(true);call('catalog.get',{},catalogRes,{asAccount:true}).then(r=>setPlaces(r.places??[])).catch(()=>{});};
  return <>
   <Group><Actions>
    <Btn icon={Pencil} onClick={go('/n/me/new/profile')}>{t('fe.v3.edit')}</Btn>
@@ -84,7 +89,8 @@ function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['
   </Actions></Group>
   {!p||!settings?<MeSkel/>:<>
    <PhotosBlock p={p} settings={settings} onChanged={load}/>
-   {p.photos.length>0&&!p.bio&&<Group><AddCard icon={PenLine} title={t(cp?'fe.mp.bioAddUs':'fe.mp.bioAdd')} sub={t(cp?'fe.mp.bioAddSubUs':'fe.mp.bioAddSub')} onClick={go('/n/me/new/profile')}/></Group>}
+   {p.photos.length>0&&!p.bio&&<Group><AddCard icon={PenLine} title={t(cp?'fe.mp.bioAddUs':'fe.mp.bioAdd')} sub={t(cp?'fe.mp.bioAddSubUs':'fe.mp.bioAddSub')} onClick={openBio}/></Group>}
+   {bio&&<BasicsSheet p={p} places={places} focusBio onClose={()=>setBio(false)} onSaved={()=>{setBio(false);load();}}/>}
   </>}
   <Group title={t('fe.v3.g.content')}><Card list>
    <Row icon={Images} title={t('fe.mx.gal')} onClick={go('/n/me/new/gallery')}/>
