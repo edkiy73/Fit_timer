@@ -2,7 +2,7 @@ import {Fragment,useCallback,useEffect,useLayoutEffect,useRef,useState,type CSSP
 import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Archive,ArchiveRestore,Ban,Calendar,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Film,Flag,Image as ImageIcon,Inbox,Info,Lock,LockOpen,MessageCircle,Plus,Search,SendHorizontal,Sparkles,Undo2,User,UserCheck,Users,X,type LucideIcon} from 'lucide-react';
+import {Archive,ArchiveRestore,Ban,Bell,BellOff,Calendar,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Film,Flag,Image as ImageIcon,Inbox,Info,Lock,LockOpen,MessageCircle,Plus,Search,SendHorizontal,Sparkles,Undo2,User,UserCheck,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {useBack,ActingAv,Actions,Alert,ChatList,ChatPane,ChatPick,ChatRequest,ChatRow,CoupleTag,NewMatch,NewMatches,Av,Bar,Btn,Card,Check as CheckBox,Chip,Chips,Empty,Field,FilePick,Group,IconBtn,Layer,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Spacer,Text,TextArea,ToggleRow,Typing,VideoBadge,VideoPlayer,View,type Voice,VoiceBubble,VoiceRecorder} from './kit';
 import {VIDEO_TYPES} from './kit/media';
@@ -759,7 +759,7 @@ function ChatView({id,to}:{id:string,to:string}){
     {grants.byMe&&<Row noChev icon={Lock} tone="v" title={t(couple?'fe.chx.revokeUs':'fe.chx.revoke')} sub={t('fe.chx.revokeSub')} onClick={()=>{if(!sheetBusy)void revoke();}}/>}
    </Card>
    <Card list>
-    <ToggleRow title={t('fe.chx.mute')} sub={t('fe.chx.muteSub')} on={meta.muted} onClick={()=>{if(!sheetBusy)void toggleMute();}}/>
+    <ToggleRow icon={meta.muted?BellOff:Bell} title={t('fe.chx.mute')} sub={t(meta.muted?'fe.chx.muteSub':'fe.chx.muteSubOn')} on={!meta.muted} onClick={()=>{if(!sheetBusy)void toggleMute();}}/>
     <Row noChev icon={meta.archived?ArchiveRestore:Archive} title={meta.archived?t('fe.chx.unarchive'):t('fe.chx.archive')} sub={t('fe.chx.archiveSub')} onClick={()=>{if(!sheetBusy)void toggleArchive();}}/>
    </Card>
    <Card list>

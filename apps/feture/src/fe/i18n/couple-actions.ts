@@ -87,7 +87,7 @@ export const ru = {
   'fe.chx.revokeUs': 'Отозвать доступ пары',
   'fe.chx.revokedUs': 'Доступ пары отозван',
   'fe.chx.ecRevokeUs': 'Также отозвать доступы пары',
-  'fe.chx.mutedUs': 'Без звука — для чата пары',
+  'fe.chx.mutedUs': 'Уведомления выключены — для чата пары',
   // Me: the couple's profile and interests.
   'fe.ac.wm.emptyTextUs': 'Здесь появятся приватные части, которые открыли паре.',
   'fe.mine.noPostsTextUs': 'Посты пары, черновики и то, что на проверке, будут здесь.',
@@ -173,7 +173,7 @@ export const en: typeof ru = {
   'fe.chx.revokeUs': 'Revoke the couple’s access',
   'fe.chx.revokedUs': 'The couple’s access revoked',
   'fe.chx.ecRevokeUs': 'Also revoke the couple’s access',
-  'fe.chx.mutedUs': 'Muted — for the couple’s chat',
+  'fe.chx.mutedUs': 'Notifications off — for the couple’s chat',
   'fe.ac.wm.emptyTextUs': 'Private parts shared with the couple will appear here.',
   'fe.mine.noPostsTextUs': 'The couple’s posts, drafts and what’s in review will be here.',
   'fe.px.lk.outEmptyTextUs': 'Likes the couple sends stay here until they’re answered.',
