@@ -247,6 +247,11 @@ const RAW = /** @type {Record<string, any>} */ ({
     normal: T('Пара на паузе', 'The couple is paused'), email: 'now-if-unread', dest: 'coupleRestore', gone: GONE_PAIR },
   'pair.restored': { cat: 'pair', filter: 'pair', icon: 'Users', tone: 'g', text: T('{couple} · Пара восстановлена', '{couple} · The couple was restored'),
     normal: T('Пара восстановлена', 'The couple was restored'), dest: 'couple', gone: GONE_PAIR },
+  // «Не восстанавливать» by the partner (owner 04.11.2026): the couple is an archive for 30 days, then deleted.
+  'pair.ended': { cat: 'pair', filter: 'pair', icon: 'Users', tone: '', text: T('{couple} · Пара завершена. Архив хранится 30 дней — сохрани нужное', '{couple} · The couple has ended. The archive is kept for 30 days — save what you need'),
+    normal: T('Пара завершена', 'The couple has ended'), email: 'now-if-unread', dest: 'coupleRestore', gone: GONE_PAIR },
+  'pair.purgeAsked': { cat: 'pair', filter: 'pair', icon: 'Users', tone: 'v', text: T('{couple} · Партнёр хочет удалить архив пары сейчас', '{couple} · Your partner wants to delete the couple’s archive now'),
+    normal: T('Партнёр хочет удалить архив пары', 'Your partner wants to delete the couple’s archive'), email: 'now-if-unread', dest: 'coupleRestore', gone: GONE_PAIR },
   'pair.restoreRequested': { cat: 'pair', filter: 'pair', icon: 'Users', tone: 'v', text: T('{couple} · Партнёр хочет восстановить пару', '{couple} · Your partner wants to restore the couple'),
     normal: T('Партнёр хочет восстановить пару', 'Your partner wants to restore the couple'), email: 'now-if-unread', dest: 'coupleRestore', gone: GONE_PAIR },
   'pair.narrowed': { cat: 'pair', filter: 'pair', icon: 'Users', tone: 'v', text: T('{couple} · Партнёр сузил видимость пары', '{couple} · Your partner narrowed the couple’s visibility'),

@@ -63,6 +63,10 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   'couple.unavailable': { type: 'pair.unavailable' },
   'couple.restored': { type: 'pair.restored' },
   'couple.restoreRequested': { type: 'pair.restoreRequested' },
+  // «Не восстанавливать» by the partner: the couple is an archive for 30 days (owner 04.11.2026).
+  'couple.ended': { type: 'pair.ended' },
+  // The partner asks to delete the archive now.
+  'couple.purgeAsked': { type: 'pair.purgeAsked' },
   'couple.narrowed': { type: 'pair.narrowed' },
   'couple.changed': { type: 'pair.acted' },
   'couple.approvalChanged': { type: 'pair.trust' },

@@ -29,7 +29,7 @@ const coupleOnly = acting => { if (acting.kind !== 'couple') fail(422, 'rule_vio
 async function currentCouple(q, accountId) {
   const [r] = await q.query(
     `select p.id, p.state from feture.profile_member m join feture.profile p on p.id = m.profile_id
-     where m.account_id = $1 and m.profile_kind = 'couple' and m.state = 'active' and p.state in ('active', 'paused')`, [accountId]);
+     where m.account_id = $1 and m.profile_kind = 'couple' and m.state = 'active' and not m.archived and p.state in ('active', 'paused')`, [accountId]);
   return r ?? null;
 }
 
@@ -139,6 +139,21 @@ export async function closeOutgoing(q, profileId) {
   await q.query(`update feture.access_grant set revoked_at = now() where viewer_profile_id = $1 and revoked_at is null`, [profileId]);
 }
 
+/** Ends a paused couple for good, keeping it 30 days as an archive for the two of them (owner 04.11.2026): both are free
+ * at once (a new couple, an invitation between them, a block — the archive is no longer «a partner»), its photos,
+ * posts and chats stay readable to them, then it is deleted (jobs.sweepExpiredCouples at restore_until). The other
+ * partner is told. @param {Q} q @param {string} profileId @param {string} byAccount */
+export async function archiveCouple(q, profileId, byAccount) {
+  const [p] = await q.query(
+    `update feture.profile set ended_at = now(), restore_until = now() + interval '30 days', updated_at = now()
+     where id = $1 and state = 'paused' and ended_at is null returning restore_until`, [profileId]);
+  if (!p) fail(409, 'conflict', { rule: 'couple_ended' });
+  const members = await q.query(`update feture.profile_member set archived = true where profile_id = $1 and state = 'active' returning account_id`, [profileId]);
+  await q.query(`delete from feture.couple_restore where profile_id = $1`, [profileId]);
+  for (const m of members) if (m.account_id !== byAccount) await enqueue(q, 'couple.ended', profileId, { for: m.account_id });
+  return p.restore_until;
+}
+
 /** Deletes a couple now: members leave, access both ways and pending changes end, and the couple's own content
  * (interests, history, private part, details, private media) is deleted (S1 §16). @param {Q} q @param {string} profileId @param {string} reason */
 export async function deleteCouple(q, profileId, reason) {
@@ -194,9 +209,10 @@ const run = {
     const mine = await currentCouple(q, account.id);
     if (mine?.state === 'active') fail(422, 'rule_violation', { rule: 'already_in_couple' });
     if (mine?.state === 'paused') {
-      // Starting a new couple while the old one waits for restoring ends the old one for good (V21 «Восстановить будет нельзя»).
+      // Starting a new couple while the old one waits for restoring ends the old one for good (V21 «Восстановить будет нельзя»):
+      // it becomes an archive for 30 days, as with «Не восстанавливать».
       if (!input.replacePaused) fail(422, 'rule_violation', { rule: 'paused_couple_exists' });
-      await deleteCouple(q, mine.id, 'replaced');
+      await archiveCouple(q, mine.id, account.id);
     }
     const handle = String(input.handle).replace(/^@/, '');
     if (!/^[A-Za-z0-9_.]{3,20}$/.test(handle)) fail(400, 'invalid_input', { fields: ['handle'] });
@@ -306,17 +322,18 @@ const run = {
   async 'couple.get'(q, { acting: a }) {
     const acting = need(a);
     coupleOnly(acting);
-    const [p] = await q.query(`select id, handle, name, chosen_name, state, paused_at, restore_until, created_at from feture.profile where id = $1`, [acting.profileId]);
+    const [p] = await q.query(`select id, handle, name, chosen_name, state, paused_at, restore_until, ended_at, created_at from feture.profile where id = $1`, [acting.profileId]);
     const members = await q.query(
       `select m.account_id = $2 me, coalesce(m.approves_before_pause, m.approves_partner) approves_partner,
          coalesce(m.approves_scope_before_pause, m.approves_scope) approves_scope, pp.id profile_id, pp.handle, pp.name,
-         exists (select 1 from feture.couple_restore r where r.profile_id = m.profile_id and r.account_id = m.account_id) restore_agreed
+         exists (select 1 from feture.couple_restore r where r.profile_id = m.profile_id and r.account_id = m.account_id) restore_agreed,
+         exists (select 1 from feture.couple_purge x where x.profile_id = m.profile_id and x.account_id = m.account_id) purge_agreed
        from feture.profile_member m join feture.account a on a.id = m.account_id join feture.profile pp on pp.id = a.person_profile_id
        where m.profile_id = $1 and m.state = 'active' order by m.account_id = $2 desc`, [acting.profileId, acting.accountId]);
     return {
       couple: {
-        id: p.id, handle: p.handle, name: p.name, chosenName: p.chosen_name, state: p.state, since: p.created_at, pausedAt: p.paused_at, restoreUntil: p.restore_until,
-        members: members.map(m => ({ me: m.me, profileId: m.profile_id, handle: m.handle, name: m.name, approvesPartner: m.approves_partner, approvesScope: m.approves_scope ?? [], restoreAgreed: m.restore_agreed })),
+        id: p.id, handle: p.handle, name: p.name, chosenName: p.chosen_name, state: p.state, since: p.created_at, pausedAt: p.paused_at, restoreUntil: p.restore_until, endedAt: p.ended_at,
+        members: members.map(m => ({ me: m.me, profileId: m.profile_id, handle: m.handle, name: m.name, approvesPartner: m.approves_partner, approvesScope: m.approves_scope ?? [], restoreAgreed: m.restore_agreed, purgeAgreed: m.purge_agreed })),
       },
     };
   },
@@ -355,21 +372,40 @@ const run = {
   },
 
   async 'couple.decline'(q, { acting: a }) {
-    // A paused couple comes back only if both agree: one partner's «Не восстанавливать» ends it now (both are free
-    // again, the partner is told «Пара удалена»), instead of a pause nobody can leave for 30 days (owner 04.11.2026).
+    // A paused couple comes back only if both agree: one partner's «Не восстанавливать» ends it now — both are free
+    // again — and keeps it 30 days as an archive for the two of them (owner 04.11.2026).
     const acting = need(a);
     coupleOnly(acting);
     const [p] = await q.query(`select state from feture.profile where id = $1 for update`, [acting.profileId]);
     if (p.state !== 'paused') fail(409, 'conflict', { state: p.state });
-    await deleteCouple(q, acting.profileId, 'declined');
+    const deleteAt = await archiveCouple(q, acting.profileId, acting.accountId);
+    return { state: 'ended', deleteAt };
+  },
+
+  async 'couple.purge'(q, { acting: a }) {
+    // «Удалить сейчас» an archive: only with both ex-partners; one asks, the other is told and decides.
+    const acting = need(a);
+    coupleOnly(acting);
+    const [p] = await q.query(`select ended_at from feture.profile where id = $1 and state = 'paused' for update`, [acting.profileId]);
+    if (!p?.ended_at) fail(409, 'conflict', { rule: 'not_archived' });
+    await q.query(`insert into feture.couple_purge (profile_id, account_id) values ($1, $2) on conflict do nothing`, [acting.profileId, acting.accountId]);
+    const [{ n }] = await q.query(
+      `select count(*)::int n from feture.profile_member m where m.profile_id = $1 and m.state = 'active'
+         and not exists (select 1 from feture.couple_purge x where x.profile_id = m.profile_id and x.account_id = m.account_id)`, [acting.profileId]);
+    if (n > 0) {
+      await enqueue(q, 'couple.purgeAsked', acting.profileId, { for: acting.partnerAccountId });
+      return { state: 'ended', waitingForPartner: true };
+    }
+    await deleteCouple(q, acting.profileId, 'purged');
     return { state: 'deleted' };
   },
 
   async 'couple.restore'(q, { acting: a }) {
     const acting = need(a);
     coupleOnly(acting);
-    const [p] = await q.query(`select state, restore_until > now() open from feture.profile where id = $1 for update`, [acting.profileId]);
+    const [p] = await q.query(`select state, restore_until > now() open, ended_at is not null ended from feture.profile where id = $1 for update`, [acting.profileId]);
     if (p.state !== 'paused' || !p.open) fail(409, 'conflict', { state: p.state });
+    if (p.ended) fail(409, 'conflict', { rule: 'couple_ended' });
     await q.query(`insert into feture.couple_restore (profile_id, account_id) values ($1, $2) on conflict do nothing`, [acting.profileId, acting.accountId]);
     const [{ n }] = await q.query(
       `select count(*)::int n from feture.couple_restore r join feture.profile_member m on m.profile_id = r.profile_id and m.account_id = r.account_id and m.state = 'active'

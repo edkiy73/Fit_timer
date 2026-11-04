@@ -103,8 +103,10 @@ test('item 13: a paused couple’s future events are cancelled and its community
     assert.equal((await db.query('select state from feture.event where id = $1', [e1]))[0].state, 'cancelled');
     const seen = (await call('ub', b, { action: 'community.get', communityId: cm })).community;
     assert.equal(seen.ownerPaused, true);
-    const dec = await call('up', pair, { action: 'couple.decline', opId: op() });
-    assert.equal(dec.state, 'deleted', JSON.stringify(dec));
+    // «Не восстанавливать» keeps an archive for 30 days; deleting it now takes both ex-partners.
+    assert.equal((await call('up', pair, { action: 'couple.decline', opId: op() })).state, 'ended');
+    await call('up', pair, { action: 'couple.purge', opId: op() });
+    assert.equal((await call('uv', pair, { action: 'couple.purge', opId: op() })).state, 'deleted');
     assert.equal((await db.query('select state from feture.community where id = $1', [cm]))[0].state, 'deleted');
   } finally { await pg.close(); }
 });

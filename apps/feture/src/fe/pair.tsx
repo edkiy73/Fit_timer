@@ -22,8 +22,8 @@ import {PAIR_TOKEN as TOKEN,dropPairLink as dropLink,pendingPairLink} from './pa
 const who=z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable()}).nullable();
 const invitesRes=z.object({ok:z.literal(true),outgoing:z.array(z.object({id:z.uuid(),state:z.string(),created_at:z.string(),profile:who})),incoming:z.array(z.object({id:z.uuid(),created_at:z.string(),profile:who})),
  link:z.object({id:z.uuid(),createdAt:z.string(),expiresAt:z.string()}).nullable().optional()});
-const coupleRes=z.object({ok:z.literal(true),couple:z.object({id:z.uuid(),handle:z.string().nullable().optional(),name:z.string().nullable(),chosenName:z.string().optional(),state:z.string(),since:z.string(),restoreUntil:z.string().nullable(),
- members:z.array(z.object({me:z.boolean(),profileId:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),approvesPartner:z.boolean(),approvesScope:z.array(z.string()).optional(),restoreAgreed:z.boolean()}))})});
+const coupleRes=z.object({ok:z.literal(true),couple:z.object({id:z.uuid(),handle:z.string().nullable().optional(),name:z.string().nullable(),chosenName:z.string().optional(),state:z.string(),since:z.string(),restoreUntil:z.string().nullable(),endedAt:z.string().nullable().optional(),
+ members:z.array(z.object({me:z.boolean(),profileId:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),approvesPartner:z.boolean(),approvesScope:z.array(z.string()).optional(),restoreAgreed:z.boolean(),purgeAgreed:z.boolean().optional()}))})});
 const ok=z.object({ok:z.literal(true)}).passthrough();
 const settingsRes=z.object({ok:z.literal(true),settings:z.object({discoverMode:z.string(),requestsFrom:z.enum(['all','matches','none']).optional()}).passthrough()});
 const listRes=z.object({ok:z.literal(true),items:z.array(z.unknown())}).passthrough();
@@ -78,7 +78,9 @@ function PairMain({onOpen}:{onOpen:(id:string)=>void}){
  const {state,acting,call,reload,setActing}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
  const toast=useToast();const {search}=useLocation();
  const q=new URLSearchParams(search);
- const couple=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='couple'&&p.state!=='deleted'):undefined;
+ // The couple, or else its archive (after «Не восстанавливать»): the same screen says which.
+ const couples=state.status==='ready'?state.boot.profiles.filter(p=>p.kind==='couple'&&p.state!=='deleted'):[];
+ const couple=couples.find(p=>!p.ended)??couples[0];
  const person=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='person'):undefined;
  const [inv,setInv]=useState<z.infer<typeof invitesRes>|null>(null);const [c,setC]=useState<Couple|null>(null);
  const [nick,setNick]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [confirmStop,setConfirmStop]=useState(()=>q.get('stop')==='1');
@@ -125,8 +127,8 @@ function PairMain({onOpen}:{onOpen:(id:string)=>void}){
   const [me,other]=[c.members.find(m=>m.me),c.members.find(m=>!m.me)];
   return <>
    <RestoreView coupleId={couple.id} onLeave={toMe} extra={<>
-    <Btn kind="soft" onClick={()=>setAskNew(true)}>{t('fe.pq.new')}</Btn>
-    <Note className="center">{t('fe.pq.newNote')}</Note>
+    {c.endedAt?<Btn kind="text" onClick={()=>{if(acting?.kind==='couple'&&person)setActing(person.id);setFresh(true);}}>{t('fe.pq.new')}</Btn>
+     :<><Btn kind="soft" onClick={()=>setAskNew(true)}>{t('fe.pq.new')}</Btn><Note className="center">{t('fe.pq.newNote')}</Note></>}
     {acting?.kind==='couple'&&person&&<Btn kind="text" onClick={()=>{setActing(person.id);navigate('/n/me');}}>{t('fe.pq.toPersonal')}</Btn>}
    </>}/>
    {askNew&&<Ask icon={Users} danger title={t('fe.pq.newTitle')} text={t('fe.pq.newText',{name:c.name||`${nameOf(me)} ${t('fe.pair.and')} ${nameOf(other)}`})} ok={t('fe.pq.newOk')}
@@ -216,7 +218,7 @@ function RestoreView({coupleId,extra,onLeave}:{coupleId:string,extra?:ReactNode,
  const load=useCallback(()=>{call('couple.get',{},coupleRes,{profileId:coupleId,fresh:true}).then(r=>{setC(r.couple);setError(null);}).catch(setError);},[call,coupleId]);
  useEffect(()=>{load();},[load]);
  useLive(['couple','decide'],load);
- const bar=<Bar title={t('fe.ap.restore.title')} onBack={onLeave}/>;
+ const bar=<Bar title={c?.endedAt?t('fe.ap.archive.title'):t('fe.ap.restore.title')} onBack={onLeave}/>;
  if(error&&!c)return <>{bar}<View className="nodock"><Empty icon={Users} title={error instanceof FeError&&(error.status===404||error.status===403)?t('fe.ap.restore.gone'):feErrorMessage(error,t)}>
   {!(error instanceof FeError&&(error.status===404||error.status===403))&&<Btn kind="soft" onClick={load}>{t('fe.ap.retry')}</Btn>}</Empty></View></>;
  if(!c)return <>{bar}<View className="nodock"><Skel kind="list"/></View></>;
@@ -238,14 +240,34 @@ function RestoreView({coupleId,extra,onLeave}:{coupleId:string,extra?:ReactNode,
    const person=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='person'):undefined;
    if(person)setActing(person.id);reload();toast(t('fe.ap.restore.declined'),{type:'ok'});navigate('/n/me',{replace:true});}
   catch(e){setFailure(pairErrorText(e,t));setAskDecline(false);}finally{setBusy(false);}};
+ // An archive (owner 04.11.2026): read-only for both until it is deleted; «Удалить сейчас» takes both.
+ const [askPurge,setAskPurge]=useState(false);
+ const purge=async()=>{setBusy(true);setFailure('');
+  try{const r=await call('couple.purge',{opId:newOpId()},z.object({ok:z.literal(true),state:z.string()}).passthrough(),{profileId:coupleId});setAskPurge(false);
+   if(r.state==='deleted'){const person=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='person'):undefined;
+    if(person)setActing(person.id);reload();toast(t('fe.ap.archive.deleted'),{type:'ok'});navigate('/n/me',{replace:true});}
+   else{toast(t('fe.ap.archive.asked',{name:otherName}),{type:'ok'});load();}}
+  catch(e){setFailure(pairErrorText(e,t));setAskPurge(false);}finally{setBusy(false);}};
+ const openArchive=()=>{setActing(coupleId);navigate('/n/me');};
  return <>
   {bar}
+  {askPurge&&<Ask icon={Users} danger title={t('fe.ap.archive.purgeTitle')} text={t('fe.ap.archive.purgeText',{name:otherName})} ok={t('fe.ap.archive.purgeOk')}
+   busy={busy} onOk={()=>void purge()} onCancel={()=>setAskPurge(false)}/>}
   {askDecline&&<Ask icon={Users} danger title={t('fe.ap.restore.declineTitle')} text={t('fe.ap.restore.declineText',{name:otherName})} ok={t('fe.ap.restore.declineOk')}
    busy={busy} onOk={()=>void decline()} onCancel={()=>setAskDecline(false)}/>}
   <View className="nodock"><div className="pair-wrap">
    <Scene me={{name:nameOf(me),id:me?.profileId}} other={{name:otherName,id:other?.profileId}}/>
    <H level={2} className="t center">{c.name||`${nameOf(me)} ${t('fe.pair.and')} ${otherName}`}</H>
-   {c.state==='paused'?<>
+   {c.state==='paused'&&c.endedAt?<>
+    <p className="lead center">{t('fe.ap.archive.lead',{date:until})}</p>
+    {other?.purgeAgreed&&<Alert kind="info" role="status">{t('fe.ap.archive.theyAsked',{name:otherName})}</Alert>}
+    <Actions stack>
+     <Btn onClick={openArchive}>{t('fe.ap.archive.open')}</Btn>
+     {me?.purgeAgreed?<Btn kind="soft" icon={Check} disabled>{t('fe.ap.restore.waiting',{name:otherName})}</Btn>
+      :<Btn kind="soft" disabled={busy} onClick={()=>setAskPurge(true)}>{t('fe.ap.archive.purge')}</Btn>}
+     {extra}
+    </Actions>
+   </>:c.state==='paused'?<>
     <p className="lead center">{t('fe.ap.restore.lead',{date:until})}</p>
     <Note className="center">{t('fe.ap.restore.agreed',{who:agreed.length?agreed.join(', '):t('fe.ap.restore.nobody')})}</Note>
     <Alert kind="info" role="status">{modes[0]} {modes[1]}</Alert>
@@ -393,8 +415,8 @@ function TrustSheet({coupleId,scope,other,otherOn,onClose,onDone}:{coupleId:stri
 export function PairEntry(){
  const {state}=useFe();const {t}=useI18n();const navigate=useNavigate();
  if(state.status!=='ready')return null;
- const couple=state.boot.profiles.find(p=>p.kind==='couple');
+ const couple=state.boot.profiles.find(p=>p.kind==='couple'&&!p.ended);const archive=!couple&&state.boot.profiles.find(p=>p.kind==='couple'&&p.ended);
  return <Group title={t('fe.pair.section')}><Card list>
-  <Row icon={Heart} tone="v" noChev title={couple?(couple.name||t('fe.pair.ourProfile')):t('fe.pair.entry')} sub={couple?t('fe.pair.entryOn'):t('fe.pair.entryOff')} onClick={()=>navigate('/n/me/pair')}/>
+  <Row icon={Heart} tone="v" noChev title={couple?(couple.name||t('fe.pair.ourProfile')):t('fe.pair.entry')} sub={couple?t('fe.pair.entryOn'):archive?t('fe.pair.entryArchive'):t('fe.pair.entryOff')} onClick={()=>navigate('/n/me/pair')}/>
  </Card></Group>;
 }

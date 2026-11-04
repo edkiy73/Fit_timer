@@ -61,7 +61,7 @@ export const incomingRequest = (c, cm) => `(${c}.origin = 'request' and ${c}.req
  * item 42 — a partner is never blocked; a stopped couple is ended in its settings instead).
  * @param {string} person profile id expression @param {string} account the acting account id (`$n`) */
 export const partnerOf = (person, account) => `exists (select 1 from feture.account pa
-  join feture.profile_member pm on pm.account_id = pa.id and pm.profile_kind = 'couple' and pm.state = 'active'
+  join feture.profile_member pm on pm.account_id = pa.id and pm.profile_kind = 'couple' and pm.state = 'active' and not pm.archived
   join feture.profile pc on pc.id = pm.profile_id and pc.state in ('active', 'paused', 'suspended')
   join feture.profile_member mm on mm.profile_id = pc.id and mm.account_id = ${account} and mm.state = 'active'
   where pa.person_profile_id = ${person} and pa.id <> ${account})`;

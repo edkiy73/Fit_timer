@@ -12,7 +12,8 @@ import {linksExpireAt} from './kit/media';
 import {PullRefreshRunner} from './kit/pull';
 
 /** What `session.bootstrap` returns: the FetUre account and the profiles this account may act as. */
-const profileCard=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string(),state:z.string(),avatarAssetId:z.uuid().nullable(),avatar:z.string().nullable().optional()});
+const profileCard=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string(),state:z.string(),avatarAssetId:z.uuid().nullable(),avatar:z.string().nullable().optional(),
+ /** A couple's archive after «Не восстанавливать»: read-only for the two, deleted after 30 days. */ ended:z.boolean().optional()});
 /** realtime: our server's origin for the SSE stream and the opaque per-profile channels (S2 §8); null when the server
  * has none. (The server also sends `key` and `transport` for older app builds; they are not needed here.) */
 const realtimeCfg=z.object({url:z.url(),channels:z.record(z.uuid(),z.string().regex(/^fe:[A-Za-z0-9_-]{22,}$/))});

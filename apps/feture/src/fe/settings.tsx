@@ -113,7 +113,7 @@ export function SettingsScreen(){
  const {state}=useFe();const {t}=useI18n();const navigate=useNavigate();
  const a=useAccountSettings();const {s,premium,error,load}=a;
  const [layer,setLayer]=useState<'hidden'|null>(null);const out=useLogout();
- const couple=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='couple'&&p.state!=='deleted'):undefined;
+ const couple=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='couple'&&p.state!=='deleted'&&!p.ended):undefined;
  const email=state.status==='ready'?state.session.email:'';
  const closeLayer=useCallback(()=>setLayer(null),[]);
  return <>
@@ -218,7 +218,7 @@ export function DataScreen(){
  const [shake,setShake]=useState(false);const op=useRef(newOpId());
  const profiles=state.status==='ready'?state.boot.profiles.filter(p=>p.state!=='deleted'):[];
  const handle=profiles.find(p=>p.kind==='person')?.handle??'';
- const couple=profiles.find(p=>p.kind==='couple');
+ const couple=profiles.find(p=>p.kind==='couple'&&!p.ended);
  const exportData=async()=>{setExporting(true);try{const r=await call('account.export',{},z.object({ok:z.literal(true)}).passthrough(),{asAccount:true});
   const blob=new Blob([JSON.stringify(r,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='feture-data.json';a.click();URL.revokeObjectURL(a.href);
   toast(t('fe.set.exportDone'),{type:'ok'});}

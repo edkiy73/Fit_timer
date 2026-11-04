@@ -8,7 +8,7 @@ import { access } from '../server/commands/access.mjs';
 import { couples } from '../server/commands/couples.mjs';
 import { social } from '../server/commands/social.mjs';
 import { readFileSync } from 'node:fs';
-import { runJobs } from '../server/jobs.mjs';
+import { runJobs, sweepExpiredCouples } from '../server/jobs.mjs';
 import { setup as baseSetup, op } from './fe-helpers.mjs';
 
 const setup = () => baseSetup({ commands: { ...platform, ...me, ...access, ...couples, ...social } });
@@ -125,7 +125,7 @@ test('a paused couple blocks a new one unless the person chooses to end it for g
     await call('ua', pair, { action: 'couple.stop', opId: op(), confirm: true });
     assert.equal((await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'Noa' })).rule, 'paused_couple_exists');
     assert.equal((await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'Noa', replacePaused: true })).status, 200);
-    assert.equal((await call('ub', pair, { action: 'couple.restore', opId: op() })).status, 403); // the old couple is gone for both
+    assert.equal((await call('ub', pair, { action: 'couple.restore', opId: op() })).rule, 'couple_ended'); // an archive now, for both
   } finally { await pg.close(); }
 });
 
@@ -286,7 +286,7 @@ test('a partner is never blocked (audit item 42): from the personal profile or t
   } finally { await pg.close(); }
 });
 
-test('«Не восстанавливать» (owner 04.11.2026): one partner ends a paused couple for good; both are free and can be invited again', async () => {
+test('«Не восстанавливать» (owner 04.11.2026): one partner ends a paused couple for good — both are free at once, the couple stays 30 days as an archive for the two, deleting it sooner takes both', async () => {
   const { pg, db, call, person } = await setup();
   try {
     await person('ua', 'Anya'); await person('ub', 'Max');
@@ -296,11 +296,36 @@ test('«Не восстанавливать» (owner 04.11.2026): one partner en
     assert.equal((await call('ua', pair, { action: 'couple.decline', opId: op() })).status, 409); // only a paused couple
     assert.equal((await call('ua', pair, { action: 'couple.stop', opId: op(), confirm: true })).state, 'paused');
     assert.equal((await call('uc', c, { action: 'couple.invite', opId: op(), handle: 'Max' })).status, 404); // still in a couple
-    assert.equal((await call('ub', pair, { action: 'couple.decline', opId: op() })).state, 'deleted');
-    assert.equal((await db.query('select state from feture.profile where id = $1', [pair]))[0].state, 'deleted');
+    assert.equal((await call('ub', pair, { action: 'couple.decline', opId: op() })).state, 'ended');
+    // Both free: invited by someone else, inviting someone else; the archive is no longer «a partner» (a block works).
     assert.equal((await call('uc', c, { action: 'couple.invite', opId: op(), handle: 'Max' })).status, 200);
     assert.equal((await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'Noa' })).status, 200);
-    const told = await db.query(`select payload from feture.outbox where topic = 'couple.deleted'`);
-    assert.equal(told.length, 2);
+    assert.equal((await db.query(`select topic from feture.outbox where topic in ('couple.ended', 'couple.deleted')`)).map(r => r.topic).join(), 'couple.ended');
+    // The archive stays readable to both, never comes back, and is not deleted by one of them alone.
+    const got = (await call('ua', pair, { action: 'couple.get' })).couple;
+    assert.ok(got.endedAt && got.restoreUntil);
+    assert.equal((await call('ua', pair, { action: 'couple.restore', opId: op() })).rule, 'couple_ended');
+    assert.equal((await call('ua', pair, { action: 'couple.purge', opId: op() })).waitingForPartner, true);
+    assert.equal((await db.query('select state from feture.profile where id = $1', [pair]))[0].state, 'paused');
+    assert.equal((await call('ub', pair, { action: 'couple.purge', opId: op() })).state, 'deleted');
+    assert.equal((await db.query('select state from feture.profile where id = $1', [pair]))[0].state, 'deleted');
+  } finally { await pg.close(); }
+});
+
+test('an archive: the ex-partner can be blocked, the profile switcher marks it, it is deleted when its 30 days are over', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    const anya = await person('ua', 'Anya'), max = await person('ub', 'Max');
+    const inv = await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'Max' });
+    const pair = (await call('ub', null, { action: 'couple.inviteAnswer', opId: op(), inviteId: inv.id, accept: true })).profileId;
+    await call('ua', pair, { action: 'couple.stop', opId: op(), confirm: true });
+    assert.equal((await call('ua', anya, { action: 'block.set', opId: op(), profileId: max, on: true })).rule, 'partner_block');
+    await call('ua', pair, { action: 'couple.decline', opId: op() });
+    assert.notEqual((await call('ua', anya, { action: 'block.set', opId: op(), profileId: max, on: true })).rule, 'partner_block');
+    const boot = await call('ua', null, { action: 'session.bootstrap' });
+    assert.equal(boot.profiles.find((/** @type {any} */ p) => p.id === pair).ended, true);
+    await db.query(`update feture.profile set restore_until = now() - interval '1 minute' where id = $1`, [pair]);
+    await sweepExpiredCouples(db);
+    assert.equal((await db.query('select state from feture.profile where id = $1', [pair]))[0].state, 'deleted');
   } finally { await pg.close(); }
 });
