@@ -34,6 +34,9 @@ export const Ответ:StoryObj<typeof Rsvp<'interested'|'going'|'not_going'>>=
  argTypes:{value:{control:'inline-radio',options:[null,'interested','going','not_going']},options:{control:false}}};
 export const ОтветПары:StoryObj<typeof Rsvp<'interested'|'going'|'not_going'>>={name:'Ответ пары (выбран «Идём»)',render:a=><Rsvp<'interested'|'going'|'not_going'> {...a}/>,
  args:{label:'Ваш ответ',value:'going',couple:true,onChange:()=>{},options:[['interested','Нам интересно',Eye,'interested'],['going','Идём',Check,'going'],['not_going','Не идём',X,'not']]}};
+export const МестНет:StoryObj<typeof Rsvp<'interested'|'going'|'not_going'>>={name:'Ответ: мест нет',parameters:{docs:{description:{story:'`off` — ответ, который сейчас выбрать нельзя: вместо подписи причина. Уже выбранный ответ остаётся как есть.'}}},
+ render:a=><Rsvp<'interested'|'going'|'not_going'> {...a}/>,
+ args:{label:'Твой ответ',value:null,onChange:()=>{},off:{going:'Мест нет'},options:[['interested','Интересно',Eye,'interested'],['going','Иду',Check,'going'],['not_going','Не иду',X,'not']]}};
 
 export const Объявление:StoryObj<typeof Announcement>={name:'Объявление организатора',render:a=><Stack gap={0}><Announcement {...a}/><Announcement icon={Bell} body="Адрес пришлём за день." meta="авто · вчера"/></Stack>,
  args:{icon:Bell,body:'Начинаем на 15 минут позже.',meta:'2 ч назад'},argTypes:{icon:{control:false}}};

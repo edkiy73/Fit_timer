@@ -231,6 +231,7 @@ export const ru = {
   'fe.cm.nobody': 'Пока никого',
   'fe.cm.coupleTwo': 'Пара считается за двоих.',
   'fe.cm.hiddenN': 'Ещё {n} — скрыли участие. Их видит только организатор.',
+  'fe.cm.unlistedN': 'Ещё {n} — скрыли себя из списка участников.',
 };
 
 export const en: Record<keyof typeof ru, string> = {
@@ -464,4 +465,5 @@ export const en: Record<keyof typeof ru, string> = {
   'fe.cm.nobody': 'Nobody yet',
   'fe.cm.coupleTwo': 'A couple counts as two people.',
   'fe.cm.hiddenN': '{n} more hid their attendance. Only the organiser sees them.',
+  'fe.cm.unlistedN': '{n} more chose not to appear in the member list.',
 };

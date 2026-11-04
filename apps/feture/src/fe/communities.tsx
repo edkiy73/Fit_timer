@@ -44,7 +44,7 @@ const commRes=z.object({ok:z.literal(true),community});
 const disc=z.object({id:z.uuid(),title:z.string().nullable(),excerpt:z.string(),pinned:z.boolean(),published_at:z.string().nullable(),replies:z.number(),owner_profile_id:z.string().nullable().optional(),popularExcluded:z.boolean().optional()});
 const discRes=z.object({ok:z.literal(true),locked:z.boolean(),items:z.array(disc)});
 const memItem=prof.extend({role:z.string(),read_only:z.boolean()});
-const memList=z.object({ok:z.literal(true),count:z.number(),items:z.array(memItem).nullable(),next:z.string().nullable().optional()});
+const memList=z.object({ok:z.literal(true),count:z.number(),hidden:z.number().optional(),items:z.array(memItem).nullable(),next:z.string().nullable().optional()});
 const priceSchema=z.object({kind:z.string(),amount:z.number().optional(),currency:z.string().optional(),ticketUrl:z.string().optional()}).passthrough();
 const ev=z.object({id:z.uuid(),title:z.string(),kind:z.string(),format:z.enum(['online','offline']),area:z.string().nullable(),place_id:z.string().nullable().optional(),tz:z.string().nullable().optional(),starts_at:z.string(),ends_at:z.string(),
  price:priceSchema,requires_application:z.boolean(),state:z.string(),plate:z.string().nullable().optional(),community_id:z.string().nullable().optional(),
@@ -57,7 +57,7 @@ const rsvpObj=z.object({status:z.string().nullable().optional(),showInList:z.boo
 const announcement=z.object({id:z.uuid(),body:z.string(),automatic:z.boolean(),created_at:z.string()}).passthrough();
 const event=z.object({id:z.uuid(),title:z.string(),kind:z.string(),description:z.string(),format:z.enum(['online','offline']),area:z.string().nullable(),tz:z.string(),placeId:z.string().nullable().optional(),
  startsAt:z.string(),endsAt:z.string(),price:priceSchema,requiresApplication:z.boolean(),questions:z.array(z.string()).nullable().optional(),
- requirements:z.string().nullable(),state:z.string(),past:z.boolean(),going:z.number(),interested:z.number(),exactAddress:z.string().nullable(),joinUrl:z.string().nullable(),locked:z.boolean(),
+ requirements:z.string().nullable(),state:z.string(),past:z.boolean(),going:z.number(),interested:z.number(),seats:z.number().nullable().optional(),full:z.boolean().optional(),taken:z.number().optional(),exactAddress:z.string().nullable(),joinUrl:z.string().nullable(),locked:z.boolean(),
  plate:z.string().nullable().optional(),communityId:z.string().nullable().optional(),cancelReason:z.string().nullable().optional(),
  organizer:prof.nullable().optional(),announcements:z.array(announcement).optional(),
  me:z.object({rsvp:rsvpObj.nullable().optional(),application:z.object({id:z.uuid(),state:z.string(),rev:z.number()}).nullable().optional(),waiting:z.object({id:z.uuid(),kind:z.string()}).passthrough().nullable().optional()}).passthrough()}).passthrough();
@@ -447,14 +447,18 @@ export function EventScreen(){
  const rawApp=e?.me.application??null;const app=rawApp&&['pending','approved','declined'].includes(rawApp.state)?rawApp:null;const waiting=!!e?.me.waiting;
  type Status='interested'|'going'|'not_going';
  /** One event.rsvp call; `msg` overrides the toast, `undo` adds «Отменить» to it. */
- const send=async(input:{status:Status|null,showInList?:boolean,ticketMarked?:boolean},msg?:string,undo?:()=>void)=>{
+ const send=async(input:{status:Status|null,showInList?:boolean,ticketMarked?:boolean,together?:boolean,alone?:boolean},msg?:string,undo?:()=>void)=>{
   if(!e)return false;setBusy(true);const {status,showInList}=input;
   try{const r=await call('event.rsvp',{opId:op.current,eventId:id,...input},rsvpRes);op.current=newOpId();
    toast(r.pending?t('fe.cm.rsvpT.waitsPartner'):msg??(showInList!==undefined?t('fe.cm.visSaved'):status===null?t('fe.cm.rsvpT.cleared'):status==='going'?t(e.format==='online'?(couple?'fe.cm.rsvpT.goingOnlineCouple':'fe.cm.rsvpT.goingOnline'):(couple?'fe.cm.rsvpT.goingOfflineCouple':'fe.cm.rsvpT.goingOffline'))
     :status==='interested'?t(couple?'fe.cm.rsvpT.interestedCouple':'fe.cm.rsvpT.interested'):t(couple?'fe.cm.rsvpT.notCouple':'fe.cm.rsvpT.not')),
     {type:'ok',...(undo&&!r.pending?{action:{label:t('fe.mx.undo'),fn:undo}}:{})});load();return true;}
-  catch(x){toast(feErrorMessage(x,t),{type:'err'});op.current=newOpId();return false;}finally{setBusy(false);}
+  catch(x){op.current=newOpId();
+   // Already coming alone or as the couple (audit item 56): ask how to go instead of an error.
+   if(x instanceof FeError&&(x.rule==='going_alone'||x.rule==='going_as_couple')){setApart({rule:x.rule,input});return false;}
+   toast(feErrorMessage(x,t),{type:'err'});return false;}finally{setBusy(false);}
  };
+ const [apart,setApart]=useState<{rule:'going_alone'|'going_as_couple',input:{status:Status|null,showInList?:boolean,ticketMarked?:boolean}}|null>(null);
  // The answer as it is now, to put back from «Отменить».
  const restore=(was:z.infer<typeof rsvpObj>|null|undefined)=>()=>{const s=was?.status as Status|null|undefined;if(!s)return;
   void send({status:s,...(was?.showInList!=null?{showInList:was.showInList}:{}),...(was?.ticketMarked?{ticketMarked:true}:{})},t('fe.w7.ev.restored'));};
@@ -515,6 +519,7 @@ export function EventScreen(){
     foot={showRsvp&&(st==='going'||st==='interested')?<ToggleRow title={t(couple?'fe.evp.showUs':'fe.evp.showMe')} sub={t('fe.evp.showSub')} on={!!e.me.rsvp?.showInList} disabled={busy}
      onClick={()=>void rsvp(st as 'going'|'interested',!e.me.rsvp?.showInList)}/>:undefined}>
     {showRsvp&&<Rsvp<'interested'|'going'|'not_going'> label={t('fe.cm.yourAnswer')} value={st as 'interested'|'going'|'not_going'|null} couple={couple} disabled={busy} onChange={v=>void rsvp(st===v?null:v)}
+     off={e.full?{going:t('fe.evp.noSeats')}:undefined}
      options={([['interested',Eye,'interested'],['going',Check,'going'],['not_going',X,'not']] as const).map(([v,Ic,tone])=>[v,t((couple?'fe.cm.rsvpC.':'fe.cm.rsvp.')+v),Ic,tone] as const)}/>}
    </EventAnswer>;
  const reqs=e?.requirements?e.requirements.split('\n').map(r=>r.trim()).filter(Boolean):[];
@@ -570,6 +575,11 @@ export function EventScreen(){
    {e.format==='online'?<Card className="flat"><div className="flabel">{t('fe.cm.link')}</div><Text as="b" size="md" bold breakAll>{e.joinUrl}</Text></Card>
     :<Stack gap={3}><Card className="flat"><Stack gap={2}><Text as="b" size="md" bold>{e.exactAddress}</Text><Note>{where} · {inTz(e.startsAt,tz,locale,{weekday:'short',day:'numeric',month:'long'})}, {evParts(e,locale).time}</Note></Stack></Card><Note>{t('fe.cm.addrNote')}</Note></Stack>}
   </Sheet>}
+  {apart&&(apart.rule==='going_alone'
+   ?<Ask icon={Users} title={t('fe.evp.apart.aloneQ')} text={t('fe.evp.apart.aloneText')} ok={t('fe.evp.apart.together')} cancel={t('fe.evp.apart.keep')} busy={busy}
+     onOk={()=>{const i=apart.input;setApart(null);void send({...i,together:true});}} onCancel={()=>setApart(null)}/>
+   :<Ask icon={Users} title={t('fe.evp.apart.coupleQ')} text={t('fe.evp.apart.coupleText')} ok={t('fe.evp.apart.alone')} cancel={t('fe.pm.cancel')} busy={busy}
+     onOk={()=>{const i=apart.input;setApart(null);void send({...i,alone:true});}} onCancel={()=>setApart(null)}/>)}
   {e&&layer==='ticket'&&ticketUrl&&<Sheet title={t('fe.w7.tk.title')} sub={site} onClose={()=>setLayer('')}
    foot={<>{<LinkBtn kind="primary" icon={ExternalLink} href={ticketUrl}>{t('fe.w7.tk.go')}</LinkBtn>}
     {ticketed?<Btn kind="soft" busy={busy} disabled={busy} onClick={()=>void unmarkTicket()}>{t('fe.w7.tk.unmark')}</Btn>

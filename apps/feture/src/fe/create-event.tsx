@@ -21,7 +21,7 @@ type Kind='meetup'|'workshop'|'talk'|'party';
 type Price='free'|'door'|'ext';
 type Form={title:string,kind:Kind|'',description:string,communityId:string,plate:PlateKey,cover:Cover|null,
  format:'offline'|'online',date:string,date2:string,t1:string,t2:string,tz:string,placeId:string,area:string,exactAddress:string,joinUrl:string,
- requiresApplication:boolean,question:string,price:Price,amount:string,currency:string,ticketUrl:string,requirements:string};
+ requiresApplication:boolean,question:string,price:Price,amount:string,currency:string,ticketUrl:string,requirements:string,seats:string};
 type Key=keyof Form;
 type Errors=Partial<Record<Key,string>>;
 
@@ -49,7 +49,7 @@ const times=(f:Form)=>({start:zonedTime(f.date,f.t1,f.tz),end:zonedTime(f.date2|
 const amountOf=(s:string)=>Number(s.replace(',','.').replace(/[^\d.]/g,''));
 const ticketHref=(s:string)=>{const v=s.trim();return !v||/^https?:\/\//i.test(v)?v:'https://'+v;};
 const fresh=():Form=>({title:'',kind:'',description:'',communityId:'',plate:'rose',cover:null,format:'offline',date:isoDay(Date.now()+7*DAY),date2:'',t1:'19:00',t2:'21:00',
- tz:userTz(),placeId:'',area:'',exactAddress:'',joinUrl:'',requiresApplication:false,question:'',price:'free',amount:'',currency:'€',ticketUrl:'',requirements:''});
+ tz:userTz(),placeId:'',area:'',exactAddress:'',joinUrl:'',requiresApplication:false,question:'',price:'free',amount:'',currency:'€',ticketUrl:'',requirements:'',seats:''});
 
 /** `evfValidate()` for one step, with the server's limits. */
 function validate(f:Form,step:number,t:(k:string,v?:Record<string,string|number>)=>string,orig?:{start:number,end:number}):Errors{
@@ -77,12 +77,14 @@ function validate(f:Form,step:number,t:(k:string,v?:Record<string,string|number>
  if(step===3){
   if(f.price!=='free'){const a=amountOf(f.amount);if(!(a>0&&a<=100000))e.amount=t('fe.ce.err.amount');}
   if(f.price==='ext'){const u=ticketHref(f.ticketUrl);if(!HTTPS.test(u)||!/\S+\.\S+/.test(u)||u.length>500)e.ticketUrl=t('fe.ce.err.ticket');}
+  // «Мест» (audit item 36): empty is no limit.
+  if(f.seats.trim()){const n=Number(f.seats.trim());if(!Number.isInteger(n)||n<1||n>10000)e.seats=t('fe.ce.err.seats');}
   if(f.requiresApplication){if(!f.question.trim())e.question=t('fe.ce.err.question');else{const m=tx('eventQuestion',f.question);if(m)e.question=m;}}
   const er=tx('eventRequirements',f.requirements);if(er)e.requirements=er;
  }
  return e;
 }
-const STEP_OF:Partial<Record<Key,number>>={title:1,kind:1,description:1,communityId:1,cover:1,date:2,t2:2,tz:2,placeId:2,area:2,exactAddress:2,joinUrl:2,amount:3,ticketUrl:3,question:3,requirements:3};
+const STEP_OF:Partial<Record<Key,number>>={title:1,kind:1,description:1,communityId:1,cover:1,date:2,t2:2,tz:2,placeId:2,area:2,exactAddress:2,joinUrl:2,amount:3,ticketUrl:3,question:3,requirements:3,seats:3};
 
 /** The event as `event.submit` takes it (contracts/events.mjs eventFields). */
 function eventOf(f:Form){
@@ -92,7 +94,7 @@ function eventOf(f:Form){
   tz:f.tz,startsAt:new Date(start).toISOString(),endsAt:new Date(end).toISOString(),
   price:f.price==='free'?{kind:'free'}:f.price==='door'?{kind:'door',amount:amountOf(f.amount),currency:cur}:{kind:'external',amount:amountOf(f.amount),currency:cur,ticketUrl:ticketHref(f.ticketUrl)},
   requiresApplication:f.requiresApplication,questions:f.requiresApplication&&f.question.trim()?[f.question.trim()]:[],
-  requirements:f.requirements.trim()||null,coverAssetId:f.cover?.id??null,plate:f.plate,communityId:f.communityId||null};
+  requirements:f.requirements.trim()||null,coverAssetId:f.cover?.id??null,plate:f.plate,communityId:f.communityId||null,seats:f.seats.trim()?Number(f.seats.trim()):null};
 }
 /** What a draft keeps: the form as typed (a draft needs only a title), with the instants when they are known. */
 function draftOf(f:Form){
@@ -109,7 +111,7 @@ const updated=z.object({ok:z.literal(true),rev:z.number().optional(),review:z.ar
 const editable=z.object({ok:z.literal(true),event:z.object({id:z.uuid(),title:z.string(),kind:z.enum(['meetup','workshop','talk','party']),description:z.string(),
  format:z.enum(['offline','online']),placeId:z.uuid().nullable(),area:z.string().nullable(),exactAddress:z.string().nullable(),joinUrl:z.string().nullable(),tz:z.string(),
  startsAt:z.string(),endsAt:z.string(),price:z.object({kind:z.enum(['free','door','external']),amount:z.number().optional(),currency:z.string().optional(),ticketUrl:z.string().optional()}),
- requiresApplication:z.boolean(),questions:z.array(z.string()).nullable(),requirements:z.string().nullable(),plate:z.string().nullable(),
+ requiresApplication:z.boolean(),questions:z.array(z.string()).nullable(),requirements:z.string().nullable(),plate:z.string().nullable(),seats:z.number().nullable().optional(),
  cover:z.object({id:z.uuid(),src:z.record(z.string(),z.string()).nullable().optional()}).passthrough().nullable().optional(),
  communityId:z.uuid().nullable(),state:z.string(),past:z.boolean(),organizer:z.object({id:z.uuid()}).passthrough().nullable().optional(),
  rev:z.number().optional(),pendingChange:z.unknown().optional()}).passthrough()});
@@ -136,7 +138,7 @@ function fromEvent(e:Loaded):Form{
   cover:e.cover?{id:e.cover.id,preview:src?.card??src?.full??src?.thumb??''}:null,
   format:e.format,date:s.date,date2:en.date!==s.date?en.date:'',t1:s.time,t2:en.time,tz:e.tz,placeId:e.placeId??'',area:e.area??'',exactAddress:e.exactAddress??'',joinUrl:e.joinUrl??'',
   requiresApplication:e.requiresApplication,question:e.questions?.[0]??'',price:p.kind==='free'?'free':p.kind==='door'?'door':'ext',amount:p.amount!=null?String(p.amount):'',
-  currency:CURRENCIES.find(([,c])=>c===p.currency)?.[0]??'€',ticketUrl:p.ticketUrl??'',requirements:e.requirements??''};
+  currency:CURRENCIES.find(([,c])=>c===p.currency)?.[0]??'€',ticketUrl:p.ticketUrl??'',requirements:e.requirements??'',seats:e.seats!=null?String(e.seats):''};
 }
 
 /** A saved draft as the editor's form: the form as typed (draftOf), or an event's fields for a draft made from a
@@ -144,7 +146,8 @@ function fromEvent(e:Loaded):Form{
 function fromDraft(raw:Record<string,unknown>,cover:{id:string,src?:Record<string,string>|null|undefined}|null):Form{
  const base=fresh();const f:Form={...base};
  const str=(k:Key)=>{const v=raw[k];if(typeof v==='string')(f as Record<Key,unknown>)[k]=v;};
- (['title','description','communityId','date','date2','t1','t2','tz','placeId','area','exactAddress','joinUrl','question','amount','currency','ticketUrl','requirements'] as Key[]).forEach(str);
+ (['title','description','communityId','date','date2','t1','t2','tz','placeId','area','exactAddress','joinUrl','question','amount','currency','ticketUrl','requirements','seats'] as Key[]).forEach(str);
+ if(typeof raw.seats==='number')f.seats=String(raw.seats);
  if(KINDS.includes(raw.kind as Kind))f.kind=raw.kind as Kind;
  if(raw.format==='online'||raw.format==='offline')f.format=raw.format;
  if(typeof raw.requiresApplication==='boolean')f.requiresApplication=raw.requiresApplication;
@@ -277,7 +280,7 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
    if(edit&&x instanceof FeError&&x.code==='conflict'){setStale(true);setNotice({kind:'err',text:feErrorMessage(x,t)});}
    else if(x instanceof FeError&&x.code==='invalid_input'&&x.fields?.length){
     const map:Record<string,Key>={title:'title',kind:'kind',description:'description',communityId:'communityId',coverAssetId:'cover',startsAt:'date',endsAt:'t2',tz:'tz',placeId:'placeId',
-     area:'area',exactAddress:'exactAddress',joinUrl:'joinUrl',price:'amount',questions:'question',requirements:'requirements',format:'t2'};
+     area:'area',exactAddress:'exactAddress',joinUrl:'joinUrl',price:'amount',questions:'question',requirements:'requirements',seats:'seats',format:'t2'};
     const rule:Partial<Record<Key,FieldName>>={title:'eventTitle',description:'eventDescription',area:'eventArea',exactAddress:'eventAddress',question:'eventQuestion',requirements:'eventRequirements'};
     const e:Errors={};for(const {path,code} of serverFields(x)){const k=map[path.split('.')[0]!];if(!k||e[k]||(edit&&k==='communityId'))continue;
      const r=rule[k];e[k]=k==='cover'?t('fe.ce.err.cover'):k==='date'?t('fe.ce.err.past'):k==='tz'?t('fe.ce.err.tz'):r&&code!=='invalid'?textErrorMessage(t,code,FIELD[r]):t('fe.val.invalid');}
@@ -349,6 +352,7 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
    <label className="field ev-cur"><span>{t('fe.ce.currency')}</span><Select label={t('fe.ce.currency')} value={f.currency} onChange={v=>set('currency',v)} options={CURRENCIES.map(([sym,code])=>[sym,code+' '+sym] as [string,string])}/></label>
   </div>}
   {f.price==='ext'&&<Field name="ext" label={t('fe.ce.ticket')} icon={LinkIcon} ph="tickets.example.org" hint={t('fe.ce.ticketHint')} value={f.ticketUrl} onChange={v=>set('ticketUrl',v)} err={err.ticketUrl}/>}
+  <Field name="seats" label={t('fe.ce.seats')} opt inputMode="decimal" ph="20" hint={t('fe.ce.seatsHint')} value={f.seats} onChange={v=>set('seats',v)} err={err.seats}/>
   <Field name="reqs" label={t('fe.ce.reqs')} opt textarea rows={3} check="eventRequirements" ph={t('fe.ce.reqsPh')} value={f.requirements} onChange={v=>set('requirements',v)} err={err.requirements}/>
  </>;
  if(step===4){

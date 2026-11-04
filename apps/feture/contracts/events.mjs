@@ -42,6 +42,8 @@ const base = {
   coverAssetId: id.nullable().default(null),
   plate: plate.default('lilac'),
   communityId: id.nullable().default(null),
+  // «Мест» (audit item 36): none means no limit; a couple takes two.
+  seats: z.int().min(1).max(10000).nullable().default(null),
 };
 /** @param {any} v */
 const shapeRules = v => (v.format === 'online' ? !!v.joinUrl : !!(v.placeId && v.area && v.exactAddress))
@@ -102,6 +104,8 @@ export const eventsCommands = {
     input: z.strictObject({
       opId, eventId: id, status: z.enum(['interested', 'going', 'not_going']).nullable(),
       showInList: z.boolean().optional(), ticketMarked: z.boolean().optional(),
+      // Asked before a double mark (audit item 56): a couple «Идём парой», a person «Отметиться всё равно».
+      together: z.boolean().optional(), alone: z.boolean().optional(),
     }),
   },
   'event.apply': {
@@ -109,6 +113,7 @@ export const eventsCommands = {
     input: z.strictObject({
       opId, eventId: id, answers: z.array(field('eventAnswer')).min(1).max(3),
       note: field('applyNote').default(''), requirementsAccepted: z.literal(true),
+      together: z.boolean().optional(), alone: z.boolean().optional(),
     }),
   },
   'event.applicationWithdraw': { profile: true, write: true, input: z.strictObject({ opId, applicationId: id }) },

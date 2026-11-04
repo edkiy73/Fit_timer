@@ -35,7 +35,7 @@ const reqItem=z.object({id:z.uuid(),state:z.string(),answer:z.string().nullable(
 const reqList=z.object({ok:z.literal(true),items:z.array(reqItem)});
 const memItem=prof.extend({role:z.string(),read_only:z.boolean()});
 type Mem=z.infer<typeof memItem>;
-const memList=z.object({ok:z.literal(true),count:z.number(),items:z.array(memItem).nullable(),next:z.string().nullable().optional()});
+const memList=z.object({ok:z.literal(true),count:z.number(),hidden:z.number().optional(),items:z.array(memItem).nullable(),next:z.string().nullable().optional()});
 const discRes=z.object({ok:z.literal(true),locked:z.boolean(),items:z.array(z.object({id:z.uuid()}).passthrough())});
 const inviteRes=z.object({ok:z.literal(true),token:z.string().optional(),expiresAt:z.string().optional(),revoked:z.boolean().optional()});
 const joinRes=z.object({ok:z.literal(true),state:z.string().optional(),pending:z.unknown().optional()}).passthrough();
@@ -46,6 +46,7 @@ const evSchema=z.object({ok:z.literal(true),event:z.object({id:z.uuid(),title:z.
  startsAt:z.string(),endsAt:z.string(),price:z.object({kind:z.string()}).passthrough(),plate:z.string().nullable().optional(),state:z.string(),past:z.boolean(),requiresApplication:z.boolean(),
  questions:z.array(z.string()).nullable().optional(),requirements:z.string().nullable(),going:z.number(),interested:z.number(),cancelReason:z.string().nullable().optional(),
  organizer:z.object({id:z.uuid()}).passthrough().nullable().optional(),announcements:z.array(announcement).optional(),pendingApplications:z.number().optional(),
+ seats:z.number().nullable().optional(),taken:z.number().optional(),full:z.boolean().optional(),
  me:z.object({application:application.nullable().optional(),waiting:z.unknown().optional()}).passthrough()}).passthrough()});
 type Ev=z.infer<typeof evSchema>['event'];
 const appItem=z.object({id:z.uuid(),state:z.string(),answers:z.array(z.string()),note:z.string().nullable(),rev:z.number(),created_at:z.string(),profile:prof,
@@ -178,8 +179,9 @@ export function MembersList({c,data,onChange}:{c:{id:string,me?:{role:string,sta
  return <>
   {items===null?<Empty compact icon={Users} title={pl(data.count,t('fe.cm.members'),locale)} text={t('fe.host.mem.afterJoin')}/>:<>
    <Group title={t('fe.host.mem.hosts')} foot={host&&members.length?t('fe.host.mem.hint'):undefined}><Card list>{hosts.map(row)}</Card></Group>
-   {members.length?<Group title={t('fe.cm.membersHead')+' · '+Math.max(data.count-hosts.length,members.length)}><Card list>{members.map(row)}</Card></Group>
-    :<Empty compact icon={Users} title={t('fe.cm.noOtherMembers')}/>}
+   {members.length?<Group title={t('fe.cm.membersHead')+' · '+Math.max(data.count-hosts.length,0)}><Card list>{members.map(row)}</Card></Group>
+    :!data.hidden&&<Empty compact icon={Users} title={t('fe.cm.noOtherMembers')}/>}
+   {!!data.hidden&&<Note>{fill(t('fe.cm.unlistedN'),{n:data.hidden})}</Note>}
    <LoadMore more={!!next} busy={loadingMore} error={moreErr} onMore={()=>void showMore()}/>
   </>}
   {open&&!confirm&&!handOver&&<Sheet title={pname(open)} onClose={()=>setOpen(null)}><Card list>
@@ -444,6 +446,7 @@ export function EventManageScreen(){
     {!cancelled&&pend>0&&<Alert kind="warn" icon={FileText} action={<Btn kind="text" auto onClick={()=>navigate(`/n/events/${id}/applications`)}>{t('fe.host.ev.openApps')} <ChevronRight/></Btn>}>
      <b>{t('fe.host.ev.next')}</b>{fill(t('fe.cm.reviewN'),{n:pl(pend,t('fe.cm.applicationsAcc'),locale)})}</Alert>}
     {!cancelled&&<StatTiles items={tiles.map(([n,label,go])=>({n,label,onClick:()=>navigate(go)}))}/>}
+    {!cancelled&&e.seats!=null&&<Note>{fill(t('fe.evp.seatsOf'),{n:e.taken??0,m:e.seats})}</Note>}
     <Card list>
      {e.requiresApplication&&!cancelled&&<Row icon={FileText} tone="v" title={t('fe.cm.appsAndAdmission')} badge={pend||undefined} onClick={()=>navigate(`/n/events/${id}/applications`)}/>}
      {open&&<Row icon={Bell} tone="l" title={t('fe.host.ev.announce')} sub={t('fe.host.ev.announceSub')} onClick={()=>{setErr('');setMode('announce');}}/>}
@@ -484,21 +487,23 @@ export function EventApplicationsScreen(){
   toast(approve?t('fe.host.apps.approved').replace('{name}',pname(a.profile)):a.state==='approved'?t('fe.host.apps.revoked').replace('{name}',pname(a.profile)):t('fe.host.apps.declined'),
    {type:'ok',ms:UNDO_MS,action:{label:t('fe.mx.undo'),fn:()=>{if(cancel('app'+a.id))unhold(a.id);else toast(t('fe.w7.undo.late'),{type:'warn'});}}});
  };
- const items=data?.lists[k].filter(a=>!held.has(a.id));const qs=data?.e.questions??[];const cancelled=data?.e.state==='cancelled';
+ const items=data?.lists[k].filter(a=>!held.has(a.id));const qs=data?.e.questions??[];const cancelled=data?.e.state==='cancelled';const full=!!data?.e.full;
  return <>
   <SubBar title={t('fe.cm.appsTitle')} sub={data?.e.title} back={`/n/events/${id}/manage`}/>
   <div className="view nodock"><div className="wrap">
    <Seg value={k} onChange={v=>setSp({k:v},{replace:true})} label={t('fe.cm.appsTitle')}
     options={(['pending','approved','declined'] as const).map(s=>({id:s,label:t('fe.host.apps.tab.'+s),n:data?.lists[s].length}))}/>
+   {/* «Мест нет» (В13): applications wait; approving opens again when a place is free. */}
+   {full&&k!=='approved'&&<Note>{fill(t('fe.evp.seatsOf'),{n:data?.e.taken??0,m:data?.e.seats??0})} · {t('fe.evp.noSeats')}</Note>}
    {!items?<Loading error={error} retry={load} kind="card"/>
     :!items.length?<Empty icon={FileText} title={t('fe.host.apps.empty')} {...(k==='pending'?{text:t('fe.host.apps.emptyText')}:{})}/>
     :items.map(a=><RequestCard key={a.id} className="application-card"
      person={<PersonLine av={<Av name={pname(a.profile)} seed={a.profile.id} src={a.profile.avatar}/>} label={pname(a.profile)} onOpen={()=>navigate('/n/people/'+a.profile.id)}
       name={<>{pname(a.profile)}{a.people.length===1&&a.people[0]!.age?`, ${a.people[0]!.age}`:''}<NameBadges p={a.profile}/></>}
       sub={<>{a.people.length>1?a.people.map(p=>[p.handle?'@'+p.handle:'',p.age?String(p.age):''].filter(Boolean).join(', ')).join(' · ')+' · ':''}{when(a.created_at,locale)}</>}/>}
-     actions={k==='pending'?<><Btn size="md" onClick={()=>void decide(a,true)} disabled={!!busy} busy={busy===a.id}>{t('fe.host.approve')}</Btn><Btn kind="soft" size="md" onClick={()=>void decide(a,false)} disabled={!!busy}>{t('fe.host.decline')}</Btn></>
+     actions={k==='pending'?<><Btn size="md" onClick={()=>void decide(a,true)} disabled={!!busy||full} busy={busy===a.id}>{t('fe.host.approve')}</Btn><Btn kind="soft" size="md" onClick={()=>void decide(a,false)} disabled={!!busy}>{t('fe.host.decline')}</Btn></>
       :cancelled?null:k==='approved'?<Btn kind="soft" size="md" onClick={()=>setConfirm(a)} disabled={!!busy}>{t('fe.host.apps.revoke')}</Btn>
-      :<Btn kind="soft" size="md" onClick={()=>void decide(a,true)} disabled={!!busy} busy={busy===a.id}>{t('fe.host.apps.approveAfter')}</Btn>}>
+      :<Btn kind="soft" size="md" onClick={()=>void decide(a,true)} disabled={!!busy||full} busy={busy===a.id}>{t('fe.host.apps.approveAfter')}</Btn>}>
      {a.answers.map((x,i)=><Answer key={i} q={qs[i]}>{x}</Answer>)}
      {a.note&&<Answer q={t('fe.host.app.note')}>{a.note}</Answer>}
     </RequestCard>)}

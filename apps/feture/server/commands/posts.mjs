@@ -159,16 +159,21 @@ async function writeParts(q, postId, f, acting, { keepVotes = false } = {}) {
 }
 
 /** Mentions in a text: persons only, allowed by their «Кто может упоминать», not blocked. Others stay plain text.
+ * A mention keeps the profile it was written to (audit item 43): a nickname already linked in this text stays with
+ * that person after they change it, and an old nickname someone else took since is never linked to them on an edit.
  * @param {Q} q @param {'post' | 'reply'} sourceType @param {string} sourceId @param {string} text @param {string} authorProfileId */
 async function writeMentions(q, sourceType, sourceId, text, authorProfileId) {
   const handles = [...new Set([...text.matchAll(MENTION)].map(m => m[1].toLowerCase()))].slice(0, 20);
   await q.query(`delete from feture.mention where source_type = $1 and source_id = $2 and not notified`, [sourceType, sourceId]);
   if (!handles.length) return [];
+  const kept = await q.query(`select written from feture.mention where source_type = $1 and source_id = $2 and written = any($3)`, [sourceType, sourceId, handles]);
+  const fresh = handles.filter(h => !kept.some(k => k.written === h));
+  if (!fresh.length) return [];
   const rows = await q.query(
-    `select p.id from feture.profile p where lower(p.handle) = any($1) and ${acceptsMention('p', '$2')}`,
-    [handles, authorProfileId]);
+    `select p.id, lower(p.handle) written from feture.profile p where lower(p.handle) = any($1) and ${acceptsMention('p', '$2')}`,
+    [fresh, authorProfileId]);
   for (const r of rows) {
-    await q.query(`insert into feture.mention (source_type, source_id, profile_id) values ($1, $2, $3) on conflict do nothing`, [sourceType, sourceId, r.id]);
+    await q.query(`insert into feture.mention (source_type, source_id, profile_id, written) values ($1, $2, $3, $4) on conflict do nothing`, [sourceType, sourceId, r.id, r.written]);
   }
   return rows.map(r => r.id);
 }
@@ -609,7 +614,7 @@ async function postDtos(q, rows, viewer, media, showExplicit) {
       [ids, ownIds, viewer.profileId]),
     // Mentions that are links: not removed by the person (V21 unmentionMe), active, not blocked either way.
     q.query(
-      `select m.source_id post_id, p.id, p.handle from feture.mention m join feture.profile p on p.id = m.profile_id
+      `select m.source_id post_id, p.id, p.handle, coalesce(m.written, lower(p.handle)) written from feture.mention m join feture.profile p on p.id = m.profile_id
        where m.source_type = 'post' and m.source_id = any($1::uuid[]) and not m.removed and p.state = 'active' and not feture.blocked($2, p.id)`,
       [ids, viewer.profileId]),
     // Own posts hidden by an open «это я на фото» claim: the author sees that, never the claimant.
@@ -696,11 +701,17 @@ async function createReply(q, viewer, input) {
   for (const to of [parentAuthor, p.owner_profile_id]) {
     if (to && !told.has(to)) { told.add(to); await enqueue(q, 'reply.created', to, { postId: input.postId, replyId: r.id, from: viewer.profileId }); }
   }
-  for (const m of await writeMentions(q, 'reply', r.id, input.body, viewer.profileId)) {
-    await q.query(`update feture.mention set notified = true where source_type = 'reply' and source_id = $1 and profile_id = $2`, [r.id, m]);
-    await enqueue(q, 'mention.created', m, { postId: input.postId, replyId: r.id, from: viewer.profileId });
-  }
+  await replyMentions(q, r.id, input.postId, input.body, viewer.profileId);
   return { id: r.id };
+}
+
+/** A reply's mentions, written or edited: each person newly mentioned hears it once. @param {Q} q @param {string} replyId
+ * @param {string} postId @param {string} body @param {string} from */
+async function replyMentions(q, replyId, postId, body, from) {
+  for (const m of await writeMentions(q, 'reply', replyId, body, from)) {
+    await q.query(`update feture.mention set notified = true where source_type = 'reply' and source_id = $1 and profile_id = $2`, [replyId, m]);
+    await enqueue(q, 'mention.created', m, { postId, replyId, from });
+  }
 }
 
 registerApprovalKind('reply.create', {
@@ -1078,9 +1089,11 @@ const run = {
     const [r] = await q.query(`select p.community_id from feture.reply r join feture.post p on p.id = r.post_id where r.id = $1 and r.author_profile_id = $2`, [input.replyId, viewer.profileId]);
     if (r) await requireWritable(q, r.community_id, viewer);
     const rows = await q.query(
-      `update feture.reply set body = $3, rev = rev + 1, edited_at = now() where id = $1 and author_profile_id = $2 and state = 'published' and rev = $4 returning rev`,
+      `update feture.reply set body = $3, rev = rev + 1, edited_at = now() where id = $1 and author_profile_id = $2 and state = 'published' and rev = $4 returning rev, post_id`,
       [input.replyId, viewer.profileId, input.body, input.rev]);
     if (!rows[0]) fail(409, 'conflict');
+    // An edit updates the mentions too (audit item 43): a name added is a link and hears it, one taken out is text.
+    await replyMentions(q, input.replyId, rows[0].post_id, input.body, viewer.profileId);
     return { rev: rows[0].rev };
   },
 
@@ -1105,7 +1118,7 @@ const run = {
          (select count(*)::int from feture.reaction x where x.target_type = 'reply' and x.target_id = r.id and ${activeActor('x.profile_id')}) likes,
          exists (select 1 from feture.reaction x where x.target_type = 'reply' and x.target_id = r.id and x.profile_id = $2) liked,
          exists (select 1 from feture.reply c where c.parent_id = r.id and c.state = 'published' and ${activeActor('c.author_profile_id')}) has_replies,
-         (select coalesce(json_agg(json_build_object('id', mp.id, 'handle', mp.handle)), '[]'::json) from feture.mention m join feture.profile mp on mp.id = m.profile_id
+         (select coalesce(json_agg(json_build_object('id', mp.id, 'handle', mp.handle, 'written', coalesce(m.written, lower(mp.handle)))), '[]'::json) from feture.mention m join feture.profile mp on mp.id = m.profile_id
           where m.source_type = 'reply' and m.source_id = r.id and not m.removed and mp.state = 'active' and not feture.blocked($2, mp.id)) mentions
        from feture.reply r where r.post_id = $1 and r.state <> 'removed' order by r.created_at`, [input.postId, viewer.profileId]);
     // Deleted without live replies disappear; with replies they stay as a stub; blocked authors show as hidden.

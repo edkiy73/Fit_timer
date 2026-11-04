@@ -1,6 +1,15 @@
 /** The event page's «участие» block (src/fe/communities.tsx EventScreen, owner 29.10.2026): one structure for every
  * state — free or by application, a guest, a couple, the organiser, cancelled, past. */
 export const ru = {
+  'fe.evp.noSeats': 'Мест нет',
+  'fe.evp.seatsOf': '{n} из {m} мест занято',
+  'fe.evp.apart.aloneQ': 'Ты уже идёшь лично',
+  'fe.evp.apart.aloneText': 'Идём парой — твоя личная отметка снимется. По отдельности — пара не отмечается.',
+  'fe.evp.apart.together': 'Идём парой',
+  'fe.evp.apart.keep': 'Оставить по отдельности',
+  'fe.evp.apart.coupleQ': 'Вы уже идёте парой',
+  'fe.evp.apart.coupleText': 'Отметиться ещё и лично? Место на событии ты всё равно займёшь одно.',
+  'fe.evp.apart.alone': 'Отметиться лично',
   'fe.evp.byApp': 'Участие по заявке',
   'fe.evp.showMe': 'Показывать меня в списке',
   'fe.evp.showUs': 'Показывать нас в списке',
@@ -16,6 +25,15 @@ export const ru = {
   'fe.evp.hostSubAppOnline': 'Ссылку видят только одобренные участники',
 };
 export const en = {
+  'fe.evp.noSeats': 'No places left',
+  'fe.evp.seatsOf': '{n} of {m} places taken',
+  'fe.evp.apart.aloneQ': 'You’re already going on your own',
+  'fe.evp.apart.aloneText': 'Go as a couple — your own mark comes off. Keep it separate — the couple isn’t marked.',
+  'fe.evp.apart.together': 'Go as a couple',
+  'fe.evp.apart.keep': 'Keep it separate',
+  'fe.evp.apart.coupleQ': 'You’re already going as a couple',
+  'fe.evp.apart.coupleText': 'Mark yourself on your own too? You still take one place.',
+  'fe.evp.apart.alone': 'Mark me on my own',
   'fe.evp.byApp': 'Attendance by application',
   'fe.evp.showMe': 'Show me in the list',
   'fe.evp.showUs': 'Show us in the list',

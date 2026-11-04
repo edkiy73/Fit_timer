@@ -216,6 +216,9 @@ const RAW = /** @type {Record<string, any>} */ ({
     cat: 'events', normal: T('Модераторы скрыли событие', 'Moderators hid the event'), email: 'now', dest: 'event', gone: GONE_EVENT },
   eventApplicationApproved: { kind: 'result', filter: 'events', icon: 'Check', tone: 'g', card: 'result', text: T('Заявку на событие одобрили — адрес и детали открыты', 'Your event application is approved — address and details are open'),
     cat: 'events', normal: T('Заявку на событие одобрили', 'Your event application is approved'), email: 'now-if-unread', dest: 'event', gone: GONE_EVENT },
+  // The partner marked the couple «идём» while this person is also marked alone (audit item 56, В11): only they see it.
+  eventPairGoing: { filter: 'events', icon: 'Users', tone: 'v', text: T(['{name} отмечает, что вы идёте парой. У тебя есть и личная отметка — сними её, если идёте вместе', '{name} отмечают, что вы идёте парой. У тебя есть и личная отметка — сними её, если идёте вместе'], '{name} marked you going as a couple. You’re also marked on your own — remove it if you go together'),
+    cat: 'events', normal: T('Вы идёте парой', 'You’re going as a couple'), named: true, dest: 'event', gone: GONE_EVENT },
   eventApplicationDeclined: { kind: 'result', filter: 'events', icon: 'Calendar', tone: '', card: 'result', text: T('Заявку на событие отклонили', 'Your event application was declined'),
     cat: 'events', normal: T('Заявку на событие отклонили', 'Your event application was declined'), email: 'now-if-unread', dest: 'event', gone: GONE_EVENT },
   eventCancelled: { important: true, filter: 'events', icon: 'CalendarX', tone: 'l', card: 'event', text: T('Событие отменено', 'The event was cancelled'),

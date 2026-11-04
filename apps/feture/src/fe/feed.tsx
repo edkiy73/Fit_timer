@@ -17,7 +17,7 @@ import {VIDEO_TYPES} from './kit/media';
 import {BellButton} from './inbox';
 import {DisputeNotice,PostMenu,ReplyMenu,type Removal} from './post-menu';
 import {restoreInto,useToast} from './toast';
-import {MarksSheet,MediaGrid,Poll,RichText,Viewer,marksPage,mdPlain,mediaSrc,personName,plural,slideOf,useTopics,type CatTopic,type MarksPage,type PollData,type ViewerBar} from './post-parts';
+import {MarksSheet,MediaGrid,MentionText,Poll,RichText,Viewer,marksPage,mdPlain,mediaSrc,personName,plural,slideOf,useTopics,type CatTopic,type MarksPage,type PollData,type ViewerBar} from './post-parts';
 import {AlbumField,albumOfPost} from './gallery';
 import {Jars,useInterests,type Interest} from './interests';
 import {NameBadges} from './faces';
@@ -52,13 +52,13 @@ export const postSchema=z.object({id:z.uuid(),type:z.enum(['post','note']),title
  poll:z.object({question:z.string(),options:z.array(z.string()),myVote:z.number().nullable().optional(),results:z.array(z.number()).nullable().optional()}).nullable().optional(),
  interests:z.array(interest).nullable().optional(),tags:z.array(tag).optional(),
  // Mentions that are links (V21 unmentionMe): only these @names open a profile.
- mentions:z.array(z.object({id:z.uuid(),handle:z.string().nullable()})).optional()});
+ mentions:z.array(z.object({id:z.uuid(),handle:z.string().nullable(),written:z.string().nullable().optional()})).optional()});
 export type Post=z.infer<typeof postSchema>;
 const page=z.object({ok:z.literal(true),items:z.array(postSchema),next:z.string().nullable()});
 const okOnly=z.object({ok:z.literal(true)}).passthrough();
 const reply=z.object({id:z.uuid(),parentId:z.uuid().nullable().optional(),deleted:z.boolean().optional(),hidden:z.boolean().optional(),unavailable:z.boolean().optional(),body:z.string().optional(),
  author:author.nullable().optional(),mine:z.boolean().optional(),liked:z.boolean().optional(),createdAt:z.string().optional(),editedAt:z.string().nullable().optional(),likes:z.number().optional(),rev:z.number().optional(),
- mentions:z.array(z.object({id:z.uuid(),handle:z.string().nullable()})).optional()});
+ mentions:z.array(z.object({id:z.uuid(),handle:z.string().nullable(),written:z.string().nullable().optional()})).optional()});
 export type Reply=z.infer<typeof reply>;
 const replies=z.object({ok:z.literal(true),items:z.array(reply)});
 const commPriv=z.object({ok:z.literal(true),community:z.object({privacy:z.string()}).passthrough()});
@@ -652,7 +652,7 @@ function ReplyTree({list,sort,open,setOpen,liked,delta,onLike,onReply,onMore,lim
    <div className="cm-b">{hidden?<Note>{c.deleted?t('fe.feed.replyDeleted'):c.unavailable?t('fe.fd.replyUnavailable'):t('fe.fd.replyBlocked')}</Note>:<>
     <div className="cm-h"><button type="button" className="plink pnm" onClick={()=>go(c.author)}><span className="nmt">{nameOf(c.author)}</span></button><time>{when(c.createdAt,locale)}{c.editedAt?' · '+t('fe.fd.edited'):''}</time></div>
     {to&&<small className="cm-to">{t('fe.fd.replyingTo')} <button type="button" className="plink" onClick={()=>go(parent!.author)}>{nameOf(parent!.author)}</button></small>}
-    <p className="reply-text">{c.body}</p>
+    <p className="reply-text"><MentionText text={c.body??''} mentions={c.mentions}/></p>
     <div className="r-acts">
      <button type="button" className={on?'on':''} aria-pressed={on} aria-label={t('fe.fd.likeReply'+(acting?.kind==='couple'?'Us':''))} onClick={()=>onLike(c)}><Heart fill={on?'currentColor':'none'}/>{lk(c)>0&&<span>{lk(c)}</span>}</button>
      <button type="button" aria-label={t('fe.fd.replyToName',{name:nameOf(c.author)})} onClick={()=>onReply(c)}><MessageCircle/></button>
@@ -679,6 +679,8 @@ function ReplyTree({list,sort,open,setOpen,liked,delta,onLike,onReply,onMore,lim
 const saved=z.object({ok:z.literal(true),id:z.uuid()}).passthrough();
 const published=z.object({ok:z.literal(true),state:z.string().optional()}).passthrough();
 const uploadIntent=z.object({ok:z.literal(true),assetId:z.uuid(),upload:z.object({url:z.string(),method:z.string(),headers:z.record(z.string(),z.string())})});
+/** The profile's photos and the posts they come from (audit item 52). */
+const photoPosts=z.object({ok:z.literal(true),profile:z.object({photos:z.array(z.object({postId:z.string().optional()}).passthrough())}).passthrough()});
 const edited=z.object({ok:z.literal(true),state:z.string().optional(),rev:z.number().optional(),review:z.boolean().optional(),pending:z.unknown().optional()}).passthrough();
 const followRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable()}).passthrough())});
 type Audience='all'|'followers'|'granted'|'only';
@@ -813,8 +815,15 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
   toast(msg,{type:unheard.length?'warn':'ok',action:{label:t('fe.fd.myPosts'),fn:()=>navigate('/n/me/posts')}});
   guard.pass(()=>navigate(communityId?'/n/communities/'+communityId:state==='review'||state==='pending_partner'?'/n/me/posts':'/n/feed',{replace:true}));
  };
- const publish=async()=>{
-  if(busy||uploading||!validate())return;setBusy('publish');setFailure('');
+ const [narrowAsk,setNarrowAsk]=useState(0);
+ const publish=async(narrowOk=false)=>{
+  if(busy||uploading||!validate())return;
+  // A post everyone sees made narrower: its photos leave the profile photos for good (audit item 52) — ask first.
+  if(live&&!narrowOk&&edit?.audience==='all'&&audience!=='all'&&acting){
+   const n=await call('profile.get',{profileId:acting.id},photoPosts).then(r=>r.profile.photos.filter(ph=>ph.postId===edit.id).length).catch(()=>0);
+   if(n){setNarrowAsk(n);return;}
+  }
+  setBusy('publish');setFailure('');
   try{
    if(live){
     const r=await call('post.edit',{opId:ops.current.edit,postId:edit!.id,rev:edit!.rev!,post:fields()},edited);
@@ -925,8 +934,10 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
    </View>
    <div className="ctabar"><div className="wrap"><Actions>
     <Btn kind="soft" onClick={()=>setPreview(false)}>{t('fe.fd.change')}</Btn>
-    <Btn onClick={publish} disabled={!!busy||uploading} busy={busy==='publish'}>{cta}</Btn>
+    <Btn onClick={()=>void publish()} disabled={!!busy||uploading} busy={busy==='publish'}>{cta}</Btn>
    </Actions></div></div>
+   {narrowAsk>0&&<Ask icon={Users} tone="v" title={t('fe.gal.audFollowersQ')} text={t('fe.gal.photoLeaves',{n:narrowAsk})} ok={t('fe.pm.ed.save')} cancel={t('fe.pm.cancel')}
+    onOk={()=>{setNarrowAsk(0);void publish(true);}} onCancel={()=>setNarrowAsk(0)}/>}
    {guard.node}
   </>;
  }
@@ -1012,13 +1023,15 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
   <div className="ctabar"><div className="wrap"><div className="row g8">
    {/* Acting as the couple the longer «…от пары» button takes the row: «Как увидят» is the kit's icon-only button. */}
    <Btn kind="soft" className="prevbtn" icon={Eye} fit square={couple} aria-label={t('fe.fd.preview')} onClick={()=>{if(validate())setPreview(true);}}>{couple?null:<span>{t('fe.fd.howSeen')}</span>}</Btn>
-   <Btn onClick={publish} disabled={!!busy||uploading} busy={busy==='publish'}>{cta}</Btn>
+   <Btn onClick={()=>void publish()} disabled={!!busy||uploading} busy={busy==='publish'}>{cta}</Btn>
   </div></div></div>
   {sheet==='topics'&&<FilterSheet direct title={t('fe.fd.topicsTitle')} max={3} topics={catalog} cats={cats} popular={topics} value={topics} onClose={()=>setSheet(null)}
    onApply={v=>{if(v.length>3){toast(t('fe.fd.max3'),{type:'warn'});return;}setTopics(v);setSheet(null);}}/>}
   {sheet==='ints'&&<FilterSheet direct title={t('fe.fd.interests')} max={4} topics={catalog.filter(c=>eligible.some(j=>j.topicId===c.id))} cats={cats} popular={interests??[]} value={interests??[]} onClose={()=>setSheet(null)}
    onApply={v=>{if(v.length>4){toast(t('fe.fd.max4'),{type:'warn'});return;}setInterests(v.length?v:null);setSheet(null);}}/>}
   {sheet==='mention'&&<MentionSheet onClose={()=>setSheet(null)} onPick={insertMention}/>}
+  {narrowAsk>0&&<Ask icon={Users} tone="v" title={t('fe.gal.audFollowersQ')} text={t('fe.gal.photoLeaves',{n:narrowAsk})} ok={t('fe.pm.ed.save')} cancel={t('fe.pm.cancel')}
+    onOk={()=>{setNarrowAsk(0);void publish(true);}} onCancel={()=>setNarrowAsk(0)}/>}
   {sheet==='people'&&<PeopleSheet value={people} onClose={()=>setSheet(null)} onApply={v=>{setPeople(v);setSheet(null);}} locked={(edit?.tags??[]).filter(x=>x.state==='no').map(x=>x.id)}/>}
   {picked&&(pickFor==='media'?<Uploader files={picked} aspects={['orig','4:5','1:1']} max={MEDIA_MAX-media.length} send={sendPhoto} sendVideo={sendVideo} onClose={()=>setPicked(null)}
    onDone={got=>{setPicked(null);setMedia(m=>[...m,...got.map(g=>({id:g.id,preview:g.url,kind:g.kind,durationMs:g.durationMs,w:g.w,h:g.h,file:g.file}))]);setErrs(e=>{const {media:_m,...rest}=e;return rest;});}}/>

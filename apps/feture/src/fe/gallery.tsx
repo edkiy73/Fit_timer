@@ -102,7 +102,7 @@ function AlbumPickSheet({title,albums,current,onPick,onNew,onClose,busy}:{title:
 /* ---------- P20 gallery ---------- */
 
 type SheetKind='menu'|'cover'|'rename'|'new'|'pick'|'newSel'|'aud'|null;
-type AskKind='visFollowers'|'visAll'|'delete'|'selDelete'|{narrow:string|null,n:number}|null;
+type AskKind='visFollowers'|'visAll'|'delete'|'selDelete'|'audFollowers'|{narrow:string|null,n:number,photos:number}|null;
 
 export function GalleryScreen(){
  const {id=''}=useParams();const [params,setParams]=useSearchParams();const asked=params.get('a');
@@ -153,6 +153,8 @@ export function GalleryScreen(){
  const fail=(e:unknown)=>toast(feErrorMessage(e,t),{type:'err'});
  const run=async(fn:()=>Promise<void>)=>{if(busy)return;setBusy(true);try{await fn();}catch(e){fail(e);}finally{setBusy(false);}};
  const picked=items.filter(x=>sel?.has(x.postId));
+ // Profile photos from these posts: narrowing takes them off the profile for good (audit item 52) — say so first.
+ const onProfile=(ids:string[])=>(p?.photos??[]).filter(ph=>ph.postId&&ids.includes(ph.postId)).length;
  const sortLabel=(s:string)=>s==='old'?t('fe.gal.sortOld'):t('fe.gal.sortNew');
 
  /* album menu */
@@ -196,18 +198,19 @@ export function GalleryScreen(){
  const toAlbum=(albumId:string|null,confirmed=false)=>{
   const target=albums?.items.find(x=>x.id===albumId);
   const wide=target?.visibility==='followers'?picked.filter(x=>x.audience==='all').length:0;
-  if(wide&&!confirmed){setSheet(null);setAsk({narrow:albumId,n:wide});return;}
+  if(wide&&!confirmed){setSheet(null);setAsk({narrow:albumId,n:wide,photos:onProfile(picked.filter(x=>x.audience==='all').map(x=>x.postId))});return;}
   void run(async()=>{const r=await bulk({change:'album',albumId,...(wide?{confirm:true}:{})});
    done((albumId?t('fe.gal.inAlbumN',{name:target?.title??'',n:r.moved??picked.length}):t('fe.gal.noAlbumN',{n:r.moved??picked.length}))+(r.narrowed?'. '+t('fe.gal.narrowedN',{n:r.narrowed}):''));});
  };
- const setAudience=(v:'all'|'followers')=>{
+ const setAudience=(v:'all'|'followers',confirmed=false)=>{
   const ids=picked.map(x=>x.postId);
   if(v==='all'){
    const closed=picked.filter(x=>albums?.items.find(y=>y.id===x.albumId)?.visibility==='followers');
    if(closed.length){setSheet(null);toast(t('fe.gal.inClosedAlbum',{n:closed.length}),{type:'warn'});return;}
   }
   const prev=picked.filter(x=>x.audience!==v).map(x=>x.postId);
-  const fromProfile=v==='followers'?(p?.photos??[]).filter(ph=>ph.postId&&ids.includes(ph.postId)).length:0;
+  const fromProfile=v==='followers'?onProfile(ids):0;
+  if(fromProfile&&!confirmed){setSheet(null);setAsk('audFollowers');return;}
   void run(async()=>{
    const r=await bulk({change:'audience',audience:v});
    const who=v==='all'?t('fe.gal.whoAll'):t('fe.gal.whoFollowers');
@@ -215,7 +218,7 @@ export function GalleryScreen(){
    if(fromProfile)msg+='. '+t('fe.gal.leftProfile',{n:fromProfile});
    if(r.review)msg+='. '+t('fe.gal.reviewN',{n:r.review});
    if(r.pending?.length)msg+='. '+t('fe.gal.pendingPartner');
-   done(msg,{type:'ok',...(prev.length?{action:{label:t('fe.gal.undo'),fn:()=>{
+   done(msg,{type:'ok',...(prev.length&&!fromProfile?{action:{label:t('fe.gal.undo'),fn:()=>{
     void call('gallery.bulk',{opId:newOpId(),postIds:prev,change:'audience',audience:v==='all'?'followers':'all'},bulkRes)
      .then(u=>{reload();toast(t('fe.gal.undone')+(u.review?'. '+t('fe.gal.reviewN',{n:u.review}):''),{type:'ok'});}).catch(fail);}}}:{})});
   });
@@ -294,7 +297,7 @@ export function GalleryScreen(){
    <Row noChev icon={Users} title={t('fe.gal.visFollowers')} sub={t('fe.gal.followersProfileNote')} disabled={busy} onClick={()=>setAudience('followers')}/>
   </Card></Sheet>}
 
-  {ask==='visFollowers'&&cur&&<Ask icon={Users} tone="v" title={t('fe.gal.visFollowersQ')} text={t('fe.gal.visFollowersText',{n:cur.count})} ok={t('fe.gal.visFollowersOk')}
+  {ask==='visFollowers'&&cur&&<Ask icon={Users} tone="v" title={t('fe.gal.visFollowersQ')} text={t('fe.gal.visFollowersText',{n:cur.count})+(onProfile(items.filter(x=>x.audience==='all').map(x=>x.postId))?' '+t('fe.gal.photoLeaves',{n:onProfile(items.filter(x=>x.audience==='all').map(x=>x.postId))}):'')} ok={t('fe.gal.visFollowersOk')}
    busy={busy} onOk={()=>void setVisibility('followers',true)} onCancel={()=>setAsk(null)}/>}
   {ask==='visAll'&&cur&&<Ask icon={Globe} tone="v" title={t('fe.gal.visAllQ')} text={t('fe.gal.visAllText')} ok={t('fe.gal.visAllOk')} busy={busy}
    alt={{label:t('fe.gal.visAllOnly'),onClick:()=>void setVisibility('all',false)}} onOk={()=>void setVisibility('all',true)} onCancel={()=>setAsk(null)}/>}
@@ -302,8 +305,10 @@ export function GalleryScreen(){
    onOk={()=>void removeAlbum()} onCancel={()=>setAsk(null)}/>}
   {ask==='selDelete'&&<Ask icon={Trash2} tone="l" danger title={t('fe.gal.selDeleteQ',{n:picked.length})} text={t('fe.gal.selDeleteText')} ok={t('fe.gal.delete')} busy={busy}
    onOk={()=>void removeSelected()} onCancel={()=>setAsk(null)}/>}
-  {ask&&typeof ask==='object'&&<Ask icon={Users} tone="v" title={t('fe.gal.narrowQ')} text={t('fe.gal.narrowText',{n:ask.n})} ok={t('fe.gal.narrowOk')} busy={busy}
+  {ask&&typeof ask==='object'&&<Ask icon={Users} tone="v" title={t('fe.gal.narrowQ')} text={t('fe.gal.narrowText',{n:ask.n})+(ask.photos?' '+t('fe.gal.photoLeaves',{n:ask.photos}):'')} ok={t('fe.gal.narrowOk')} busy={busy}
    onOk={()=>toAlbum(ask.narrow,true)} onCancel={()=>setAsk(null)}/>}
+  {ask==='audFollowers'&&<Ask icon={Users} tone="v" title={t('fe.gal.audFollowersQ')} text={t('fe.gal.photoLeaves',{n:onProfile(picked.map(x=>x.postId))})} ok={t('fe.gal.audFollowersOk')} busy={busy}
+   onOk={()=>{setAsk(null);setAudience('followers',true);}} onCancel={()=>setAsk(null)}/>}
  </>;
 }
 
