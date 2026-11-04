@@ -548,17 +548,19 @@
 /* one height open or closed (owner 05.11.2026: nothing stretches); open — the name shrinks into the top-left corner
    inside the frame and the 1–10 sits under it */
 .v21 .ans-row-l{position:absolute;left:16px;top:32px;transform:translateY(-50%);font-size:var(--fs-body);font-weight:600;line-height:1.2;color:var(--ink);pointer-events:none;z-index:1;transition:top .18s var(--ease),font-size .18s var(--ease),color .18s var(--ease)}
-.v21 .ans-row.open{padding:24px 6px 6px}.v21 .ans-row.open .ans-row-l{left:12px;top:13px;font-size:var(--fs-micro);color:var(--mute)}.v21 .ans-row.open.on .ans-row-l{color:var(--accent)}
-.v21 .ans-row.open .ans-scale{gap:3px}.v21 .ans-row.open .ans-scale button{height:34px;border-radius:var(--r-xs)}
+.v21 .ans-row.open{padding:26px 16px 8px}.v21 .ans-row.open .ans-row-l{left:16px;top:14px;font-size:var(--fs-micro);color:var(--mute)}.v21 .ans-row.open.on .ans-row-l{color:var(--accent)}
+.v21 .ans-row.open .ans-scale{gap:4px}.v21 .ans-row.open .ans-scale button{height:30px;border-radius:var(--r-xs);box-shadow:none;background:var(--raise)}
+.v21 .ans-row.open .ans-scale button.fill{background:color-mix(in srgb,var(--accent) 22%,var(--surf))}.v21 .ans-row.open .ans-scale button.on,.v21 .ans-row.open .ans-scale button.held{background:var(--accent);color:#fff}
 .v21 .ans-scale button.held{background:var(--accent);color:#fff;box-shadow:none}
 /* the marks in the colours of the interest capsules: «обсуждаемо» a dashed amber edge, «табу» red stripes */
 .v21 .ans-m.soft{border:1.5px dashed color-mix(in srgb,var(--warn) 65%,transparent);box-shadow:none;color:var(--warn)}.v21 .ans-m.soft svg{color:var(--warn)}
-.v21 .ans-m.soft.on{background:color-mix(in srgb,var(--warn) 20%,var(--surf));color:var(--ink)}.v21 .ans-m.soft.on svg{color:var(--warn)}
+.v21 .ans-m.soft.on{border:2px solid var(--warn);background:color-mix(in srgb,var(--warn) 16%,var(--surf));color:var(--warn)}.v21 .ans-m.soft.on svg{color:var(--warn)}
 .v21 .ans-m.taboo{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--danger) 18%,transparent) 0 6px,var(--trk) 6px 12px);box-shadow:none;color:var(--danger)}.v21 .ans-m.taboo svg{color:var(--danger)}
 .v21 .ans-m{display:flex;align-items:center;justify-content:center;gap:8px;min-height:46px;border-radius:var(--r-m);background:var(--surf);box-shadow:inset 0 0 0 1px var(--line2);font-size:var(--fs-body);font-weight:600}
 .v21 .ans-m svg{width:18px;height:18px;color:var(--mute)}
 .v21 .ans-m.on{background:var(--ink);color:var(--bg);box-shadow:none}.v21 .ans-m.on svg{color:var(--bg)}
-.v21 .ans-m.taboo.on{background:var(--danger);color:#fff}.v21 .ans-m.taboo.on svg{color:#fff}
+/* a chosen mark keeps its look and gains a 2px edge in its colour (owner 05.11.2026: no solid red slab) */
+.v21 .ans-m.taboo.on{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--danger) 32%,transparent) 0 6px,var(--trk) 6px 12px);box-shadow:inset 0 0 0 2px var(--danger);color:var(--danger)}.v21 .ans-m.taboo.on svg{color:var(--danger)}
 /* tests */
 .v21 .tests{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .v21 .tcard{display:grid;align-content:start;min-width:0;border-radius:var(--r-l);background:var(--surf);border:1px solid var(--line);overflow:hidden;text-align:left}
