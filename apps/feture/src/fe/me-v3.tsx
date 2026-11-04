@@ -2,7 +2,7 @@ import {useCallback,useEffect,useState} from 'react';
 import {useNavigate,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,Bell,Bookmark,Calendar,CircleHelp,Crown,Download,Eye,Globe,Heart,Images,Inbox,KeyRound,Link2,Lock,LogOut,Newspaper,Pencil,Settings,ShieldCheck,Smartphone,Sparkles,UserCog,Users} from 'lucide-react';
+import {Ban,Bell,Bookmark,Calendar,CircleHelp,Crown,Download,Eye,Globe,Heart,Images,Inbox,Info,KeyRound,Link2,ListChecks,Lock,LogOut,Newspaper,Settings,ShieldCheck,Smartphone,Sparkles,UserCog,UserRound,Users} from 'lucide-react';
 import {Actions,Av,Bar,Btn,Card,Group,IconBtn,Row,Seg,Skel,View} from './kit';
 import {useFe,useLive,useShown} from './session';
 import {BellButton,countsRes} from './inbox';
@@ -16,10 +16,7 @@ import {usePremiumStatus} from './account-extra';
 import {onStatusAnswered} from './status-todo';
 import {useAccountSettings,useLogout} from './settings';
 import {useMe} from './me-new';
-import {DetailsBlock,MeSkel,PhotosBlock,catalogRes,type option} from './me';
-import {BasicsForm} from './me-basics-form';
-import {MeAboutBlock} from './about-facts';
-import type {Place} from './kit/Place';
+import {MeSkel,PhotosBlock} from './me';
 
 /** «Я» v3 (owner's account prototype, 05.11.2026), by address only (/n/me/v3) until the owner picks it: one header,
  * then two zones of the acting profile — «Профиль» (what others see) and «Приватность» (who reaches it). The account's
@@ -77,21 +74,22 @@ export function MeV3Screen(){
 
 type MeData=ReturnType<typeof useMe>;
 
-/** «Профиль»: the two main actions, the photos, what the profile holds and the pair (the bio is edited in «Редактировать»). */
+/** «Профиль» (owner 05.11.2026): «Как видят», the photos, then one list in the order the public profile shows it —
+ * Основное · Обо мне · Данные · Связи · Интересы · Галерея · Моё; each part edits on its own screen, no «Редактировать». */
 function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['settings'],load:()=>void,cp:boolean,links:number|undefined}){
  const {t}=useI18n();const navigate=useNavigate();const go=(to:string)=>()=>navigate(to);
  return <>
   <Group><Actions>
-   <Btn icon={Pencil} onClick={go('/n/me/v3/edit')}>{t('fe.v3.edit')}</Btn>
    <Btn kind="soft" icon={Eye} onClick={go('/n/me/preview')}>{t('fe.mx.howSeen')}</Btn>
   </Actions></Group>
-  {!p||!settings?<MeSkel/>:<>
-   <PhotosBlock p={p} settings={settings} onChanged={load}/>
-  </>}
-  <Group title={t('fe.v3.g.content')}><Card list>
-   <Row icon={Images} title={t('fe.mx.gal')} onClick={go('/n/me/new/gallery')}/>
-   <Row icon={Sparkles} title={t('fe.v3.interests')} onClick={go('/n/me/interests')}/>
+  {!p||!settings?<MeSkel/>:<PhotosBlock p={p} settings={settings} onChanged={load}/>}
+  <Group><Card list>
+   <Row icon={UserRound} title={t('fe.me.basics')} onClick={go('/n/me/edit?only=basics')}/>
+   {!cp&&<Row icon={Info} title={t('fe.ab.title')} onClick={go('/n/me/edit?only=about')}/>}
+   <Row icon={ListChecks} title={t(cp?'fe.v3.us.details':'fe.me.details')} onClick={go('/n/me/edit?only=details')}/>
    <Row icon={Link2} title={t('fe.v3.links')} badge={links||undefined} onClick={go('/n/me/links')}/>
+   <Row icon={Sparkles} title={t('fe.v3.interests')} onClick={go('/n/me/interests')}/>
+   <Row icon={Images} title={t('fe.mx.gal')} onClick={go('/n/me/new/gallery')}/>
    <Row icon={Bookmark} title={t(cp?'fe.v3.mineUs':'fe.v3.mine')} onClick={go('/n/me/v3/mine')}/>
   </Card></Group>
   <PairEntry plain/>
@@ -167,22 +165,3 @@ export function MeV3MineScreen(){
  </>;
 }
 
-/** «Редактировать» (the prototype's editor): only what the profile says about itself — «Основное», «Обо мне», «Данные»,
- * one column, no tabs. Photos, gallery, interests, links and the private part are rows of «Я», each in one place. */
-export function MeV3EditScreen(){
- const {call}=useFe();const {t,locale}=useI18n();
- const {p,load}=useMe();
- const [options,setOptions]=useState<z.infer<typeof option>[]>([]);const [places,setPlaces]=useState<Place[]>([]);
- useEffect(()=>{call('catalog.get',{},catalogRes,{asAccount:true}).then(r=>{setOptions(r.options);setPlaces(r.places??[]);}).catch(()=>{});},[call]);
- const label=(kind:string,code:string)=>{const o=options.find(x=>x.kind===kind&&x.code===code);return o?(locale==='en'?o.en:o.ru):code;};
- return <>
-  <Bar title={t('fe.v3.editTitle')} back="/n/me/v3"/>
-  <View refresh={load}>
-   {!p?<MeSkel/>:<>
-    <BasicsForm p={p} places={places} onSaved={load}/>
-    <MeAboutBlock p={p}/>
-    <DetailsBlock p={p} label={label}/>
-   </>}
-  </View>
- </>;
-}
