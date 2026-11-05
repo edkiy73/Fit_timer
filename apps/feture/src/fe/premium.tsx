@@ -13,7 +13,7 @@ import {useFe,useShown} from './session';
  * the server says so (`payments: false`) and the pay buttons explain that payment comes later; nothing is faked. */
 
 const statusRes=z.object({ok:z.literal(true),premium:z.boolean(),until:z.string().nullable(),viaPartner:z.boolean(),
- source:z.enum(['purchase','gift','staff']).nullable().optional(),
+ source:z.enum(['purchase','gift','staff','promo','referral']).nullable().optional(),
  subscription:z.object({plan:z.string(),autoRenew:z.boolean(),renewsAt:z.string().nullable()}).nullable().optional(),
  payments:z.boolean().optional(),
  partner:z.object({name:z.string().nullable(),until:z.string()}).nullable().optional(),

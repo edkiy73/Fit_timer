@@ -19,6 +19,7 @@ export const PRICE_CURRENCY = 'EUR';
 export const PRICES = /** @type {const} */ ({ month: 1199, year: 7999, m1: 1199, m3: 2999, m12: 7999 });
 export const PAIR_FACTOR = 2;
 const nick = z.string().trim().min(3).max(20);
+const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 /** A price in cents of PRICE_CURRENCY: 1.00 to 10 000.00. */
 const price = z.int().min(100).max(1000000);
 export const premiumCommands = {
@@ -45,6 +46,16 @@ export const premiumCommands = {
     input: z.strictObject({ opId, prices: z.strictObject({ month: price.optional(), year: price.optional(), m1: price.optional(), m3: price.optional(), m12: price.optional() })
       .refine(v => Object.keys(v).length > 0, { message: 'empty' }) }),
   },
+  // Premium in bulk (owner 06.11.2026): to everyone, or to everyone who registered before a day; a count first, then the grant.
+  'staff.premiumGrantAllCount': { profile: false, write: false, input: z.strictObject({ audience: z.enum(['all', 'before']), before: day.optional() }) },
+  'staff.premiumGrantAll': {
+    profile: false, write: true,
+    input: z.strictObject({ opId, audience: z.enum(['all', 'before']), before: day.optional(), days: z.int().min(1).max(400), reason: field('staffReason') })
+      .refine(v => v.audience === 'all' || !!v.before, { message: 'before_required', path: ['before'] }),
+  },
+  // «Premium новым аккаунтам»: on with a number of days, or off (null).
+  'staff.premiumPromo': { profile: false, write: false, input: z.strictObject({}) },
+  'staff.premiumPromoSet': { profile: false, write: true, input: z.strictObject({ opId, welcomeDays: z.int().min(1).max(365).nullable() }) },
   // A person's or couple's Premium as staff see it: every period with its source, so nobody pastes a number to revoke it.
   'staff.premiumList': { profile: false, write: false, input: z.strictObject({ handle: z.string().trim().min(3).max(20) }) },
   // `confirmPaid`: a period someone paid for or was gifted is revoked only on purpose (the refund itself is done at the provider).

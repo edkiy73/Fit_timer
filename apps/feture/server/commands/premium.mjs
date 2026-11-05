@@ -189,6 +189,29 @@ export async function pricesOf(q) {
   return { ...PRICES, ...Object.fromEntries(rows.map(r => [r.key, r.amount_cents])) };
 }
 
+/** The accounts a bulk grant reaches: everyone active with a profile, or those who registered before a day.
+ * @param {Q} q @param {'all' | 'before'} audience @param {string | undefined} before YYYY-MM-DD */
+async function bulkTargets(q, audience, before) {
+  return q.query(
+    `select a.id, a.person_profile_id from feture.account a
+     where a.state = 'active' and a.person_profile_id is not null and ($1 = 'all' or a.created_at < $2::date) order by a.created_at`, [audience, before ?? null]);
+}
+const BULK_MAX = 20000;
+
+/** Gives every new account its welcome Premium when it finishes onboarding, if the switch is on (once per account).
+ * @param {Q} q @param {string} accountId */
+export async function grantWelcome(q, accountId) {
+  const [promo] = await q.query('select welcome_days from feture.premium_promo where id');
+  if (!promo?.welcome_days) return;
+  if ((await q.query(`select 1 from feture.entitlement where account_id = $1 and source = 'promo' and reason = 'welcome'`, [accountId])).length) return;
+  const [e] = await q.query(
+    `insert into feture.entitlement (account_id, source, starts_at, ends_at, reason)
+     select $1, 'promo', s, s + make_interval(days => $2), 'welcome' from (select greatest(now(), coalesce((select premium_until from feture.account where id = $1), now())) s) x returning id, ends_at`,
+    [accountId, promo.welcome_days]);
+  await recompute(q, accountId);
+  await enqueue(q, 'premium.granted', await accountProfile(q, accountId), { for: accountId, days: promo.welcome_days, until: new Date(e.ends_at).toISOString() });
+}
+
 /** Ends the account's subscriptions at their providers before the account is deleted: a deleted account must not go on
  * being charged. A provider that cannot be reached stops the deletion (503: try again), never leaves a charge behind.
  * @param {Q} q @param {import('../handler.mjs').Cfg} cfg @param {string} accountId */
@@ -493,6 +516,41 @@ const run = {
     }
     await journal(q, account.id, 'premium.prices', 'premium', account.id, { before, after: input.prices });
     return { currency: PRICE_CURRENCY, prices: await pricesOf(q) };
+  },
+
+  async 'staff.premiumGrantAllCount'(q, { account, input }) {
+    await requireStaff(q, account, ['owner', 'lead']);
+    return { count: (await bulkTargets(q, input.audience, input.before)).length, max: BULK_MAX };
+  },
+
+  async 'staff.premiumGrantAll'(q, { account, input }) {
+    await requireStaff(q, account, ['owner', 'lead']);
+    const targets = await bulkTargets(q, input.audience, input.before);
+    if (!targets.length) fail(422, 'rule_violation', { rule: 'nobody' });
+    if (targets.length > BULK_MAX) fail(422, 'rule_violation', { rule: 'too_many' });
+    // Every account gets a period of its own, queued after its current Premium; each is told, like a single grant.
+    const given = await q.query(
+      `with t as (select a.id, greatest(now(), coalesce(a.premium_until, now())) s from feture.account a where a.id = any($1)),
+            ins as (insert into feture.entitlement (account_id, source, starts_at, ends_at, granted_by, reason)
+                    select id, 'promo', s, s + make_interval(days => $2), $3, $4 from t returning account_id, ends_at),
+            upd as (update feture.account a set premium_until = ins.ends_at, updated_at = now() from ins where a.id = ins.account_id returning a.id)
+       select account_id, ends_at from ins`, [targets.map(r => r.id), input.days, account.id, input.reason]);
+    for (const g of given) await enqueue(q, 'premium.granted', targets.find(r => r.id === g.account_id)?.person_profile_id ?? null, { for: g.account_id, days: input.days, until: new Date(g.ends_at).toISOString() });
+    await journal(q, account.id, 'premium.grantAll', 'premium', account.id, { count: given.length, days: input.days, audience: input.audience, before: input.before ?? null, reason: input.reason });
+    return { count: given.length };
+  },
+
+  async 'staff.premiumPromo'(q, { account }) {
+    await requireStaff(q, account, ['owner', 'lead']);
+    const [p] = await q.query('select welcome_days from feture.premium_promo where id');
+    return { welcomeDays: p?.welcome_days ?? null };
+  },
+
+  async 'staff.premiumPromoSet'(q, { account, input }) {
+    await requireStaff(q, account, ['owner', 'lead']);
+    await q.query('update feture.premium_promo set welcome_days = $1, updated_by = $2, updated_at = now() where id', [input.welcomeDays, account.id]);
+    await journal(q, account.id, 'premium.welcome', 'premium', account.id, { welcomeDays: input.welcomeDays });
+    return { welcomeDays: input.welcomeDays };
   },
 
   async 'staff.premiumList'(q, { account, input }) {

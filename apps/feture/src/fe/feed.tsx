@@ -730,8 +730,8 @@ type MediaDraft={id:string,preview:string,kind?:string|undefined,durationMs?:num
 type Person={id:string,name:string};
 /** `mentionable`: the server says whether a mention by the acting profile reaches the person (their «Кто может
  * упоминать»); false — the name stays text and nobody is notified. */
-type Mention={id:string,handle:string,name:string,avatar:string|null,kind?:string|undefined,halves?:{name:string|null,avatar?:string|null}[]|undefined,mentionable?:boolean|undefined};
-const mentionRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.unknown().optional(),mentionable:z.boolean().optional(),halves:faceFields.halves}).passthrough())});
+type Mention={id:string,handle:string,name:string,avatar:string|null,premium?:boolean|undefined,photoVerified?:boolean|undefined,kind?:string|undefined,halves?:{name:string|null,avatar?:string|null}[]|undefined,mentionable?:boolean|undefined};
+const mentionRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.unknown().optional(),mentionable:z.boolean().optional(),premium:z.boolean().optional(),photoVerified:z.boolean().optional(),halves:faceFields.halves}).passthrough())});
 const thumbOf=(a:unknown):string|null=>{const src=(a as {src?:Record<string,string>|null}|null)?.src;return src?(src.thumb??src.card??null):null;};
 
 /** A fresh form every time «Новая публикация» is opened (the same route again kept the old mode and text). */
@@ -1095,12 +1095,12 @@ function MentionSheet({onClose,onPick}:{onClose:()=>void,onPick:(handle:string,m
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[call,acting]);
  const low=q.trim().toLowerCase().replace(/^@/,'');
- useEffect(()=>{if(low.length<2){setFound([]);return;}const id=setTimeout(()=>{call('people.search',{q:low},mentionRes).then(r=>setFound(r.items.map(p=>({id:p.id,handle:p.handle??'',name:nameOf(p),avatar:thumbOf(p.avatar),kind:p.kind,mentionable:p.mentionable})))).catch(()=>setFound([]));},250);
+ useEffect(()=>{if(low.length<2){setFound([]);return;}const id=setTimeout(()=>{call('people.search',{q:low},mentionRes).then(r=>setFound(r.items.map(p=>({id:p.id,handle:p.handle??'',name:nameOf(p),avatar:thumbOf(p.avatar),kind:p.kind,mentionable:p.mentionable,premium:p.premium,photoVerified:p.photoVerified})))).catch(()=>setFound([]));},250);
   return ()=>clearTimeout(id);},[low,call]);
  const match=(p:Mention)=>!low||p.handle.toLowerCase().startsWith(low)||p.name.toLowerCase().includes(low);
  const mine=(near??[]).filter(match) as (Mention&{kind:string})[];const known=new Set(mine.map(p=>p.id));const rest=found.filter(p=>!known.has(p.id));
  const issue=(p:Mention&{kind:string})=>!p.handle?t('fe.w3.mention.noNick'):'';
- const row=(p:Mention&{kind:string})=>{const why=issue(p);return <Row key={p.id} noChev av={<ProfileAv p={p} size="sm"/>} title={<Who name={p.name} nick={p.handle}/>}
+ const row=(p:Mention&{kind:string})=>{const why=issue(p);return <Row key={p.id} noChev av={<ProfileAv p={p} size="sm"/>} title={<Who name={p.name} nick={p.handle}><NameBadges p={p}/></Who>}
   sub={why||(p.mentionable===false?t('fe.lo.mention.silent'):undefined)}
   onClick={()=>{if(why){toast(why,{type:'info'});return;}onPick(p.handle,p.mentionable,p.id);}}/>;};
  return <Sheet full title={t('fe.fd.mention')} sub={t('fe.w3.mention.sub')} onClose={onClose} search={<SearchInput value={q} onChange={e=>setQ(e.target.value)} label={t('fe.w3.mention.find')}/>}>

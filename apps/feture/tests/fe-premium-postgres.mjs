@@ -668,3 +668,42 @@ test('Robokassa: the pay link and the Result URL notification are signed as the 
   assert.equal(ok.reply.body, 'OK7');
   await assert.rejects(p.webhook({ headers: {}, rawBody: body.replace('1199.00', '1.00'), query: new URLSearchParams() }), /bad_signature/);
 });
+
+test('Premium in bulk: a count first, one period each queued after their own, journaled; a switch gives new accounts days once', async () => {
+  const { pg, db, call, person } = await world();
+  try {
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira');
+    await db.query(`update feture.account set created_at = now() - interval '10 days' where person_profile_id = $1`, [a]);
+    await call('uo', null, { action: 'staff.premiumGrant', opId: op(), handle: 'Kira', days: 10, reason: 'у Киры уже есть' });
+    assert.equal((await call('um', null, { action: 'staff.premiumGrantAllCount', audience: 'all' })).status, 403, 'a moderator does not');
+    assert.equal((await call('uo', null, { action: 'staff.premiumGrantAllCount', audience: 'before', before: '2000-01-01' })).count, 0);
+    assert.equal((await call('uo', null, { action: 'staff.premiumGrantAllCount', audience: 'all' })).count, 4); // Boss, Mira, Alex, Kira
+    const old = new Date(Date.now() - 5 * 86400000).toISOString().slice(0, 10);
+    assert.equal((await call('uo', null, { action: 'staff.premiumGrantAllCount', audience: 'before', before: old })).count, 1);
+    const until = async p => new Date((await db.query('select premium_until from feture.account where person_profile_id = $1', [p]))[0].premium_until).getTime();
+    const kiraBefore = await until(b);
+    const r = await call('uo', null, { action: 'staff.premiumGrantAll', opId: op(), audience: 'all', days: 7, reason: 'всем на неделю' });
+    assert.equal(r.count, 4);
+    assert.ok(Math.abs(await until(a) - (Date.now() + 7 * 86400000)) < 60000);
+    assert.ok(Math.abs(await until(b) - (kiraBefore + 7 * 86400000)) < 60000, 'queued after her own 10 days');
+    assert.equal((await db.query(`select count(*)::int n from feture.entitlement where source = 'promo'`))[0].n, 4);
+    assert.equal((await db.query(`select count(*)::int n from feture.staff_action where action = 'premium.grantAll'`))[0].n, 1);
+    assert.equal((await call('uo', null, { action: 'staff.premiumGrantAll', opId: op(), audience: 'before', before: '2000-01-01', days: 7, reason: 'никому' })).rule, 'nobody');
+
+    // «Premium новым аккаунтам»: off by default, on gives each new account its days once when it finishes onboarding.
+    assert.equal((await call('uo', null, { action: 'staff.premiumPromo' })).welcomeDays, null);
+    assert.equal((await call('uo', null, { action: 'staff.premiumPromoSet', opId: op(), welcomeDays: 14 })).welcomeDays, 14);
+    const { grantWelcome } = await import('../server/commands/premium.mjs');
+    const c = await person('uc', 'Noa');
+    const [{ id: accC }] = await db.query('select id from feture.account where person_profile_id = $1', [c]);
+    await db.tx(q => grantWelcome(q, accC));
+    await db.tx(q => grantWelcome(q, accC));
+    assert.equal((await db.query(`select count(*)::int n from feture.entitlement where account_id = $1 and reason = 'welcome'`, [accC]))[0].n, 1, 'once');
+    assert.ok(Math.abs(await until(c) - (Date.now() + 14 * 86400000)) < 60000);
+    await call('uo', null, { action: 'staff.premiumPromoSet', opId: op(), welcomeDays: null });
+    const d = await person('ud', 'Dan');
+    const [{ id: accD }] = await db.query('select id from feture.account where person_profile_id = $1', [d]);
+    await db.tx(q => grantWelcome(q, accD));
+    assert.equal((await db.query(`select count(*)::int n from feture.entitlement where account_id = $1`, [accD]))[0].n, 0, 'off: nothing');
+  } finally { await pg.close(); }
+});
