@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Camera,ClipboardList,Clock,Eye,HeartOff,Newspaper,Settings,Star,Trash2} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {AddCard,Alert,Ask as KitAsk,Card,CheckList,Group,PhotoAdd,PhotoSlot,PhotoSlots,Row,SelectRow,Sheet,Skel,ToggleRow} from './kit';
+import {AddCard,Alert,Ask as KitAsk,Card,Group,MultiChips,PhotoAdd,PhotoSlot,PhotoSlots,Row,SelectRow,Sheet,Skel,ToggleRow} from './kit';
 import {MESSAGE_POINTS,MESSAGES_DEFAULT} from '../../contracts/_messages.mjs';
 import {AgeCheckLink,useAgeResume} from './age-check';
 import {dropReadCache,useFe} from './session';
@@ -152,11 +152,10 @@ export function Visibility({p,settings,onChanged,part}:{p:Profile,settings:Setti
    {toggle('showLikes',cp?t('fe.mx.v.showLikesUs'):t('fe.mx.v.showLikes'),cp?t('fe.mx.v.showLikesSubUs'):t('fe.mx.v.showLikesSub'),settings.showLikes!==false)}
   </Card></Group>
   {/* «Кто может мне писать» (owner 29.10.2026, message requests); the server enforces it. */}
-  <Group title={cp?t('fe.rq.set.titleUs'):t('fe.rq.set.title')}>
-   {/* A list (audit item 50): a mutual like always opens a chat; «Все» stands alone; nothing picked — only a like. */}
-   <CheckList label={cp?t('fe.rq.set.titleUs'):t('fe.rq.set.title')} value={settings.messagesFrom??[...MESSAGES_DEFAULT]} only="all" onChange={v=>void set('messagesFrom',v)}
-    fixed={[[t('fe.rq.set.match'),t('fe.rq.set.matchSub')]]}
-    options={MESSAGE_POINTS.map(v=>[v,t('fe.rq.set.'+v+(cp&&(v==='followers'||v==='following')?'Us':'')),v==='all'?t('fe.rq.set.allSub'):undefined] as const)}/>
+  <Group title={cp?t('fe.rq.set.titleUs'):t('fe.rq.set.title')} foot={t('fe.rq.set.foot')}>
+   {/* Chips (owner 05.11.2026): «Все» stands alone; nothing picked — only a like; a mutual like always opens a chat. */}
+   <MultiChips label={cp?t('fe.rq.set.titleUs'):t('fe.rq.set.title')} value={settings.messagesFrom??[...MESSAGES_DEFAULT]} only="all" onChange={v=>void set('messagesFrom',v)}
+    options={MESSAGE_POINTS.map(v=>[v,t('fe.rq.set.'+v+(cp&&(v==='followers'||v==='following')?'Us':''))] as const)}/>
   </Group>
   {part==='who'&&<Group title={t('fe.m2.who.more')}><Card list>
    <SelectRow row label={t('fe.mx.pr.reqFrom')} value={settings.requestsFrom??'all'} onChange={v=>void set('requestsFrom',v)}
