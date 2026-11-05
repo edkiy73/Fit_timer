@@ -77,6 +77,18 @@ async function approvePhoto(email, s) {
   throw new Error('photo approval for ' + email + ' did not go through');
 }
 
+/** A cover photo for a community or an event (the cover is required to create either): uploaded and approved by staff. */
+export async function coverFor(email, purpose) {
+  const asset = await uploadFixture(email, purpose);
+  await staff();
+  for (let i = 0; i < 20; i++) { // the scan job runs first; the asset then shows up in the queue
+    const r = await api(STAFF, 'staff.mediaDecide', { opId: uuid7(), assetId: asset, decision: 'approve', explicit: false });
+    if (r.status === 200) return asset;
+    await sleep(3000);
+  }
+  throw new Error('cover approval for ' + email + ' did not go through');
+}
+
 async function verifyAge(email) {
   const st = await api(email, 'verification.ageStatus');
   if (st.verified || st.state === 'approved' || st.ageVerified) return;
@@ -163,7 +175,7 @@ async function hostSetup(lane, email) {
       const r = must(await api(email, 'community.create', {
         opId: uuid7(), name: want.name, privacy: want.privacy, ...(want.joinQuestion ? { joinQuestion: want.joinQuestion } : {}),
         description: 'Сообщество для сценариев FetUre: здесь проверяют вступление, заявки и обсуждения.', topics: ['bondage'],
-        rules: ['Уважай границы', 'Без фото без согласия'], plate: 'lilac' }), 'community.create ' + want.name);
+        rules: ['Уважай границы', 'Без фото без согласия'], plate: 'lilac', coverAssetId: await coverFor(email, 'community') }), 'community.create ' + want.name);
       c = { id: r.id, state: r.state };
     }
     const full = (await api(email, 'community.get', { communityId: c.id })).community;
@@ -205,7 +217,7 @@ async function hostEvent(email, title, price, extra = {}) {
     const r = must(await api(email, 'event.submit', { opId: uuid7(), event: {
       title, kind: 'meetup', description: 'Открытая встреча для сценариев: отметки «иду», адрес, сохранение.', format: 'offline',
       placeId: places[0]?.id ?? null, area: 'Митте', exactAddress: 'Тестовая улица 1, вход со двора', tz: 'Europe/Berlin',
-      startsAt: start.toISOString(), endsAt: new Date(+start + 2 * 3600e3).toISOString(), price, plate: 'sea', ...extra } }), 'event.submit');
+      startsAt: start.toISOString(), endsAt: new Date(+start + 2 * 3600e3).toISOString(), price, plate: 'sea', coverAssetId: await coverFor(email, 'event'), ...extra } }), 'event.submit');
     e = { id: r.id };
   }
   const got = (await api(email, 'event.get', { eventId: e.id })).event;

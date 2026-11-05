@@ -2,10 +2,10 @@ import {useCallback,useEffect,useLayoutEffect,useRef,useState,type CSSProperties
 import {useNavigate,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,EyeOff,KeyRound,MessageCircle,Pencil,Plus,Sparkles,Trash2,X} from 'lucide-react';
+import {Ban,EyeOff,KeyRound,MessageCircle,Plus,Sparkles,Trash2,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {AddBtn,AddCard,Alert,AnswerScale,Bar,Btn,Card,Chip,Empty,Group,IconBtn,Note,Progress,Row,SearchInput,SectionLabel,Sheet,Skel,View} from './kit';
-import {useToast} from './toast';
+import {AddBtn,AddCard,AnswerScale,Bar,Btn,Card,Chip,Empty,Group,Note,Progress,SearchInput,SectionLabel,Sheet,Skel,View} from './kit';
+import {useToast,useFail} from './toast';
 import {useFe,usePartnerApproves,useShown} from './session';
 import {when} from './feed';
 import {topicMatches} from './topic-search';
@@ -114,7 +114,7 @@ export function InterestSheet({topicId,topics,cats,current,defaultVis='public',o
  const [v,setV]=useState<Answer>(current?current.mark??current.value??null:null);
  const [dir,setDir]=useState<Dir[]>(()=>{const d=dirsOf(current?.dir);return d.length?d:[...DIRS];});
  const [vis,setVis]=useState<Vis>(current?visOf(current):defaultVis);
- const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [asking,setAsking]=useState(false);
+ const [busy,setBusy]=useState(false);const setFailure=useFail();const [asking,setAsking]=useState(false);
  const opId=useRef(newOpId());
  // A pick saves at once (owner 05.11.2026: no «Сохранить»); the sheet closes with the toast.
  const save=async(v:Answer,dir:Dir[])=>{
@@ -133,8 +133,8 @@ export function InterestSheet({topicId,topics,cats,current,defaultVis='public',o
  const pick=(nv:Answer,nd:Dir[])=>{setV(nv);setDir(nd);void save(nv,nd);};
  // The kit sheet (in the app layer, above the phone dock); Escape, ✕ and the scrim close it. Only «Удалить» stays at
  // the bottom; it asks once more as «Точно удалить» / «Отмена».
- return <Sheet title={name} sub={cat?(locale==='en'?cat.en:cat.ru):undefined} onClose={onClose} foot={failure||current?<>
-  {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
+ return <Sheet title={name} sub={cat?(locale==='en'?cat.en:cat.ru):undefined} onClose={onClose} foot={current?<>
+  
   {/* «Удалить» turns into «Точно удалить» next to «Отмена» — no question line (owner 05.11.2026) */}
   {current&&(asking?<div className="row g8"><Btn kind="soft" onClick={()=>setAsking(false)} disabled={busy}>{t('fe.cancel')}</Btn><Btn kind="danger" icon={Trash2} busy={busy} onClick={remove} disabled={busy}>{t('fe.int.ed.removeSure')}</Btn></div>
    :<Btn kind="soft" icon={Trash2} onClick={()=>setAsking(true)} disabled={busy}>{t('fe.int.ed.remove')}</Btn>)}
@@ -204,7 +204,7 @@ export function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Ca
  const {call,acting}=useFe();const {t,locale}=useI18n();const toast=useToast();const [q,setQ]=useState('');
  const [sel,setSel]=useState<string[]>([]);const [stage,setStage]=useState<'pick'|'answer'|'review'>('pick');const [step,setStep]=useState(0);
  const [fromReview,setFromReview]=useState(false);const [drafts,setDrafts]=useState<Record<string,Draft>>({});
- const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const ops=useRef<Record<string,string>>({});
+ const [busy,setBusy]=useState(false);const setFailure=useFail();const ops=useRef<Record<string,string>>({});
  const couple=acting?.kind==='couple';const toPartner=usePartnerApproves();
  const nq=q.trim().toLowerCase();const label=(x:{ru:string,en:string})=>locale==='en'?x.en:x.ru;
  const left=topics.filter(x=>!have.has(x.id));
@@ -254,7 +254,7 @@ export function TopicPicker({cats,topics,have,presetVis,onClose,onDone}:{cats:Ca
   </Sheet>;}
  const list:Interest[]=sel.map(id=>{const x=drafts[id]!;return {topicId:id,vis:x.vis,...(typeof x.v==='number'?{value:x.v,dir:x.dir}:{mark:x.v as 'discuss'|'hard'})};});
  return <Sheet title={t('fe.int.check')} onClose={onClose} dirty={!busy}
-  foot={<>{failure&&<Alert kind="err" noIcon>{failure}</Alert>}
+  foot={<>
    <div className="row g8"><Btn kind="soft" fit onClick={back} disabled={busy}>{t('fe.back')}</Btn><Btn busy={busy} onClick={save}>{toPartner?t('fe.ca.toPartner'):t('fe.int.saveAll')}</Btn></div></>}>
   <Note>{t('fe.int.checkHint',{n:sel.length})}</Note>
   <Card className="mt12"><Jars still={edited} list={sortJars(list)} topics={topics} onOpen={id=>{setEdited(true);setStep(sel.indexOf(id));setFromReview(true);setStage('answer');}}/></Card>

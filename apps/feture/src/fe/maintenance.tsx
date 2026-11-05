@@ -7,6 +7,7 @@ import {FeError,feErrorMessage,feRequest,newOpId,MAINTENANCE_EVENT} from '../fet
 import {Alert,Ask,Btn,Card,Field,Form,Group,Input,Maintenance,Note,Row,Skel} from './kit';
 import {useFe,useSeen} from './session';
 import {softMax,textError} from './kit/validate';
+import {useFail} from './toast';
 
 /** MAINT (wave 8): while staff keep the app in maintenance, every command of everyone else answers «maintenance».
  * The gate shows the «Скоро вернёмся» screen instead of the app and asks `platform.maintenance` every 30 s (and on
@@ -47,7 +48,7 @@ function MaintenanceView({message,onRetry}:{message:string|null,onRetry:()=>Prom
 export function StaffMaintenance(){
  const {call}=useFe();const {t}=useI18n();
  const [st,setSt]=useSeen<{active:boolean,message:string|null}|null>('StaffMaintenance.st',()=>null);const [msg,setMsg]=useState('');
- const [ask,setAsk]=useState(false);const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [loadError,setLoadError]=useState('');
+ const [ask,setAsk]=useState(false);const [busy,setBusy]=useState(false);const setError=useFail();const [loadError,setLoadError]=useState('');
  const load=useCallback(()=>{setLoadError('');call('platform.maintenance',{},statusRes,{asAccount:true,fresh:true}).then(r=>{setSt(r);setMsg(r.message??'');}).catch(e=>setLoadError(feErrorMessage(e,t)));},[call,t]);
  useEffect(()=>{load();},[load]);
  const msgErr=textError(t,'maintenance',msg);
@@ -65,7 +66,6 @@ export function StaffMaintenance(){
     </Field>}
     {st.active?<Btn kind="soft" icon={Power} busy={busy} onClick={()=>void set(false)}>{t('fe.w8.staff.maintOff')}</Btn>
      :<Btn kind="danger" icon={Power} onClick={()=>setAsk(true)}>{t('fe.w8.staff.maintOn')}</Btn>}
-    {error&&<Alert kind="err">{error}</Alert>}
    </Form>}
   {ask&&<Ask title={t('fe.w8.staff.maintTitle')} text={t('fe.w8.staff.maintAsk')} ok={t('fe.w8.staff.maintOn')} danger busy={busy} onOk={()=>void set(true)} onCancel={()=>setAsk(false)}/>}
  </Group>;

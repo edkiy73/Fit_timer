@@ -255,6 +255,8 @@ test('catalog cards: description, cover, «обсуждали…» only where th
       `insert into feture.media_asset (owner_profile_id, uploaded_by, kind, purpose, storage_key, mime, declared_bytes, state, explicitness, copies_at)
        values ($1, $2, 'image', 'community', 'u/' || gen_random_uuid(), 'image/jpeg', 10, 'approved', 'safe', now()) returning id`, [a, account_id]);
     await db.query('update feture.community set cover_asset_id = $1 where id = $2', [cov.id, open]);
+    // A community made before the cover became required still has none.
+    await db.query('update feture.community set cover_asset_id = null where id = $1', [closed]);
     const items = (await call('ub', b, { action: 'community.catalog' })).items;
     const o = items.find((/** @type {any} */ x) => x.id === open), cl = items.find((/** @type {any} */ x) => x.id === closed);
     assert.equal(o.description, base.description);
@@ -418,6 +420,7 @@ test('staff queue carries the current and the proposed cover without staff.media
   const { pg, db, call, a, make } = await world();
   try {
     const id = await make('ua', a, { name: 'Клуб обложек', privacy: 'open' });
+    await db.query('update feture.community set cover_asset_id = null where id = $1', [id]); // made before the cover was required
     const [{ account_id }] = await db.query('select account_id from feture.profile_member where profile_id = $1 limit 1', [a]);
     const [cov] = await db.query(
       `insert into feture.media_asset (owner_profile_id, uploaded_by, kind, purpose, storage_key, mime, declared_bytes, state, explicitness, copies_at)
@@ -485,5 +488,19 @@ test('a taken name is refused up front: on create, on rename (published or in re
     // The name the rename waits for is taken meanwhile (here: directly, as by an older version): staff reject instead.
     await pg.query(`update feture.community set name = 'Новое имя' where id = $1`, [fresh.id]);
     assert.equal((await decide(second)).rule, 'name_taken');
+  } finally { await pg.close(); }
+});
+
+test('a cover photo is required: a community cannot be created or edited without one', async () => {
+  const { pg, call, a, make } = await world();
+  try {
+    const none = await call('ua', a, { action: 'community.create', opId: op(), name: 'Клуб без обложки', privacy: 'open', ...base, coverAssetId: null });
+    assert.equal(none.status, 400);
+    assert.deepEqual(none.fields, ['coverAssetId']);
+    const id = await make('ua', a, { name: 'Клуб с обложкой', privacy: 'open' });
+    const g = (await call('ua', a, { action: 'community.get', communityId: id })).community;
+    const off = await call('ua', a, { action: 'community.update', opId: op(), communityId: id, rev: g.rev, coverAssetId: null });
+    assert.equal(off.status, 400);
+    assert.deepEqual(off.fields, ['coverAssetId']);
   } finally { await pg.close(); }
 });

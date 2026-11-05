@@ -2,9 +2,9 @@ import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import {useNavigate,useParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {CircleAlert,Clock,Image as ImageIcon,Lock,RefreshCw,X,type LucideIcon} from 'lucide-react';
+import {CircleAlert,Clock,Image as ImageIcon,Lock,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActingAv,AddCard,Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Counter,Empty,FilePick,Group,Input,Note,SelectRow as KitSelectRow,Skel,Stack,Swatches,TextArea,useLeaveGuard,View} from './kit';
+import {ActingAv,AddCard,Alert,Bar,Btn,Card,Chip,Chips,ChoiceChips,Counter,Empty,FilePick,Group,Input,SelectRow as KitSelectRow,Skel,TextArea,useLeaveGuard,View} from './kit';
 import {useFe} from './session';
 import {Uploader} from './kit/Uploader';
 import {CityField} from './kit/Place';
@@ -40,6 +40,7 @@ export function useOp(){
 
 /** shakeFirstErr lives in the kit's validation layer; re-exported for the screens that import it from here. */
 import {FIELD,serverFields,shakeFirstErr,softMax,textError,textErrorMessage,textLength,type FieldName,type TextRule} from './kit/validate';
+import {useFail} from './toast';
 export {shakeFirstErr};
 
 export const FErr=({children}:{children:ReactNode})=><div className="ferr"><CircleAlert/>{children}</div>;
@@ -77,8 +78,8 @@ const uploadIntent=z.object({ok:z.literal(true),assetId:z.uuid(),upload:z.object
 const okOnly=z.object({ok:z.literal(true)}).passthrough();
 export type Cover={id:string,preview:string};
 
-/** The cover block: a 16:9 photo (reviewed like any photo) or one of the colour plates. */
-export function CoverField({purpose,plate,setPlate,cover,setCover}:{purpose:'community'|'event',plate:string,setPlate:(k:PlateKey)=>void,cover:Cover|null,setCover:(c:Cover|null)=>void}){
+/** The cover block: a required 16:9 photo (reviewed like any photo); no colour stand-ins (owner 06.11.2026). */
+export function CoverField({purpose,cover,setCover}:{purpose:'community'|'event',cover:Cover|null,setCover:(c:Cover|null)=>void}){
  const {call}=useFe();const {t}=useI18n();const file=useRef<HTMLInputElement>(null);
  const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
  // A cover is one 16:9 photo through the kit uploader (crop, compress, no metadata).
@@ -91,9 +92,7 @@ export function CoverField({purpose,plate,setPlate,cover,setCover}:{purpose:'com
    onDone={got=>{setPicked(null);const g=got[0];if(g)setCover({id:g.id,preview:g.url});}}/>}
   {!cover&&<>
    <AddCard icon={ImageIcon} title={busy?t('fe.cc.coverUploading'):t('fe.fd.addCover')} sub="16:9" disabled={busy} onClick={()=>file.current?.click()}/>
-   {err&&<FErr>{err}</FErr>}
-   <div className="cov-or"><span>{t('fe.cc.coverOr')}</span>
-    <Swatches label={t('fe.cc.coverOr')} value={plate as PlateKey} onChange={k=>{setPlate(k);setCover(null);}} options={PLATE_KEYS.map(k=>[k,t('fe.cc.plate.'+k),namedPlate(k)] as const)}/></div></>}
+   {err&&<FErr>{err}</FErr>}</>}
  </div>;
 }
 
@@ -109,7 +108,7 @@ export function ChipGroup({items,selected,onToggle}:{items:[string,string][],sel
 }
 
 type Privacy='open'|'closed'|'hidden';
-type Errors=Partial<Record<'name'|'desc'|'topics'|'q0'|'rules'|'where',string>>;
+type Errors=Partial<Record<'name'|'desc'|'topics'|'q0'|'rules'|'where'|'cover',string>>;
 const created=z.object({ok:z.literal(true),id:z.uuid().optional(),state:z.string().optional(),pending:z.unknown().optional()}).passthrough();
 const ruleLines=(s:string)=>s.split('\n').map(x=>x.trim()).filter(Boolean);
 
@@ -159,7 +158,7 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
  const lastCity=useRef('');
  const [privacy,setPrivacy]=useState<Privacy>(pend.privacy??edit?.privacy??'open');const [q0,setQ0]=useState((pend.joinQuestion!==undefined?pend.joinQuestion:edit?.joinQuestion)??'');const [where,setWhere]=useState(edit?(edit.placeId??'online'):'online');
  const [rules,setRules]=useState(edit?.rules.join('\n')??'');const [plate,setPlate]=useState<PlateKey>(()=>PLATE_KEYS.find(k=>k===edit?.plate)??'lilac');const [cover,setCover]=useState<Cover|null>(()=>coverOf(edit));
- const [err,setErr]=useState<Errors>({});const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [stale,setStale]=useState(false);const [topicsMax,setTopicsMax]=useState(false);
+ const [err,setErr]=useState<Errors>({});const [busy,setBusy]=useState(false);const setFailure=useFail();const [topicsMax,setTopicsMax]=useState(false);
  const couple=acting?.kind==='couple';
  const clear=(k:keyof Errors)=>setErr(e=>{if(!e[k])return e;const n={...e};delete n[k];return n;});
 
@@ -181,6 +180,7 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
   const eq=privacy!=='open'?textError(t,'joinQuestion',q0):undefined;if(eq)e.q0=eq;
   const er=rulesError(rules);if(er)e.rules=er;
   if(!where)e.where=t('fe.cc.err.cityNeeded');
+  if(!cover)e.cover=t('fe.cc.err.coverNeeded');
   setErr(e);return !Object.keys(e).length;
  };
  /** The edit as `community.update` takes it: only the fields that differ from what was loaded. */
@@ -195,7 +195,7 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
  };
  const fail=(e:unknown)=>{
   if(e instanceof FeError&&e.rule==='name_taken'){setErr({name:t('fe.cc.err.nameTaken')});shakeFirstErr();}
-  else if(e instanceof FeError&&e.code==='conflict'){setStale(true);setFailure(feErrorMessage(e,t));}
+  else if(e instanceof FeError&&e.code==='conflict'){setFailure(feErrorMessage(e,t),reload?{label:t('fe.ece.reload'),fn:reload}:undefined);}
   else if(e instanceof FeError&&e.code==='invalid_input'&&e.fields?.length){
    const map:Record<string,keyof Errors>={name:'name',description:'desc',topics:'topics',joinQuestion:'q0',rules:'rules',placeId:'where'};
    const rule:Record<string,FieldName>={name:'communityName',description:'communityDescription',joinQuestion:'joinQuestion',rules:'communityRule'};
@@ -207,7 +207,7 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
  const dirty=!busy&&(edit?Object.keys(changes(edit)).length>0:!!(name.trim()||desc.trim()||topics.length||rules.trim()||cover));
  const guard=useLeaveGuard(dirty);
  const save=async()=>{
-  if(busy)return;setFailure('');setStale(false);
+  if(busy)return;setFailure('');
   if(!validate()){shakeFirstErr();return;}
   if(edit){
    const diff=changes(edit);
@@ -255,9 +255,9 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
     {where!=='online'&&<CityField label={t('fe.ce.city')} placeholder={t('fe.ce.cityPh')} places={catalog?.places??[]} value={where||null} error={err.where} fallbackName={t('fe.ece.c.placeCurrent')}
      onChange={id=>{if(id){setWhere(id);lastCity.current=id;clear('where');}}}/>}
     <Field name="rules" label={t('fe.cc.rules')} ph={t('fe.cc.rulesPh')} max={1000} check={rulesError} textarea rows={4} value={rules} onChange={v=>{setRules(v);clear('rules');}} err={err.rules}/>
-    <CoverField purpose="community" plate={plate} setPlate={setPlate} cover={cover} setCover={setCover}/>
+    <CoverField purpose="community" cover={cover} setCover={setCover}/>
+    {err.cover&&<FErr>{err.cover}</FErr>}
    </Card></Group>
-   {failure&&<Alert kind="err" noIcon action={stale&&reload?<Btn kind="text" auto icon={RefreshCw} onClick={reload}>{t('fe.ece.reload')}</Btn>:undefined}>{failure}</Alert>}
   </div></div>
   <div className="ctabar"><div className="wrap"><Btn onClick={save} disabled={busy}>{busy?t('fe.cc.sending'):edit?t('fe.ece.save'):t('fe.cc.submit')}</Btn></div></div>
  </>;

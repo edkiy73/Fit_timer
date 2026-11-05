@@ -6,7 +6,7 @@ import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Ask,Btn,Field,Form,Group,H,Input,Note,Sheet,Stack} from './kit';
 import {CodeForm,FactorEnrol,checkRes,startRes} from './factor';
 import {setFactorPrompt,useFe} from './session';
-import {useToast} from './toast';
+import {useToast,useFail} from './toast';
 
 /** Staff second factor (owner 29.10.2026, server/commands/staff.mjs): enrolment, the unlock form of the staff area, and
  * the inline prompt that a refused dangerous action opens — the shared pieces of factor.tsx on the staff commands. */
@@ -55,7 +55,7 @@ export function FactorPromptHost({onEnrol}:{/** The factor was removed meanwhile
 /** Owner / lead: remove a staff member's authenticator (lost phone). Needs a fresh code (the prompt asks). */
 export function FactorReset(){
  const {call}=useFe();const {t}=useI18n();const toast=useToast();
- const [nick,setNick]=useState('');const [ask,setAsk]=useState(false);const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
+ const [nick,setNick]=useState('');const [ask,setAsk]=useState(false);const [busy,setBusy]=useState(false);const setErr=useFail();
  const clean=nick.trim().replace(/^@/,'');
  const reset=async()=>{setBusy(true);setErr('');
   setAsk(false); // a fresh-code prompt may open over the screen next
@@ -66,7 +66,6 @@ export function FactorReset(){
   <Form>
    <Field id="fe-sf-reset" label={t('fe.sf.resetNick')}><Input id="fe-sf-reset" value={nick} placeholder="@nick" autoCapitalize="off" autoComplete="off" spellCheck={false} onChange={e=>setNick(e.target.value)}/></Field>
    <Btn kind="soft" icon={UserX} busy={busy} disabled={busy||clean.length<2} onClick={()=>{setErr('');setAsk(true);}}>{t('fe.sf.resetBtn')}</Btn>
-   {err&&<Alert kind="err">{err}</Alert>}
   </Form>
   {ask&&<Ask icon={UserX} title={t('fe.sf.resetAsk',{nick:clean})} ok={t('fe.sf.resetBtn')} danger onOk={()=>void reset()} onCancel={()=>setAsk(false)}/>}
  </Group>;

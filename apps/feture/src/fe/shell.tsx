@@ -9,7 +9,7 @@ import {Ban,Bell,Calendar,Globe,Image as FeedIcon,LogOut,MessageCircle,Plus,User
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {FeError} from '../feture/fe-api';
 import {feErrorMessage} from '../feture/fe-api';
-import {ActingAv,Av,Brand,Btn,Empty,H,Skel} from './kit';
+import {ActingAv,Brand,Btn,Empty,H,Skel} from './kit';
 import {FeSessionProvider,useFe,useLive} from './session';
 import {sweepDrafts} from './drafts';
 import {countsRes} from './inbox';
@@ -26,7 +26,6 @@ import {ActAsSheet,actAsCouple} from './couple';
 import {CreateSheet} from './create-entry';
 import {AppUpdateProvider,UpdateRequired,UpdateSheet,useUpdateRequired} from './app-update';
 import {DockHide} from './dock';
-import {followPageTheme} from './system-bars';
 import {page,prefetchScreens} from '../lazy-screens';
 import {useWide} from './wide';
 import './kit/base.css';

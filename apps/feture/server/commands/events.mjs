@@ -553,6 +553,8 @@ const run = {
     await requireUnrestricted(q, acting, 'events');
     const f = input.event;
     if (Date.parse(f.startsAt) <= Date.now()) fail(400, 'invalid_input', { fields: ['startsAt'] });
+    // A cover photo is required (owner 06.11.2026): no colour stand-ins.
+    if (!f.coverAssetId) fail(400, 'invalid_input', { fields: ['coverAssetId'] });
     await checkEventRefs(q, acting, f);
     const partner = needsPartner(acting, 'event.submit');
     const [e] = await q.query(
@@ -581,6 +583,7 @@ const run = {
     const acting = need(a);
     await requireUnrestricted(q, acting, 'events');
     const e = await ownEvent(q, input.eventId, acting);
+    if (!input.event.coverAssetId) fail(400, 'invalid_input', { fields: ['coverAssetId'] });
     // A published couple event changes when the partner agrees (if they asked to); before that the submit approval covers it.
     if (e.state === 'published' && needsPartner(acting, 'event.update')) {
       if (e.rev !== input.rev) fail(409, 'conflict', { rev: e.rev });

@@ -102,7 +102,7 @@ export default [
      club = mine.find(x => x.name === 'Клуб уведомлений')?.id ?? null;
      if (!club) {
        const cr = await t.api('community.create', { opId: t.uuid7(), name: 'Клуб уведомлений', privacy: 'closed', joinQuestion: 'Почему тебе интересно?',
-         description: 'Встречи и разговоры для проверки центра уведомлений.', topics: ['shibari'], rules: ['Уважать границы'], plate: 'rose' });
+         description: 'Встречи и разговоры для проверки центра уведомлений.', topics: ['shibari'], rules: ['Уважать границы'], plate: 'rose', coverAssetId: await t.cover('community') });
        expect(cr.ok, 'community.create ' + JSON.stringify(cr)); club = cr.id;
        const q = (await t.api('staff.communityQueue', {}, staff.email)).items.find(x => x.id === club);
        await t.api('staff.communityDecide', { opId: t.uuid7(), communityId: club, rev: q.rev, decision: 'approve' }, staff.email);

@@ -13,7 +13,7 @@ import {faceFields,NameBadges} from './faces';
 import {PostCard,postSchema,type Post} from './feed';
 import {ActivityCardOf,activitySchema,type Act} from './feed-activity';
 import type {Removal} from './post-menu';
-import {useToast} from './toast';
+import {useToast,useFail} from './toast';
 import {useCopyLink} from './share';
 import {PrivateVault} from './private';
 import {GiftSheet,openPaywall} from './premium';
@@ -670,7 +670,7 @@ function Block({profileId,name,onClose,onDone}:{profileId:string,name:string,onC
  const {call,acting,state}=useFe();const {t}=useI18n();
  const others=state.status==='ready'?state.boot.profiles.filter(p=>p.state!=='deleted'&&p.id!==acting?.id):[];
  const alsoFor:'partner'|'me'|null=acting?.kind==='person'&&others.some(p=>p.kind==='couple')?'partner':acting?.kind==='couple'&&others.some(p=>p.kind==='person')?'me':null;
- const [also,setAlso]=useState(false);const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
+ const [also,setAlso]=useState(false);const [busy,setBusy]=useState(false);const setErr=useFail();
  const go=async()=>{setBusy(true);setErr('');
   // From the personal profile the couple is covered by default; «Оставить пару открытой» keeps it out (audit item 19).
   try{await call('block.set',{opId:newOpId(),profileId,on:true,...(alsoFor==='partner'?{keepCouple:also}:also&&alsoFor?{alsoFor}:{})},ok);onDone(t(acting?.kind==='couple'?'fe.ca.blocked':'fe.px.bl.done'));}
@@ -679,14 +679,14 @@ function Block({profileId,name,onClose,onDone}:{profileId:string,name:string,onC
   <Stack><p className="lead">{t(acting?.kind==='couple'?'fe.ca.blockText':'fe.px.bl.text')}</p>
   {alsoFor&&<Card list><ToggleRow title={t(alsoFor==='partner'?'fe.px.bl.keepCouple':'fe.px.bl.alsoMe')} sub={t(alsoFor==='partner'?'fe.px.bl.keepCoupleSub':'fe.px.bl.alsoMeSub')}
    on={also} onClick={()=>setAlso(v=>!v)}/></Card>}
-  {err&&<Alert kind="err" noIcon>{err}</Alert>}</Stack>
+  </Stack>
  </Sheet>;
 }
 
 type MenuStep='menu'|'report'|'block'|'end'|'gift'|null;
 /** End a connection (ACT.endConn): withdraws the like; for a match the chat closes too (`match.end`). */
 function EndConnection({profileId,name,mutual,onClose,onDone}:{profileId:string,name:string,mutual:boolean,onClose:()=>void,onDone:(msg:string)=>void}){
- const {call,acting}=useFe();const {t}=useI18n();const us=acting?.kind==='couple';const u=(k:string)=>t(us?k+'Us':k);const [revoke,setRevoke]=useState(true);const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
+ const {call,acting}=useFe();const {t}=useI18n();const us=acting?.kind==='couple';const u=(k:string)=>t(us?k+'Us':k);const [revoke,setRevoke]=useState(true);const [busy,setBusy]=useState(false);const setErr=useFail();
  const go=async()=>{setBusy(true);setErr('');
   try{if(mutual)await call('match.end',{opId:newOpId(),profileId,revokeMyGrant:revoke},ok);else await call('like.withdraw',{opId:newOpId(),profileId},ok);onDone(u('fe.px.ec.done'));}
   catch(e){setErr(pxError(e,t));}finally{setBusy(false);}};
@@ -696,7 +696,7 @@ function EndConnection({profileId,name,mutual,onClose,onDone}:{profileId:string,
   <Card className="flat">{mutual&&fact(true,t('fe.px.ec.chat'))}{fact(true,u(mutual?'fe.px.ec.likeMatch':'fe.px.ec.like'))}{mutual&&fact(true,t('fe.px.ec.history'))}{fact(false,t('fe.px.ec.notBlock'))}</Card>
   {mutual&&<Card list><ToggleRow title={u('fe.px.ec.revoke')} sub={t('fe.px.ec.revokeSub')} on={revoke} onClick={()=>setRevoke(v=>!v)}/></Card>}
   <Note>{u('fe.px.ec.block')}</Note>
-  {err&&<Alert kind="err" noIcon>{err}</Alert>}</Stack>
+  </Stack>
  </Sheet>;
 }
 
