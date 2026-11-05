@@ -13,9 +13,8 @@ import {useWide} from './wide';
 import {useFe,useLive,useTypingSignal,useSeen} from './session';
 import {readDraft,useDraftKey,writeDraft} from './drafts';
 import {ReportSheet} from './report';
-import {faceFields} from './faces';
+import {NameBadges,faceFields} from './faces';
 import {useToast,useFail} from './toast';
-import {PhotoBadge} from './photo-check';
 import {limitCounter,overMax,softMax,textError} from './kit/validate';
 import {BellButton,SegN} from './inbox';
 
@@ -35,7 +34,7 @@ type Ctx=z.infer<typeof ctxItem>;
 const reqView=z.object({role:z.enum(['sender','recipient']),renewAt:z.string().optional(),context:z.array(ctxItem).optional(),at:z.string().nullable().optional()}).nullable().optional();
 type Req=NonNullable<z.infer<typeof reqView>>;
 const chat=z.object({request:reqView,origin:z.string().optional(),id:z.uuid(),state:z.string(),side:z.object({id:z.uuid(),kind:z.enum(['person','couple'])}),newMatch:z.boolean(),
- other:z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:media.nullable(),halves:faceFields.halves,ages:z.array(z.number()).optional(),photoVerified:z.boolean().optional(),paused:z.boolean().optional()}),
+ other:z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:media.nullable(),halves:faceFields.halves,ages:z.array(z.number()).optional(),photoVerified:z.boolean().optional(),premium:z.boolean().optional(),paused:z.boolean().optional()}),
  unread:z.number(),muted:z.boolean(),archived:z.boolean().optional(),last:z.object({body:z.string(),media:z.boolean(),mode:z.string(),mine:z.boolean(),kind:z.string().nullable().optional()}).nullable(),at:z.string()});
 type Chat=z.infer<typeof chat>;
 const list=z.object({ok:z.literal(true),items:z.array(chat),requests:z.array(chat).optional()});
@@ -132,7 +131,7 @@ function ChatsSide({current,archived:inArchive}:{current:string,/** The open cha
   {searching&&!archived&&<ChatsSearch value={q} onChange={setQ} onClose={toggleSearch}/>}
   {data===null?<Skel kind="list" rows={6}/>:<>
    {!archived&&!needle&&data.requests.length>0&&<Card list><Row icon={Inbox} tone="v" title={t('fe.rq.folder')} badge={data.requests.length} onClick={()=>navigate('/n/chats/requests')}/></Card>}
-   {rows.length?<ChatList>{rows.map(c=><ChatRow key={c.id} on={c.id===current} av={<OtherAv o={c.other} size="lg"/>} name={nameOf(c.other)}
+   {rows.length?<ChatList>{rows.map(c=><ChatRow key={c.id} on={c.id===current} av={<OtherAv o={c.other} size="lg"/>} name={<>{nameOf(c.other)}<NameBadges p={c.other}/></>}
     tag={c.side.kind==='couple'&&<CoupleTag>{t('fe.chx.coupleChat')}</CoupleTag>} line={previewOf(c,t)} time={ago(c.at,locale)} unread={c.id===current?0:c.unread} ended={c.state==='ended'||!!c.other.paused}
     onClick={()=>navigate('/n/chats/'+c.id,{replace:true})}/>)}</ChatList>
     :needle?<Empty compact icon={Search} title={t('fe.chx.notFound',{q:q.trim()})}/>
@@ -166,7 +165,7 @@ export function ChatsTab(){
  const fresh=archived?[]:mine.filter(c=>c.newMatch&&c.state==='active');const rows=mine.filter(c=>!fresh.includes(c));
  const unreadFor=(s:'me'|'couple')=>(items??[]).filter(c=>side(c)===s&&c.unread>0).length;
  const preview=(c:Chat)=>previewOf(c,t);const wide=useWide();
- const row=(c:Chat)=><ChatRow key={c.id} av={<OtherAv o={c.other} size="lg"/>} name={nameOf(c.other)}
+ const row=(c:Chat)=><ChatRow key={c.id} av={<OtherAv o={c.other} size="lg"/>} name={<>{nameOf(c.other)}<NameBadges p={c.other}/></>}
   tag={c.side.kind==='couple'&&<CoupleTag>{t('fe.chx.coupleChat')}</CoupleTag>} line={preview(c)} time={ago(c.at,locale)} unread={c.unread} ended={c.state==='ended'||!!c.other.paused} onClick={()=>navigate('/n/chats/'+c.id)}/>;
  const toggleSearch=()=>{setSearching(s=>!s);setQ('');};
 
@@ -656,7 +655,7 @@ function ChatView({id,to}:{id:string,to:string}){
  const sep=(iso:string)=>{const d=day(iso);if(d===lastDay)return null;lastDay=d;return <div className="daysep">{d}</div>;};
  return <>
   <PersonBar onBack={wide?undefined:back} {...(meta?{name:otherName,onOpen:()=>navigate('/n/people/'+meta.other.id),av:<OtherAv o={meta.other} size="sm"/>}:{})}
-   mark={meta?<>{meta.other.ages&&meta.other.ages.length>0&&<span className="cw-age">{meta.other.ages.join(' · ')}</span>}{meta.other.photoVerified&&<PhotoBadge/>}
+   mark={meta?<>{meta.other.ages&&meta.other.ages.length>0&&<span className="cw-age">{meta.other.ages.join(' · ')}</span>}<NameBadges p={meta.other}/>
     {state==='active'&&(grants.byMe||grants.withMe)&&<span className="cw-ic" role="img" aria-label={grants.byMe&&grants.withMe?t('fe.chx.pillBoth'):grants.withMe?t('fe.chx.pillTheirs'):t('fe.chx.pillMine')}>{grants.withMe?<LockOpen/>:<Eye/>}</span>}</>:undefined}
    sub={couple?<><CoupleTag>{t('fe.chx.coupleChat')}</CoupleTag>{t('fe.chx.coupleSees')}</>:undefined}>
    <IconBtn icon={Ellipsis} kind="ghost" label={t('fe.chx.menu')} disabled={!meta||!!draft} onClick={()=>{setSheetErr('');setSheet('menu');}}/>

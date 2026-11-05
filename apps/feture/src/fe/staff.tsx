@@ -59,7 +59,8 @@ const disputeItem=z.object({person,id:z.uuid(),disputed_at:ts,opened_at:ts,excer
  object:objectDto,evidence:opt(z.array(z.object({assetId:z.uuid(),kind:z.string()})))});
 const flaggedRes=z.object({ok:z.literal(true),flagged:z.array(z.object({profileId:z.uuid(),handle:z.string().nullable(),strikes:z.number(),flaggedAt:ts})).optional().default([])}).passthrough();
 const revisionItem=z.object({person,id:z.uuid(),postId:z.uuid(),createdAt:ts,live:opt(z.string()),proposed:z.unknown().optional()});
-const grantRes=z.object({ok:z.literal(true),id:z.string(),until:z.string()});
+const grantRes=z.object({ok:z.literal(true),id:z.string(),until:z.string(),accounts:z.number().optional()});
+const revokeRes=z.object({ok:z.literal(true),premium:z.boolean().optional()});
 const measure=z.object({rule:z.string().nullable(),until:ts}).nullable();
 const measuresRes=z.object({ok:z.literal(true),profileId:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable(),state:z.string().optional(),createdAt:z.string().nullable().optional(),openReports:z.number().optional(),watched:z.object({at:z.string(),note:z.string().nullable(),by:z.string().nullable()}).nullable().optional(),restricted:measure,suspended:measure});
 
@@ -1415,17 +1416,17 @@ function WaiverSheet({member,onClose,onDone}:{member:Waived|null,onClose:()=>voi
 function Premium(){
  const {call}=useFe();const {t}=useI18n();const when=useWhen();
  const [handle,setHandle]=useState('');const [days,setDays]=useState('30');const [reason,setReason]=useState('');
- const [busy,setBusy]=useState(false);const setFailure=useFail();const [granted,setGranted]=useState<{id:string,until:string}|null>(null);
+ const [busy,setBusy]=useState(false);const setFailure=useFail();const [granted,setGranted]=useState<{id:string,until:string,pair:boolean}|null>(null);
  const [entitlement,setEntitlement]=useState('');const [revokeReason,setRevokeReason]=useState('');const [ask,setAsk]=useState(false);const [revoked,setRevoked]=useState('');
  const err=(e:unknown)=>setFailure(forbidden(e)?t((e as FeError).rule==='self'?'fe.staff.premium.self':'fe.staff.premium.forbidden'):feErrorMessage(e,t));
  const n=Number(days);const h=handle.trim().replace(/^@/,'');
  const canGrant=h.length>=3&&Number.isInteger(n)&&n>=1&&n<=400&&reason.trim().length>=3;
  const grant=async()=>{setBusy(true);setFailure('');setRevoked('');
-  try{const r=await call('staff.premiumGrant',{opId:newOpId(),handle:h,days:n,reason:reason.trim()},grantRes,{asAccount:true});setGranted({id:r.id,until:r.until});setEntitlement(r.id);}
+  try{const r=await call('staff.premiumGrant',{opId:newOpId(),handle:h,days:n,reason:reason.trim()},grantRes,{asAccount:true});setGranted({id:r.id,until:r.until,pair:(r.accounts??1)>1});setEntitlement(r.id);}
   catch(e){err(e);}finally{setBusy(false);}};
  const revoke=async()=>{setBusy(true);setFailure('');
-  try{await call('staff.premiumRevoke',{opId:newOpId(),entitlementId:entitlement.trim(),reason:revokeReason.trim()},ok,{asAccount:true});
-   setRevoked(t('fe.staff.premium.revoked'));setAsk(false);if(granted?.id===entitlement.trim())setGranted(null);setEntitlement('');setRevokeReason('');}
+  try{const r=await call('staff.premiumRevoke',{opId:newOpId(),entitlementId:entitlement.trim(),reason:revokeReason.trim()},revokeRes,{asAccount:true});
+   setRevoked(t(r.premium?'fe.staff.premium.revokedStill':'fe.staff.premium.revoked'));setAsk(false);if(granted?.id===entitlement.trim())setGranted(null);setEntitlement('');setRevokeReason('');}
   catch(e){err(e);}finally{setBusy(false);}};
  const uuid=/^[0-9a-f-]{36}$/i.test(entitlement.trim());
  return <>
@@ -1435,7 +1436,7 @@ function Premium(){
     <LineField label={t('fe.staff.premium.days')} inputMode="numeric" value={days} max={3} onChange={v=>setDays(v.replace(/\D/g,''))}/>
     <TextField label={t('fe.staff.premium.reason')} value={reason} onChange={setReason} max={300}/>
     <Btn icon={Check} disabled={busy||!canGrant} onClick={grant} busy={busy}>{t('fe.staff.premium.grant')}</Btn>
-    {granted&&<Alert kind="ok" icon={Check} action={<Actions><Btn kind="soft" size="sm" onClick={()=>setEntitlement(granted.id)}>{t('fe.staff.premium.revokeThis')}</Btn></Actions>}>{t('fe.staff.premium.granted',{until:when(granted.until)})}</Alert>}
+    {granted&&<Alert kind="ok" icon={Check} action={<Actions><Btn kind="soft" size="sm" onClick={()=>setEntitlement(granted.id)}>{t('fe.staff.premium.revokeThis')}</Btn></Actions>}>{t(granted.pair?'fe.staff.premium.grantedPair':'fe.staff.premium.granted',{until:when(granted.until)})}</Alert>}
     {granted&&<Details data={granted.id}/>}
    </Form>
   </Group>

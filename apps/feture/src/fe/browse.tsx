@@ -9,7 +9,7 @@ import {useBack,useKept,useReturning,ActingAv,Alert,Bar,Btn,Card,Chip,Chips,Choi
 import {useFe,useKeyChange,useSeen} from './session';
 import {PostCard,postSchema,type Post} from './feed';
 import {InterestSheet,Jars,useInterests} from './interests';
-import {faceFields,PersonRow} from './faces';
+import {NameBadges,faceFields,PersonRow} from './faces';
 import {useToast,useFail} from './toast';
 import {FollowButton} from './follow';
 import {topicMatches} from './topic-search';
@@ -31,7 +31,7 @@ const evList=z.object({ok:z.literal(true),items:z.array(evRow),next:z.string().n
 export type Ev=z.infer<typeof evRow>;
 const media=z.object({src:z.record(z.string(),z.string()).nullable(),pending:z.boolean().optional()}).passthrough();
 const personCard=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),ages:z.array(z.number()),
- city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable()}).passthrough();
+ city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),photoVerified:z.boolean().optional(),premium:z.boolean().optional()}).passthrough();
 const peopleRes=z.object({ok:z.literal(true),items:z.array(personCard)});
 type Person=z.infer<typeof personCard>;
 const follower=z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).passthrough();
@@ -203,7 +203,7 @@ export function SearchScreen(){
   if(k==='people')return <Card list>{(list as Person[]).map(p=><Row key={p.id} onClick={()=>{commit();navigate('/n/people/'+p.id);}}
    av={<ActingAv size="" p={{id:p.id,kind:p.kind,name:nameOf(p),avatar:mediaSrc(p.avatar)}}/>}
    // A couple: its two names already say who; both ages go to the line under it («34 и 31»), never «, 34 · 31» in the title.
-   title={<Who name={nameOf(p)} nick={p.handle} age={p.kind==='person'?p.ages[0]:undefined}/>}
+   title={<Who name={nameOf(p)} nick={p.handle} age={p.kind==='person'?p.ages[0]:undefined}><NameBadges p={p}/></Who>}
    sub={[p.kind==='couple'&&p.ages.length?p.ages.join(t('fe.br.and')):null,p.city?(locale==='en'?p.city.en:p.city.ru):null].filter(Boolean).join(' · ')||undefined}/>)}</Card>;
   if(k==='posts')return <PostList items={list as Post[]} setItems={f=>setRes(r=>r&&{...r,posts:f(r.posts)})}/>;
   if(k==='communities')return <>{(list as Comm[]).map(c=><CommunityCard key={c.id} c={c} tname={tname}/>)}</>;

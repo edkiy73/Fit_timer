@@ -21,7 +21,7 @@ type Status=z.infer<typeof statusRes>;
 const buyRes=z.object({ok:z.literal(true),purchaseId:z.string(),state:z.enum(['paid','pending']),url:z.string().optional(),until:z.string().nullable().optional()});
 const restoreRes=z.object({ok:z.literal(true),restored:z.number(),providers:z.number(),premium:z.boolean()});
 const renewRes=z.object({ok:z.literal(true),autoRenew:z.boolean()});
-const giftCheckRes=z.object({ok:z.literal(true),recipient:z.object({id:z.string(),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.string().nullable()}),queued:z.boolean()});
+const giftCheckRes=z.object({ok:z.literal(true),recipient:z.object({id:z.string(),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.string().nullable()}),queued:z.boolean(),kind:z.enum(['person','couple']).optional()});
 type Recipient=z.infer<typeof giftCheckRes>;
 
 export const useDate=()=>{const {locale}=useI18n();return (v:string)=>new Date(v).toLocaleDateString(locale==='en'?'en-GB':'ru-RU',{day:'numeric',month:'long',year:'numeric'});};
@@ -114,7 +114,8 @@ export function GiftSheet({handle,onClose,onDone}:{handle?:string|null|undefined
   finally{setFinding(false);}
  },[call,t]);
  useEffect(()=>{if(handle)void find(handle);},[handle,find]);
- const price=t('fe.w8.gift.'+plan+'Price');
+ const pair=to?.kind==='couple';const priceOf=(id:GiftPlan)=>t('fe.w8.gift.'+id+(pair?'PairPrice':'Price'));
+ const price=priceOf(plan);
  const name=to?.recipient.name||to?.recipient.handle||'';
  const person=to&&<Card list><Row noChev av={<Av name={name} seed={to.recipient.id} src={to.recipient.avatar}/>} title={<Who name={name} nick={to.recipient.handle}/>}
   end={handle||step==='confirm'?undefined:<Btn kind="text" size="sm" auto onClick={()=>{setTo(null);setNick('');}}>{t('fe.w8.gift.change')}</Btn>}/></Card>;
@@ -136,11 +137,12 @@ export function GiftSheet({handle,onClose,onDone}:{handle?:string|null|undefined
    </Field>
    <Btn kind="soft" size="md" icon={AtSign} busy={finding} onClick={()=>void find(nick)}>{t('fe.w8.gift.find')}</Btn>
   </Stack>}
-  {to?.queued&&<Alert kind="info">{t('fe.w8.gift.queued',{name})}</Alert>}
+  {pair&&<Alert kind="info">{t('fe.w8.gift.pairNote',{name})}</Alert>}
+  {to?.queued&&<Alert kind="info">{t(pair?'fe.w8.gift.queuedPair':'fe.w8.gift.queued',{name})}</Alert>}
   {to&&<>
    <SectionLabel>{t('fe.w8.gift.term')}</SectionLabel>
    <PlanCards<GiftPlan> label={t('fe.w8.gift.term')} value={plan} onChange={setPlan}
-    plans={(['m1','m3','m12'] as const).map(id=>({id,title:t('fe.w8.gift.'+id),price:t('fe.w8.gift.'+id+'Price')}))}/>
+    plans={(['m1','m3','m12'] as const).map(id=>({id,title:t('fe.w8.gift.'+id),price:priceOf(id)}))}/>
    <Spacer size={3}/><Card list><ToggleRow title={t('fe.w8.gift.anon')} sub={t('fe.w8.gift.anonSub')} on={anon} onClick={()=>setAnon(v=>!v)}/></Card>
   </>}
  </Sheet>;
@@ -168,7 +170,7 @@ export function PremiumScreen(){
     :!status?<Skel kind="list"/>:<>
     {premium&&<Alert kind="ok" icon={Check}>{status.viaPartner
      ?<><b>{t('fe.ax.prem.viaPartner')}</b>{t('fe.ax.prem.viaPartnerText')}</>
-     :<><b>{status.source==='gift'?t('fe.w8.prem.gift'):t('fe.ax.prem.active')}</b>{until?t('fe.ax.prem.until',{date:until}):''}</>}</Alert>}
+     :<><b>{status.source==='gift'?t('fe.w8.prem.gift'):t('fe.ax.prem.active')}</b>{until?t(sub?'fe.ax.prem.untilOnly':'fe.ax.prem.until',{date:until}):''}</>}</Alert>}
     {premium&&!status.viaPartner&&<Group title={t('fe.w8.prem.manage')}>
      <Card list>
       {sub?<ToggleRow icon={RotateCcw} title={t('fe.w8.prem.renew')} disabled={busy==='renew'}
