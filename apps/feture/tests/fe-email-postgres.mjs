@@ -181,8 +181,9 @@ test('digest: in the morning of the person’s zone, once a day, never empty, no
   try {
     const a = await member('ua', 'Alex'), b = await member('ub', 'Kira'), c = await member('uc', 'Noa');
     await db.query(`update feture.profile set chosen_name = 'Алекс' where id = $1`, [a.id]);
-    // 10:00 in Berlin (UTC+1 in November).
-    const morning = new Date('2026-11-04T09:00:00Z'), night = new Date('2026-11-04T02:00:00Z');
+    // 10:00 in Berlin (UTC+1 until the end of March), tomorrow: the notifications of this test are created now, before it.
+    const tomorrow = new Date(); tomorrow.setUTCHours(0, 0, 0, 0); tomorrow.setTime(tomorrow.getTime() + 864e5);
+    const morning = new Date(tomorrow.getTime() + 9 * 3600e3), night = new Date(tomorrow.getTime() + 2 * 3600e3);
     const kiraDigests = async () => (await db.query(`select count(*)::int n from feture.email_delivery where account_id = $1 and mode = 'digest'`, [b.account]))[0].n;
     // Nothing new: no digest goes (it is queued, then skipped as empty).
     await queueDigests(db, { now: morning });
