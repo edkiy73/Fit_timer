@@ -17,8 +17,6 @@ describe('what staff decided, in plain words',()=>{
   expect(text('en','mediaDecided',{purpose:'event',state:'approved',kind:'image'})).toBe('Event cover approved');
  });
  it('a city, Premium and a role',()=>{
-  expect(text('ru','placeDecided',{state:'approved'})).toBe('Предложенный тобой город добавлен — теперь его можно выбрать');
-  expect(text('ru','placeDecided',{state:'rejected'})).toBe('Предложенный тобой город не добавлен');
   expect(text('ru','premiumGranted',{until:SOON})).toBe('Тебе открыт Premium до 3 ноября');
   expect(text('en','premiumGranted',{until:SOON})).toBe('Premium is on for you until 3 November');
   expect(text('ru','staffRole',{role:'moderator',grant:true})).toMatch(/^Тебе выдана роль: /);

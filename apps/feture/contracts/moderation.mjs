@@ -75,11 +75,6 @@ export const moderationCommands = {
   'staff.watchList': { profile: false, write: false, input: z.strictObject({}) },
   // «Взять в работу»: the item open on this moderator's screen; others see who has it.
   'staff.claim': { profile: false, write: true, input: z.strictObject({ opId, item: z.string().min(3).max(200), on: z.boolean() }) },
-  'staff.placeQueue': { profile: false, write: false, input: z.strictObject({ ...queuePaging }) },
-  'staff.placeDecide': {
-    profile: false, write: true,
-    input: z.strictObject({ opId, placeId: id, decision: z.enum(['approve', 'reject']), nameRu: field('placeName').optional(), nameEn: field('placeName').optional() }),
-  },
   'appeal.create': {
     profile: true, write: true, rate: { kind: 'appeal.create', max: 10, window: '1 day' },
     input: z.strictObject({ opId, targetType: z.enum(['post', 'reply', 'community', 'event', 'profile', 'media', 'revision']), targetId: id, body: field('appeal') }),

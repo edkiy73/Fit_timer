@@ -210,10 +210,6 @@ function AboutYou({profileId,onNext,onLeave,initial}:{profileId:string,onLeave:(
  });
  // V21 A05: «Дальше» / «Позже» go to step 2 (interests and communities); everything is saved there by «Готово».
  const finish=(skip:boolean)=>onNext({pick:skip?{gender:[],orient:[],role:[],status:[],format:[],seek:[]}:picked,vis,discover,partner,cityId});
- const addPlace=async(country:string,name:string):Promise<Place>=>{
-  const r=await call('place.submit',{opId:newOpId(),country,name},z.object({placeId:z.string()}),{asAccount:true});
-  return {id:r.placeId,country,ru:name,en:name,pending:true};
- };
  const radio=<T extends string>(items:[T,string][],sel:T|'',pick:(v:T)=>void,aria:string)=><ChoiceChips label={aria} value={sel||null} options={items} onChange={pick}/>;
  const group=(kind:Kind)=>{
   const list=listOf(kind);if(!list.length)return null;
@@ -231,7 +227,7 @@ function AboutYou({profileId,onNext,onLeave,initial}:{profileId:string,onLeave:(
    <Steps at={2}/>
    <H level={2} className="t">{t('fe.reg.about.title')}</H>
    <section className="fin"><div className="fin-t"><b>{t('fe.onb.city.title')}</b></div>
-    <CityField label={t('fe.mx.ed.city')} placeholder={t('fe.onb.city.pick')} places={places} value={cityId} onChange={setCityId} add={addPlace}/>
+    <CityField label={t('fe.mx.ed.city')} placeholder={t('fe.onb.city.pick')} places={places} value={cityId} onChange={setCityId}/>
    </section>
    <section className="fin"><div className="fin-t"><b>{t('fe.reg.discover.title')}</b></div>
     <Stack gap={2}>{radio([['visible',t('fe.onb.discover.on')],['off',t('fe.onb.discover.off')]],discover,v=>void pickDiscover(v),t('fe.reg.discover.title'))}

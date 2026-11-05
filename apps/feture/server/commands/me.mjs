@@ -421,9 +421,10 @@ const run = {
       q.query('select id, ru, en, plate from feture.topic_category where not hidden order by position'),
       q.query('select id, category_id "categoryId", ru, en, desc_ru "descRu", desc_en "descEn" from feture.topic where not hidden and category_id in (select id from feture.topic_category where not hidden) order by position'),
       q.query('select kind, code, ru, en from feture.profile_option where not hidden order by kind, position'),
-      q.query(`select id, code, country, name_ru ru, name_en en, lat, lon from feture.place where state = 'approved' order by coalesce(name_en, name_ru)`),
+      q.query(`select id, code, country, name_ru ru, name_en en, lat, lon, population pop from feture.place where state = 'approved' order by population desc nulls last, coalesce(name_en, name_ru)`),
     ]);
-    return { categories, topics, options, places };
+    // Only what the screens use; the picker lists the biggest first (the query already orders them), `code` only for the seeded ones.
+    return { categories, topics, options, places: places.map((/** @type {any} */ { code, ...p }) => (code ? { ...p, code } : p)) };
   },
 
   async 'nick.check'(q, { input }) {
@@ -578,13 +579,6 @@ const run = {
   async 'profile.statusKeep'(q, { account }) {
     await q.query('update feture.profile_details set status_kept = true where profile_id = $1', [account.person_profile_id]);
     return { ok: true };
-  },
-
-  async 'place.submit'(q, { account, input }) {
-    const [p] = await q.query(
-      `insert into feture.place (country, name_ru, name_en, state, submitted_by) values ($1, $2, $2, 'pending', $3) returning id`,
-      [input.country, input.name, account.id]);
-    return { placeId: p.id, pending: true };
   },
 
   async 'interests.list'(q, { acting: a, input }) {

@@ -17,7 +17,7 @@ const QUEUES = /** @type {const} */ ([
   ['dispute', moderation, 'staff.disputeQueue'], ['report', moderation, 'staff.reportQueue'], ['revision', moderation, 'staff.revisionQueue'],
   ['media', staff, 'staff.mediaQueue'], ['community', communities, 'staff.communityQueue'], ['event', events, 'staff.eventQueue'],
   ['age', premium, 'staff.ageCheckQueue'], ['photo', verification, 'staff.photoCheckQueue'], ['appeal', moderation, 'staff.appealQueue'],
-  ['notice', dsa, 'staff.noticeQueue'], ['place', moderation, 'staff.placeQueue'],
+  ['notice', dsa, 'staff.noticeQueue'],
 ]);
 
 /** @type {Record<string, Command['run']>} */

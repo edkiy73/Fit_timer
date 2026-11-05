@@ -2,7 +2,7 @@
 import { fail } from './errors.mjs';
 
 /** Per-account sliding window for actions that reveal existence or can be used to pester people
- * (nick.check, place.submit, couple.invite). Serialised per account and kind; call inside a transaction.
+ * (nick.check, couple.invite). Serialised per account and kind; call inside a transaction.
  * @param {import('./db.mjs').Q} q @param {string} accountId @param {string} kind @param {number} max @param {string} window postgres interval */
 export async function limit(q, accountId, kind, max, window) {
   await q.query(`select pg_advisory_xact_lock(hashtext('feture-rate:' || $1 || ':' || $2))`, [accountId, kind]);

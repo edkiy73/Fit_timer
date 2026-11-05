@@ -103,9 +103,10 @@ test('onboarding and profile views: own vs others, details visibility, age, nick
     const c = await person('uc', 'Noa', { discover: null });
     const quiet = await call('uc', c, { action: 'onboarding.complete', opId: op(), detailsVis: 'only', genders: [], orients: [], roles: [], formats: [], seeks: [], status: null });
     assert.deepEqual([quiet.status, quiet.discoverVisible, quiet.photoNeeded], [200, false, false]);
-    // The city of the sign-up step: an unknown one is refused, a submitted one is kept; the catalog carries the cities' coordinates.
+    // The city of the sign-up step: an unknown one is refused, a catalog one is kept; the catalog carries the cities' coordinates.
     const d = await person('ud', 'Dina', { discover: null });
-    const myCity = await call('ud', null, { action: 'place.submit', opId: op(), country: 'DE', name: 'Jena' });
+    const [{ id: cityId }] = await db.query(`select id from feture.place where code = 'berlin'`);
+    const myCity = { placeId: cityId };
     const base = { action: 'onboarding.complete', detailsVis: 'only', genders: [], orients: [], roles: [], formats: [], seeks: [], status: null };
     assert.equal((await call('ud', d, { ...base, opId: op(), cityId: '00000000-0000-4000-8000-000000000000' })).status, 400);
     assert.equal((await call('ud', d, { ...base, opId: op(), cityId: myCity.placeId })).status, 200);
@@ -139,12 +140,11 @@ test('onboarding and profile views: own vs others, details visibility, age, nick
     assert.equal((await call('ub', b, { action: 'profile.update', opId: op(), rev: 1, handle: 'ALEX' })).field, 'handle'); // held
     assert.equal((await call('ub', b, { action: 'nick.check', handle: 'alex' })).available, false);
 
-    // Own submitted city is usable at once; others do not see it until approved.
-    const place = await call('ua', null, { action: 'place.submit', opId: op(), country: 'DE', name: 'Leipzig' });
-    assert.equal((await call('ua', a, { action: 'profile.update', opId: op(), rev: r2.rev, cityId: place.id ?? place.placeId })).status, 200);
-    assert.equal((await call('ua', a, { action: 'profile.get', profileId: a })).profile.city.pending, true);
-    assert.equal((await call('ub', b, { action: 'profile.get', profileId: a })).profile.city, null);
-    assert.equal((await call('ub', b, { action: 'profile.update', opId: op(), rev: 1, cityId: place.placeId })).status, 400);
+    // A city of the catalog is chosen at once; one that does not exist is refused.
+    const [{ id: berlin }] = await db.query(`select id from feture.place where code = 'berlin'`);
+    assert.equal((await call('ua', a, { action: 'profile.update', opId: op(), rev: r2.rev, cityId: berlin })).status, 200);
+    assert.equal((await call('ua', a, { action: 'profile.get', profileId: a })).profile.city.pending, false);
+    assert.equal((await call('ub', b, { action: 'profile.update', opId: op(), rev: 1, cityId: '00000000-0000-4000-8000-000000000000' })).status, 400);
   } finally { await pg.close(); }
 });
 

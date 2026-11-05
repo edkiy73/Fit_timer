@@ -71,7 +71,6 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   'couple.changed': { type: 'pair.acted' },
   'couple.approvalChanged': { type: 'pair.trust' },
   // Staff decisions that used to say nothing (audit 30.10): a city proposal, a Premium grant / withdrawal, a staff role.
-  'place.decided': { type: 'placeDecided' },
   'premium.granted': { type: 'premiumGranted' },
   'premium.revoked': { type: 'premiumRevoked' },
   'staff.role': { type: 'staffRole' },

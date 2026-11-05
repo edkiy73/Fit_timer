@@ -94,7 +94,7 @@ a rate-limit error for a read. Old → new (28.10.2026):
 | `event.submit`, `event.announce` | 10 / day | 20 / day |
 | `report.create` | 10 / day | 30 / day |
 | private part requests (`LIMITS.requestsPerDay`; owner 29.10.2026: «10 в день более чем достаточно») | 20 / day | 10 / day |
-| `community.create`, `appeal.create`, `place.submit`, `support.create`, `account.export` | 5 / day | 10 / day |
+| `community.create`, `appeal.create`, `support.create`, `account.export` | 5 / day | 10 / day |
 | `verification.ageStart`, `verification.photoStart` | 5 / day | 10 / day |
 | `premium.purchase`, `premium.gift` | 20 / day | 40 / day |
 | `tag.object` (`DISPUTE_LIMITS`, owner rule) | 30 / day | unchanged |

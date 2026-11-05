@@ -89,14 +89,10 @@ test('a decided file opens what it belongs to: the post it is attached to', asyn
   } finally { await pg.close(); }
 });
 
-test('a city proposal, Premium and a staff role: the person is told what was decided', async () => {
+test('Premium and a staff role: the person is told what was decided', async () => {
   const { pg, call, member, deliver, rowsOf } = await world();
   try {
     const alex = await member('ua', 'Alex');
-    const yes = await call('ua', null, { action: 'place.submit', opId: op(), country: 'DE', name: 'Leipzig' });
-    const no = await call('ua', null, { action: 'place.submit', opId: op(), country: 'DE', name: 'Qwerty' });
-    await call('um', null, { action: 'staff.placeDecide', opId: op(), placeId: yes.placeId, decision: 'approve' });
-    await call('um', null, { action: 'staff.placeDecide', opId: op(), placeId: no.placeId, decision: 'reject' });
     const g = await call('uo', null, { action: 'staff.premiumGrant', opId: op(), handle: 'Alex', days: 30, reason: 'проба' });
     await call('uo', null, { action: 'staff.premiumRevoke', opId: op(), entitlementId: g.id, reason: 'проба закончилась' });
     await call('uo', null, { action: 'staff.grant', opId: op(), handle: 'Alex', role: 'support', grant: true });
@@ -104,7 +100,6 @@ test('a city proposal, Premium and a staff role: the person is told what was dec
     await deliver();
     const items = await rowsOf(alex.account);
     const by = (/** @type {string} */ type) => items.filter((/** @type {any} */ n) => n.type === type);
-    assert.deepEqual(by('placeDecided').map((/** @type {any} */ n) => n.data.state).sort(), ['approved', 'rejected']);
     assert.equal(by('premiumGranted').length, 1);
     assert.equal(by('premiumGranted')[0].data.days, 30);
     assert.ok(by('premiumGranted')[0].data.until);

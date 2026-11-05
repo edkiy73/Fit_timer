@@ -515,28 +515,6 @@ const run = {
     return { claimed: false, by: o?.name ?? null };
   },
 
-  async 'staff.placeQueue'(q, { account, input }) {
-    await requireStaff(q, account, [...MODERATORS, 'verifier']);
-    const { sql, params } = queuePageSql(input, CREATED_KEYS,
-      `select pl.id, pl.country, pl.name_ru, pl.name_en, pl.created_at,
-         (select count(*)::int from feture.profile_details d where d.city_id = pl.id) used
-       from feture.place pl where pl.state = 'pending'`, []);
-    const rows = await q.query(sql, params);
-    return { items: rows.map(r => ({ id: r.id, country: r.country, name_ru: r.name_ru, name_en: r.name_en, created_at: r.created_at, used: r.used })), ...pageInfo(rows, CREATED_KEYS, input.limit) };
-  },
-
-  async 'staff.placeDecide'(q, { account, input }) {
-    await requireStaff(q, account, [...MODERATORS, 'verifier']);
-    const rows = await q.query(
-      `update feture.place set state = $2, name_ru = coalesce($3, name_ru), name_en = coalesce($4, name_en) where id = $1 and state = 'pending' returning id, submitted_by`,
-      [input.placeId, input.decision === 'approve' ? 'approved' : 'rejected', input.nameRu ?? null, input.nameEn ?? null]);
-    if (!rows[0]) fail(409, 'conflict');
-    // The person who proposed the city is told whether it can be chosen now.
-    if (rows[0].submitted_by) await enqueue(q, 'place.decided', null, { for: rows[0].submitted_by, state: input.decision === 'approve' ? 'approved' : 'rejected' });
-    await journal(q, account.id, 'place.' + input.decision, 'place', input.placeId, {});
-    return { decision: input.decision };
-  },
-
   async 'appeal.create'(q, { acting: a, input }) {
     // The author appeals a removal (or a restriction of their profile); a lead who did not decide it looks again.
     if (!a) throw new Error('acting profile missing');
