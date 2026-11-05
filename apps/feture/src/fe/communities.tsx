@@ -17,7 +17,7 @@ import {AppealSheet} from './appeal';
 import {useToast} from './toast';
 import {placeName,useCatalog} from './create-community';
 import {CommPlate,NamedPlate,ReportSheet,appUrl,fill,okRes,pl} from './comm-kit';
-import {faceFields} from './faces';
+import {NameBadges,faceFields} from './faces';
 import {CommunityHostEntry,type DiscussionChange,DiscussionHostSheet,JoinSheet,MembersList,isCommunityHost,useEventApplication} from './host';
 
 /** «Комьюнити» (V21 C01 catalogue with interests and filters, C03 community page with discussions, events, members
@@ -391,7 +391,7 @@ export function CommunityScreen(){
       {!discs?<Skel kind="list"/>:discs.items.length===0?<Empty icon={MessageCircle} title={t('fe.comm.noDisc')} text={member?t('fe.cm.noDiscMember'):t('fe.cm.noDiscGuest')}/>
        :<Card list>{discs.items.map(d=>{const a=d.owner_profile_id?names.get(d.owner_profile_id):undefined;
         return <Discussion key={d.id} onClick={()=>navigate('/n/feed/post/'+d.id,{state:{tab:'communities'}})} pinned={d.pinned?t('fe.comm.pinned'):undefined} title={d.title?mdPlain(d.title):d.title} excerpt={mdPlain(d.excerpt)}
-         meta={<>{a&&<><ProfileAv p={a} size="xs"/><span>{pname(a)}</span><span>·</span></>}<span>{when(d.published_at,locale)}</span><span><MessageCircle/>{d.replies}</span></>}
+         meta={<>{a&&<><ProfileAv p={a} size="xs"/><span>{pname(a)}</span><NameBadges p={a}/><span>·</span></>}<span>{when(d.published_at,locale)}</span><span><MessageCircle/>{d.replies}</span></>}
          tools={<IconBtn icon={Ellipsis} kind="ghost" size="sm" aria-haspopup="dialog" label={t(host?'fe.cm.hostTools':'fe.cm.more')} onClick={()=>setHostTools(d.id)}/>}/>;})}</Card>}
      </>)
      :tab==='events'?(evs.length?<div className="evgrid">{sorted.map(e=><EventCard key={e.id} e={e}/>)}</div>
@@ -548,7 +548,7 @@ export function EventScreen(){
       tags={[<>{e.format==='online'?<Video/>:<MapPin/>}{where}</>,t('fe.ev.kind.'+e.kind)]}/>
      {/* Who: the organiser and the community. */}
      {(e.organizer||comm)&&<Card list>
-      {e.organizer&&<Row av={<ProfileAv p={e.organizer} size="sm"/>} title={pname(e.organizer)} sub={t('fe.ev.organizer')} onClick={()=>navigate(orgMe?'/n/me':'/n/people/'+e.organizer!.id)}/>}
+      {e.organizer&&<Row av={<ProfileAv p={e.organizer} size="sm"/>} title={<>{pname(e.organizer)}<NameBadges p={e.organizer}/></>} sub={t('fe.ev.organizer')} onClick={()=>navigate(orgMe?'/n/me':'/n/people/'+e.organizer!.id)}/>}
       {comm&&<Row av={<span className="av sm">{coverSrc(comm.cover)?<img src={coverSrc(comm.cover)!} alt="" draggable={false}/>:<NamedPlate k={comm.plate}/>}</span>} title={comm.name} sub={t('fe.cm.community')} onClick={()=>navigate('/n/communities/'+comm.id)}/>}
      </Card>}
      {/* What and when: the date, the place (closed until «Иду»), the price. */}
@@ -597,7 +597,7 @@ export function EventScreen(){
     {ticketed?<Btn kind="soft" busy={busy} disabled={busy} onClick={()=>void unmarkTicket()}>{t('fe.w7.tk.unmark')}</Btn>
      :<Btn kind="soft" icon={Check} busy={busy} disabled={busy} onClick={()=>void markTicket()}>{t(couple?'fe.w7.tk.boughtUs':'fe.w7.tk.bought')}</Btn>}</>}>
    <Stack gap={3}><Card list>
-    {e.organizer&&<Row av={<ProfileAv p={e.organizer} size="sm"/>} title={pname(e.organizer)} sub={t('fe.ev.organizer')}/>}
+    {e.organizer&&<Row av={<ProfileAv p={e.organizer} size="sm"/>} title={<>{pname(e.organizer)}<NameBadges p={e.organizer}/></>} sub={t('fe.ev.organizer')}/>}
     <Row icon={Globe} tone="v" title={site||ticketUrl} sub={t('fe.w7.tk.site')} wrap/>
     <Row icon={Ticket} tone="a" title={priceText(e.price,t,locale)} sub={ticketed?t('fe.w7.tk.mine'):t('fe.w7.tk.price')}/>
    </Card>

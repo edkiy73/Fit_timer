@@ -45,6 +45,8 @@ export const TOPIC_ENTITIES = /** @type {Record<string, readonly Entity[]>} */ (
   'verification.decided': CHECK, 'verification.photoDecided': CHECK, 'verification.expire': ['check'],
   'media.approved': ['media'], 'media.decided': ['media', 'counts'], 'media.hide': ['media', 'post'],
   'premium.granted': ['profile', 'counts'], 'premium.revoked': ['profile', 'counts'], 'premium.gifted': ['profile', 'counts'],
+  'premium.ending': ['profile', 'counts'], 'premium.ended': ['profile', 'counts'], 'premium.pair': ['profile', 'counts'], 'premium.giftSent': ['counts'],
+  'premium.renewalFailed': ['profile', 'counts'], 'premium.renewal': ['profile', 'counts'], 'premium.receipt': ['counts'], 'premium.refunded': ['profile', 'counts'],
   // A staff role granted or revoked: the staff entry, tab and alerts appear or go without a restart.
   'staff.role': ['profile', 'boot', 'counts'],
   // Plumbing and staff-only markers: nobody's screen shows them.
