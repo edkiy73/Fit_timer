@@ -219,12 +219,12 @@ test('digest: in the morning of the person’s zone, once a day, never empty, no
     const next = new Date(morning.getTime() + 864e5);
     // The test's own clock (not the database's): the dates here are fixed, so «a day ago» is a day before `next`.
     await db.query(`update feture.email_address set digest_at = $2::timestamptz - interval '1 day' where account_id = $1`, [b.account, next.toISOString()]);
-    await db.query(`update feture.email_address set seen_at = now() where account_id = $1`, [b.account]);
+    await db.query(`update feture.email_address set seen_at = $2::timestamptz - interval '2 hours' where account_id = $1`, [b.account, next.toISOString()]);
     await call('ua', a.id, { action: 'follow.set', opId: op(), profileId: b.id, on: false }).catch(() => null);
     await queueDigests(db, { now: next });
     assert.equal(await kiraDigests(), 1);
-    await db.query(`update feture.email_address set seen_at = now() - interval '2 days' where account_id = $1`, [b.account]);
-    await db.query(`update feture.notification set created_at = now() where recipient_account_id = $1`, [b.account]);
+    await db.query(`update feture.email_address set seen_at = $2::timestamptz - interval '2 days' where account_id = $1`, [b.account, next.toISOString()]);
+    await db.query(`update feture.notification set created_at = $2::timestamptz - interval '1 hour' where recipient_account_id = $1`, [b.account, next.toISOString()]);
     await db.query(`update feture.notification_settings set settings = settings || '{"mode": "normal"}' where account_id = $1`, [b.account]);
     await db.query(`insert into feture.notification_settings (account_id, settings) values ($1, '{"mode": "normal"}') on conflict (account_id) do update set settings = feture.notification_settings.settings || '{"mode": "normal"}'`, [b.account]);
     await queueDigests(db, { now: next });
@@ -234,7 +234,7 @@ test('digest: in the morning of the person’s zone, once a day, never empty, no
     assert.ok(second[1].text.includes('Алекс ставит тебе симпатию'), second[1].text);
     // Digest off: none.
     await db.query(`update feture.notification_settings set settings = settings || '{"digest": "off"}' where account_id = $1`, [b.account]);
-    await db.query(`update feture.email_address set digest_at = now() - interval '2 days' where account_id = $1`, [b.account]);
+    await db.query(`update feture.email_address set digest_at = $2::timestamptz - interval '1 day' where account_id = $1`, [b.account, next.toISOString()]);
     await queueDigests(db, { now: new Date(next.getTime() + 864e5) });
     assert.equal(await kiraDigests(), 2);
   } finally { await pg.close(); }
