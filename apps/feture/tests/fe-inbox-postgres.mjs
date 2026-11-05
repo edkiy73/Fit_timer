@@ -78,7 +78,7 @@ test('«Нужно решить»: couple invitation, partner approval for the p
     assert.deepEqual(d.map((/** @type {any} */ x) => [x.kind, x.actor.handle]), [['pinv', 'Alex']]);
 
     const pair = await coupleOf([b, c]);
-    await db.query('update feture.profile_member set approves_partner = true where profile_id = $1', [pair]);
+    await db.query('update feture.profile_member set approves_scope = array[\'private\',\'profile\',\'posts\',\'links\',\'communities\',\'events\',\'chats\'], approves_partner = true where profile_id = $1', [pair]);
     const dr = await call('ub', pair, { action: 'post.saveDraft', opId: op(), post: draft('От пары') });
     await call('ub', pair, { action: 'post.publish', opId: op(), postId: dr.id });
     d = (await call('uc', null, { action: 'decide.list' })).items;

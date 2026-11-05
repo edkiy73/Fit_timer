@@ -11,7 +11,7 @@ import { keysetPage, readKeyset } from '../cursor.mjs';
 import { readAbout } from '../notify.mjs';
 
 /** Slice C2: private part and access (S1 §6). Narrowing (decline, narrow, revoke, switch off) applies at once;
- * opening the private part of a couple to someone always needs both partners (V21 «только вдвоём»).
+ * opening the private part of a couple to someone needs both partners while the «private» point is on (the default).
  * @typedef {import('../handler.mjs').Command} Command @typedef {import('../db.mjs').Q} Q
  * @typedef {import('../profiles.mjs').Acting} Acting @typedef {import('../access.mjs').Scope} Scope
  */
@@ -124,9 +124,8 @@ async function applyGrant(q, { requestId, ownerId, scopes, term, by }) {
   return { state: partial ? 'partial' : 'granted', scopes, until: g.until };
 }
 
-// Opening a couple's private part to someone is always decided by both partners — in trust mode too.
+// Opening a couple's private part to someone waits for the partner when the partner asks for the «private» point (the default).
 registerApprovalKind('access.grant', {
-  always: true,
   apply: async (q, row) => {
     const c = /** @type {{requestId: string, scopes: Scope[], term: keyof typeof TERM}} */ (row.change);
     await applyGrant(q, { requestId: c.requestId, ownerId: row.profile_id, scopes: c.scopes, term: c.term, by: row.requested_by });

@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,ChartColumn,Bell,BellOff,Bookmark,BookmarkCheck,Calendar,CalendarCheck,CalendarPlus,Check,ChevronLeft,Clock,Ellipsis,Eye,ExternalLink,FileText,Flag,Globe,Image as ImageIcon,Link as LinkIcon,Lock,Map as MapIcon,MapPin,MessageCircle,Search,Settings,Share,SlidersHorizontal,Ticket,TriangleAlert,Users,Video,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {useSideNav} from './wide';
-import {Actions,AddBtn,Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventAnswer,EventHero,EventTile,Fact,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,Stack,StatusCard,Text,ToggleRow,useRefreshable,Veil,View,useKept} from './kit';
+import {Actions,AddBtn,Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventAnswer,EventHero,EventTile,Fact,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,Stack,StatusCard,Text,ToggleRow,useRefreshable,Veil,View,ProfileAv,useKept} from './kit';
 import {useFe,useKeyChange,useOwnProfiles,useShown} from './session';
 import {mdPlain,RichText} from './post-parts';
 import {evParts,evRange,evTz,evWhere,inTz,usePlaces} from './event-time';
@@ -31,7 +31,7 @@ const coverSrc=(m:z.infer<typeof media>|null|undefined,size:'card'|'full'='card'
 const card=z.object({id:z.uuid(),name:z.string(),description:z.string().optional(),cover:media.nullable().optional(),lastTalkAt:z.string().nullable().optional(),nextEventAt:z.string().nullable().optional(),topics:z.array(z.string()),privacy:z.string(),members:z.number(),joined:z.boolean(),plate:z.string().nullable().optional(),place_id:z.string().nullable().optional()});
 type Card=z.infer<typeof card>;
 const catalog=z.object({ok:z.literal(true),items:z.array(card),next:z.string().nullable()});
-const prof=z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).passthrough();
+const prof=z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).passthrough();
 const community=z.object({id:z.uuid(),name:z.string(),description:z.string(),topics:z.array(z.string()),privacy:z.string(),rules:z.array(z.string()),members:z.number(),
  plate:z.string().nullable().optional(),cover:media.nullable().optional(),placeId:z.string().nullable().optional(),hosts:z.array(prof.extend({role:z.string()})).optional(),
  me:z.object({role:z.string(),state:z.string(),muted:z.boolean().optional(),readOnly:z.boolean().optional()}).passthrough().nullable(),request:z.object({id:z.uuid(),at:z.string().nullable().optional()}).nullable(),joinQuestion:z.string().nullable(),
@@ -385,7 +385,7 @@ export function CommunityScreen(){
       {!discs?<Skel kind="list"/>:discs.items.length===0?<Empty icon={MessageCircle} title={t('fe.comm.noDisc')} text={member?t('fe.cm.noDiscMember'):t('fe.cm.noDiscGuest')}/>
        :<Card list>{discs.items.map(d=>{const a=d.owner_profile_id?names.get(d.owner_profile_id):undefined;
         return <Discussion key={d.id} onClick={()=>navigate('/n/feed/post/'+d.id,{state:{tab:'communities'}})} pinned={d.pinned?t('fe.comm.pinned'):undefined} title={d.title?mdPlain(d.title):d.title} excerpt={mdPlain(d.excerpt)}
-         meta={<>{a&&<><Av name={pname(a)} seed={a.id} size="xs" src={a.avatar}/><span>{pname(a)}</span><span>·</span></>}<span>{when(d.published_at,locale)}</span><span><MessageCircle/>{d.replies}</span></>}
+         meta={<>{a&&<><ProfileAv p={a} size="xs"/><span>{pname(a)}</span><span>·</span></>}<span>{when(d.published_at,locale)}</span><span><MessageCircle/>{d.replies}</span></>}
          tools={<IconBtn icon={Ellipsis} kind="ghost" size="sm" aria-haspopup="dialog" label={t(host?'fe.cm.hostTools':'fe.cm.more')} onClick={()=>setHostTools(d.id)}/>}/>;})}</Card>}
      </>)
      :tab==='events'?(evs.length?<div className="evgrid">{sorted.map(e=><EventCard key={e.id} e={e}/>)}</div>
@@ -542,7 +542,7 @@ export function EventScreen(){
       tags={[<>{e.format==='online'?<Video/>:<MapPin/>}{where}</>,t('fe.ev.kind.'+e.kind)]}/>
      {/* Who: the organiser and the community. */}
      {(e.organizer||comm)&&<Card list>
-      {e.organizer&&<Row av={<Av name={pname(e.organizer)} seed={e.organizer.id} size="sm" src={e.organizer.avatar}/>} title={pname(e.organizer)} sub={t('fe.ev.organizer')} onClick={()=>navigate(orgMe?'/n/me':'/n/people/'+e.organizer!.id)}/>}
+      {e.organizer&&<Row av={<ProfileAv p={e.organizer} size="sm"/>} title={pname(e.organizer)} sub={t('fe.ev.organizer')} onClick={()=>navigate(orgMe?'/n/me':'/n/people/'+e.organizer!.id)}/>}
       {comm&&<Row av={<span className="av sm">{coverSrc(comm.cover)?<img src={coverSrc(comm.cover)!} alt="" draggable={false}/>:<NamedPlate k={comm.plate}/>}</span>} title={comm.name} sub={t('fe.cm.community')} onClick={()=>navigate('/n/communities/'+comm.id)}/>}
      </Card>}
      {/* What and when: the date, the place (closed until «Иду»), the price. */}
@@ -563,7 +563,7 @@ export function EventScreen(){
       end={!orgMe&&!a.automatic?<IconBtn icon={Flag} kind="ghost" size="sm" label={t('fe.cm.reportUpdate')} onClick={()=>setReportAnn(a.id)}/>:undefined}/>)}</Card></Group>}
      {cancelled&&!orgMe?null:going+interested===0?(orgMe&&!cancelled&&!e.past&&<Group title={t('fe.cm.crowd')}><Empty compact icon={Users} title={t('fe.cm.nobodyYet')}/></Group>)
       :<Group title={e.past?t('fe.cm.whoWas'):t('fe.cm.crowd')}><Card list>
-       <Row av={faces.length?<span className="av-stack">{faces.map(f=><Av key={f.id} name={pname(f)} seed={f.id} size="sm" src={f.avatar}/>)}</span>:undefined}
+       <Row av={faces.length?<span className="av-stack">{faces.map(f=><ProfileAv key={f.id} p={f} size="sm"/>)}</span>:undefined}
         title={fill(t(e.past?'fe.cm.attendedN':'fe.cm.goingN'),{n:going})} sub={e.past?undefined:fill(t('fe.cm.interestedN'),{n:interested})} onClick={()=>navigate(`/n/events/${id}/attendees`)}/></Card></Group>}
     </>}
   </View>
@@ -591,7 +591,7 @@ export function EventScreen(){
     {ticketed?<Btn kind="soft" busy={busy} disabled={busy} onClick={()=>void unmarkTicket()}>{t('fe.w7.tk.unmark')}</Btn>
      :<Btn kind="soft" icon={Check} busy={busy} disabled={busy} onClick={()=>void markTicket()}>{t(couple?'fe.w7.tk.boughtUs':'fe.w7.tk.bought')}</Btn>}</>}>
    <Stack gap={3}><Card list>
-    {e.organizer&&<Row av={<Av name={pname(e.organizer)} seed={e.organizer.id} size="sm" src={e.organizer.avatar}/>} title={pname(e.organizer)} sub={t('fe.ev.organizer')}/>}
+    {e.organizer&&<Row av={<ProfileAv p={e.organizer} size="sm"/>} title={pname(e.organizer)} sub={t('fe.ev.organizer')}/>}
     <Row icon={Globe} tone="v" title={site||ticketUrl} sub={t('fe.w7.tk.site')} wrap/>
     <Row icon={Ticket} tone="a" title={priceText(e.price,t,locale)} sub={ticketed?t('fe.w7.tk.mine'):t('fe.w7.tk.price')}/>
    </Card>

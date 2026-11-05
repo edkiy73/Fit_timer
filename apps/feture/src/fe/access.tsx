@@ -2,7 +2,7 @@ import {useCallback,useEffect,useState} from 'react';
 import {useNavigate,useSearchParams} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Lock,LockOpen,Send,X} from 'lucide-react';
-import {Av,Bar,Btn,Card,Chip,Empty,Group,LoadMore,Note,Pill,Row,Seg,Skel,Spacer,Stack,View,useScrollTo} from './kit';
+import {Av,Bar,Btn,Card,Chip,Empty,Group,LoadMore,Note,Pill,Row,Seg,Skel,Spacer,Stack,View,useScrollTo,ProfileAv} from './kit';
 import {useFe} from './session';
 import {NameBadges} from './faces';
 import {GrantCard,grantsRes,incomingRes,nameOf,outRes,RequestCards,useAccessWords,useCancelRequest,useGrantActions,type GrantItem,type IncomingList,type OutItem} from './private';
@@ -67,7 +67,7 @@ function OutTab({pendingOnly,onFilter}:{pendingOnly:boolean,onFilter:(on:boolean
   :['expired','revoked','replaced','cancelled','closed'].includes(r.state)||(r.state==='declined'&&!(r.reaskAt&&new Date(r.reaskAt)>new Date()))
    ?<Btn size="sm" kind="text" auto onClick={()=>profile(r)}>{t('fe.ac.out.again')}</Btn>:null;
  return <>{head}
-  <Card list>{pg.items.map(r=><Row key={r.id} onClick={()=>profile(r)} av={<Av name={nameOf(r.profile)} seed={r.profile?.id??r.id} size="sm" src={r.profile?.avatar}/>}
+  <Card list>{pg.items.map(r=><Row key={r.id} onClick={()=>profile(r)} av={<ProfileAv p={r.profile??{id:r.id,name:'?'}} size="sm"/>}
    title={<>{nameOf(r.profile)}<NameBadges p={r.profile}/> <Pill tone={TONE[r.state]}>{t('fe.ac.st.'+r.state)}</Pill></>}
    sub={t('fe.ac.out.asked',{what:w.what(r.scopes),when:w.when(r.created_at)})}
    extra={<>
@@ -88,7 +88,7 @@ function WithMeTab(){
  if(!pg.items)return <Skel kind="list"/>;
  if(!pg.items.length)return <Empty icon={LockOpen} title={t('fe.ac.wm.empty')} text={t(acting?.kind==='couple'?'fe.ac.wm.emptyTextUs':'fe.ac.wm.emptyText')}/>;
  return <><Card list>{pg.items.map((g,i)=><Row key={g.profile?.id??i} onClick={()=>g.profile&&navigate('/n/people/'+g.profile.id)}
-  av={<Av name={nameOf(g.profile)} seed={g.profile?.id??String(i)} size="sm" src={g.profile?.avatar}/>}
+  av={<ProfileAv p={g.profile??{id:String(i),name:'?'}} size="sm"/>}
   title={<>{nameOf(g.profile)}<NameBadges p={g.profile}/></>} sub={`${w.what(g.scopes)} · ${w.until(g.until)}`}/>)}</Card>{pg.moreBtn}</>;
 }
 

@@ -403,7 +403,6 @@ function TrustSheet({coupleId,scope,other,otherOn,onClose,onDone}:{coupleId:stri
    <p className="lead">{t('fe.c6.trust.lead2',{name:other})}</p>
    <Card list>
     {SWITCHABLE.map(k=><ToggleRow key={k} title={t('fe.c6.pt.'+k)} sub={t('fe.c6.pt.'+k+'.sub')} on={v.includes(k)} onClick={()=>flip(k)} disabled={busy}/>)}
-    <ToggleRow title={t('fe.c6.pt.private')} sub={t('fe.c6.pt.private.sub')} on disabled onClick={()=>{}}/>
    </Card>
    <Note>{otherOn?t('fe.c6.trust.otherOn',{name:other}):t('fe.c6.trust.otherOff',{name:other})}</Note>
    {failure&&<Alert kind="err" noIcon>{failure}</Alert>}

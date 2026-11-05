@@ -259,7 +259,7 @@ const run = {
     const acting = need(a);
     const items = await q.query(
       `select h.kind, h.target_id, h.created_at,
-         case when h.kind in ('author', 'activity') then (select json_build_object('id', p.id, 'handle', p.handle, 'name', p.name) from feture.profile p where p.id = h.target_id and p.state = 'active')
+         case when h.kind in ('author', 'activity') then (select json_build_object('id', p.id, 'kind', p.kind, 'handle', p.handle, 'name', p.name) from feture.profile p where p.id = h.target_id and p.state = 'active')
               when h.kind = 'post' then (select json_build_object('id', x.id, 'excerpt', left(coalesce(x.title, x.body), 60)) from feture.post x
                                          where x.id = h.target_id and feture.post_visible(x, $1, $2))
               when h.kind = 'event' then (select json_build_object('id', e.id, 'title', e.title) from feture.event e

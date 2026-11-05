@@ -12,7 +12,7 @@ import { qaProfile, requireUnrestricted } from '../profiles.mjs';
 import { isPremium } from './premium.mjs';
 import { photoVerifiedOf } from './verification.mjs';
 import { endConversations, endRequestChat, openConversation } from './chats.mjs';
-import { PREMIUM_SQL } from './faces.mjs';
+import { PREMIUM_SQL, facesOf } from './faces.mjs';
 import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { photosFor } from './photos.mjs';
 import { availableScopes, grantedScopes } from '../access.mjs';
@@ -171,6 +171,8 @@ export async function cards(q, viewer, ids, media) {
      where p.id = any($1)`, [ids, viewer.profileId]);
   const assets = await q.query('select * from feture.media_asset where id = any($1)', [rows.map(r => r.avatar_asset_id).filter(Boolean)]);
   const verified = await photoVerifiedOf(q, rows.map(r => r.id));
+  // A couple without a photo: its partners' photos for the two halves of the avatar.
+  const faces = await facesOf(q, media, viewer, rows.map(r => r.id));
   const byId = new Map();
   for (const r of rows) {
     const asset = assets.find(x => x.id === r.avatar_asset_id);
@@ -179,6 +181,7 @@ export async function cards(q, viewer, ids, media) {
       id: r.id, kind: r.kind, handle: r.handle, name: r.name || r.handle, ages: r.ages,
       city: r.city_ru ? { ru: r.city_ru, en: r.city_en } : null, avatar, likedMe: r.liked_me, shared: r.shared, photoVerified: verified.get(r.id) ?? false,
       premium: !!r.premium, distanceKm: r.distance_km ?? null,
+      ...(faces.get(r.id)?.halves ? { halves: faces.get(r.id)?.halves } : {}),
     });
   }
   return ids.map(i => byId.get(i)).filter(Boolean);

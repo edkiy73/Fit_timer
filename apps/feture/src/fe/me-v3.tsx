@@ -2,8 +2,8 @@ import {useCallback,useEffect,useState} from 'react';
 import {useNavigate,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,Bell,Bookmark,Calendar,CircleHelp,Crown,Download,Eye,Globe,Heart,Images,Inbox,Info,KeyRound,Link2,ListChecks,Lock,LogOut,Newspaper,Settings,ShieldCheck,Smartphone,Sparkles,UserCog,UserRound,Users} from 'lucide-react';
-import {ActingAv,Actions,Av,Bar,Btn,Card,Group,IconBtn,Row,Seg,Skel,View} from './kit';
+import {Ban,Bell,Bookmark,Calendar,CircleHelp,Crown,Download,Globe,Heart,Images,Inbox,Info,KeyRound,Link2,ListChecks,Lock,LogOut,Newspaper,Settings,ShieldCheck,Smartphone,Sparkles,UserCog,UserRound,Users} from 'lucide-react';
+import {ActingAv,Bar,Card,Group,IconBtn,Row,Seg,View} from './kit';
 import {useFe,useLive,useShown} from './session';
 import {BellButton,countsRes} from './inbox';
 import {StaffEntry} from './staff';
@@ -65,7 +65,7 @@ export function MeV3Screen(){
    {state.status==='ready'&&state.boot.restriction&&<Group><RestrictionNotice/></Group>}
    {todo>0&&<Group><Card list><Row className="me-todo" icon={Inbox} tone="l" title={t('fe.mx.todo')} badge={todo} onClick={()=>navigate('/n/inbox')}/></Card></Group>}
    {/* every block of the screen is a Group, so they all stand 24 apart (the tabs too) */}
-   <Group><Seg value={tab} label={t('fe.mx.whose')} onChange={v=>setParams(v==='profile'?{}:{tab:v},{replace:true})}
+   <Group tight><Seg value={tab} label={t('fe.mx.whose')} onChange={v=>setParams(v==='profile'?{}:{tab:v},{replace:true})}
     options={TABS.map(id=>({id,label:id==='mine'?t(cp?'fe.v3.mineUs':'fe.v3.mine'):t('fe.v3.tab.'+id),...(id==='privacy'&&waiting?.reqs?{n:waiting.reqs}:{})}))}/></Group>
    {tab==='profile'?<ProfileZone p={p} settings={settings} load={load} cp={cp} links={waiting?.links}/>
     :tab==='privacy'?<PrivacyZone discover={settings?.discoverMode} cp={cp} reqs={waiting?.reqs}/>
@@ -121,10 +121,7 @@ function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['
  const privSub=privOn===undefined?undefined:!privOn?t('fe.m2.off'):[t('fe.m2.on'),privParts.length?privParts.join(', '):t('fe.v3.s.emptyLow')].join(' · ');
  const cap=(x:string|undefined)=>x&&x[0]!.toUpperCase()+x.slice(1);
  return <>
-  <Group><Actions>
-   <Btn kind="soft" icon={Eye} onClick={go('/n/me/preview')}>{t('fe.mx.howSeen')}</Btn>
-  </Actions></Group>
-  {!p||!settings?<MeSkel/>:<PhotosBlock p={p} settings={settings} onChanged={load}/>}
+  {!p||!settings?<MeSkel/>:<PhotosBlock p={p} settings={settings} onChanged={load} action={<button type="button" onClick={go('/n/me/preview')}>{t('fe.v3.preview')}</button>}/>}
   <Group title={t('fe.v3.g.profileData')}><Card list className="k-one-line">
    <Row icon={UserRound} title={t('fe.me.basics')} sub={basics} onClick={go('/n/me/edit?only=basics')}/>
    {/* the pair where the public profile shows it, under the name (owner 05.11.2026): «Ваша пара», its name and nick */}

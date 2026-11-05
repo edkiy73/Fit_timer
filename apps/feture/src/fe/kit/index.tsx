@@ -198,8 +198,8 @@ export const Alert=forwardRef<HTMLDivElement,{kind?:'ok'|'err'|'warn'|'info'|'pl
 });
 
 /** `.grp` — a titled group: the title row (with an optional action on the right), the content, a footnote. */
-export const Group=forwardRef<HTMLElement,{title?:ReactNode,action?:ReactNode,foot?:ReactNode,children:ReactNode,className?:string,bare?:boolean,id?:string}>(function Group({title,action,foot,children,className,bare,id},ref){
- return <section ref={ref} id={id} className={['grp',bare?'bare':'',className].filter(Boolean).join(' ')}>
+export const Group=forwardRef<HTMLElement,{title?:ReactNode,action?:ReactNode,foot?:ReactNode,children:ReactNode,className?:string,bare?:boolean,tight?:boolean,id?:string}>(function Group({title,action,foot,children,className,bare,tight,id},ref){
+ return <section ref={ref} id={id} className={['grp',bare?'bare':'',tight?'tight':'',className].filter(Boolean).join(' ')}>
   {(title||action)&&<div className="grp-t"><span>{title}</span>{action}</div>}
   {children}
   {foot&&<p className="grp-n">{foot}</p>}
@@ -306,12 +306,16 @@ export function ChoiceChips<T extends string>({value,options,onChange,label,scro
 /** Several values from a small set as chips (what to ask for). `all` adds a first chip that picks every option at once
  * and reads as picked while all are; a tap on it with everything picked clears the choice. `value` keeps the order of
  * `options`. */
-export function MultiChips<T extends string>({value,options,onChange,label,all,disabled}:{value:readonly T[],options:readonly (readonly [T,ReactNode])[],onChange:(v:T[])=>void,label:string,
- /** The «Всё» chip's label; shown only when there are two options or more. */ all?:ReactNode,disabled?:boolean}){
+export function MultiChips<T extends string>({value,options,onChange,label,all,only,disabled}:{value:readonly T[],options:readonly (readonly [T,ReactNode])[],onChange:(v:T[])=>void,label:string,
+ /** The «Всё» chip's label; shown only when there are two options or more. */ all?:ReactNode,
+ /** An option that stands alone («Все»): picking it clears the others, picking another clears it (not the same as `all`). */ only?:T|undefined,disabled?:boolean}){
  // «Всё» or several (owner 29.10.2026): with every option picked only «Всё» is lit; a tap on one part then picks that
  // part alone; picking the last missing part lights «Всё» again.
  const keys=options.map(o=>o[0]);const showAll=!!all&&keys.length>1;const every=keys.length>0&&keys.every(k=>value.includes(k));
- const flip=(k:T)=>onChange(showAll&&every?[k]:keys.filter(x=>x===k?!value.includes(k):value.includes(x)));
+ const flip=(k:T)=>{
+  if(only!==undefined&&k===only){onChange(value.includes(k)?[]:[k]);return;}
+  onChange(showAll&&every?[k]:keys.filter(x=>x===only?false:x===k?!value.includes(k):value.includes(x)));
+ };
  return <div className="chips" role="group" aria-label={label}>
   {showAll&&<button type="button" disabled={disabled} className={'chip'+(every?' on':'')} aria-pressed={every} onClick={()=>onChange(keys)}>{all}</button>}
   {options.map(([k,l])=>{const on=value.includes(k)&&!(showAll&&every);return <button key={k} type="button" disabled={disabled} className={'chip'+(on?' on':'')} aria-pressed={on} onClick={()=>flip(k)}>{l}</button>;})}
@@ -319,15 +323,9 @@ export function MultiChips<T extends string>({value,options,onChange,label,all,d
 }
 /** Several values from a list as rows with a box (what to open, what to keep). A row may say more under its title
  * («не запрошено», «уже открыто»); `value` keeps the order of `options`. */
-export function CheckList<T extends string>({value,options,onChange,label,fixed,only}:{value:readonly T[],options:readonly (readonly [T,ReactNode,ReactNode?])[],onChange:(v:T[])=>void,label:string,/** Kept for old calls; the rows never have a second frame. */ bare?:boolean,
- /** Rows that are always on and cannot be switched off (shown first, ticked, without a tap). */ fixed?:readonly (readonly [ReactNode,ReactNode?])[]|undefined,
- /** An option that stands alone («Все»): picking it clears the others, picking another clears it. */ only?:T|undefined}){
- const flip=(k:T)=>{
-  if(only!==undefined&&k===only){onChange(value.includes(k)?[]:[k]);return;}
-  onChange(options.map(o=>o[0]).filter(x=>x===only?false:x===k?!value.includes(k):value.includes(x)));
- };
+export function CheckList<T extends string>({value,options,onChange,label}:{value:readonly T[],options:readonly (readonly [T,ReactNode,ReactNode?])[],onChange:(v:T[])=>void,label:string,/** Kept for old calls; the rows never have a second frame. */ bare?:boolean}){
+ const flip=(k:T)=>onChange(options.map(o=>o[0]).filter(x=>x===k?!value.includes(k):value.includes(x)));
  return <div className="k-radios" role="group" aria-label={label}>
-  {fixed?.map(([title,sub],i)=><div key={'f'+i} className="radio k-chk on fixed" role="checkbox" aria-checked="true" aria-disabled="true"><i><Check2/></i><span className="tx">{title}{sub&&<small>{sub}</small>}</span></div>)}
   {options.map(([k,title,sub])=>{const on=value.includes(k);return <button key={k} type="button" className={'radio k-chk'+(on?' on':'')} role="checkbox" aria-checked={on} onClick={()=>flip(k)}>
   <i><Check2/></i><span className="tx">{title}{sub&&<small>{sub}</small>}</span></button>;})}</div>;
 }

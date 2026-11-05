@@ -67,15 +67,15 @@ test('a new couple starts empty, outside Discover, readable by both; approvals a
     assert.equal((await call('ua', pair, { action: 'private.get', profileId: pair })).text, '');
     assert.equal((await call('ua', pair, { action: 'profile.settings' })).settings.discoverMode, 'off'); // owner 28.10.2026: switched on with a photo
 
-    // Kira asks to approve Alex's widening changes; Alex's own setting stays off.
-    assert.equal((await call('ub', pair, { action: 'couple.setApproval', opId: op(), approvesPartner: true })).approvesPartner, true);
+    // A new couple: each partner asks for the private part and its access only (DEFAULT_SCOPE); Kira adds the profile.
+    assert.equal((await call('ub', pair, { action: 'couple.setApproval', opId: op(), scope: ['private', 'profile'] })).approvesPartner, true);
     const rows = await db.query(`select approves_partner from feture.profile_member where profile_id = $1 order by approves_partner`, [pair]);
-    assert.deepEqual(rows.map(r => r.approves_partner), [false, true]);
-    // As Alex, turning the couple's private part on now waits for Kira; as Kira it would apply at once.
+    assert.deepEqual(rows.map(r => r.approves_partner), [true, true]);
+    // As Alex, turning the couple's private part on waits for Kira (and as Kira for Alex).
     await call('ua', pair, { action: 'private.setOn', opId: op(), on: false });
     const pend = await call('ua', pair, { action: 'private.setOn', opId: op(), on: true });
     assert.ok(pend.pending?.approvalId);
-    // The private part always waits for the partner (audit item 20), whoever turns it on.
+    // The private part waits for the partner while that point is on (the default), whoever turns it on.
     assert.ok((await call('ub', pair, { action: 'private.setOn', opId: op(), on: true })).pending?.approvalId);
   } finally { await pg.close(); }
 });
@@ -326,5 +326,30 @@ test('an archive: the ex-partner can be blocked, the profile switcher marks it, 
     await db.query(`update feture.profile set restore_until = now() - interval '1 minute' where id = $1`, [pair]);
     await sweepExpiredCouples(db);
     assert.equal((await db.query('select state from feture.profile where id = $1', [pair]))[0].state, 'deleted');
+  } finally { await pg.close(); }
+});
+
+test('a new couple: the partners like and follow each other and have a chat; each asks for the private part only; a setting waits only for its own point', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira');
+    const inv = await call('ua', null, { action: 'couple.invite', opId: op(), handle: 'Kira' });
+    const pair = (await call('ub', null, { action: 'couple.inviteAnswer', opId: op(), inviteId: inv.id, accept: true })).profileId;
+    // Owner 05.11.2026: a like each way (already a match), a follow each way, and their chat.
+    const likes = await db.query(`select state from feture.profile_like where (from_profile_id = $1 and to_profile_id = $2) or (from_profile_id = $2 and to_profile_id = $1)`, [a, b]);
+    assert.deepEqual(likes.map(r => r.state), ['matched', 'matched']);
+    const follows = await db.query(`select 1 from feture.follow where (follower_profile_id = $1 and target_profile_id = $2) or (follower_profile_id = $2 and target_profile_id = $1)`, [a, b]);
+    assert.equal(follows.length, 2);
+    const [chat] = await db.query(`select id from feture.conversation where state = 'active' and origin = 'match' and profile_a = least($1::uuid, $2::uuid) and profile_b = greatest($1::uuid, $2::uuid)`, [a, b]);
+    assert.ok(chat, 'the partners have a chat');
+    assert.equal((await db.query(`select 1 from feture.conversation_member where conversation_id = $1`, [chat.id])).length, 2);
+    // Each partner asks for the private part and its access only.
+    const scopes = (await call('ua', pair, { action: 'couple.get' })).couple.members.map((/** @type {any} */ m) => m.approvesScope);
+    assert.deepEqual(scopes, [['private'], ['private']]);
+    // Visibility has its own points: «Что видят другие» is immediate by default, and waits once the partner asks for it.
+    assert.equal((await call('ua', pair, { action: 'profile.setVisibility', opId: op(), setting: 'activityVis', value: 'all' })).pending, undefined);
+    await call('ub', pair, { action: 'couple.setApproval', opId: op(), scope: ['private', 'seen'] });
+    await call('ua', pair, { action: 'profile.setVisibility', opId: op(), setting: 'activityVis', value: 'off' });
+    assert.ok((await call('ua', pair, { action: 'profile.setVisibility', opId: op(), setting: 'activityVis', value: 'followers' })).pending?.approvalId);
   } finally { await pg.close(); }
 });

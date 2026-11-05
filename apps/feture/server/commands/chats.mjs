@@ -6,7 +6,7 @@ import { mediaDto } from '../media/assets.mjs';
 import { requireUnrestricted } from '../profiles.mjs';
 import { needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
 import { incomingRequest } from '../sql-rules.mjs';
-import { withFaces } from './faces.mjs';
+import { facesOf, withFaces } from './faces.mjs';
 import { otherProfile } from './access.mjs';
 import { lockPair } from './discover.mjs';
 import { typingTag } from '../realtime.mjs';
@@ -457,6 +457,8 @@ const run = {
     // The header of a chat: the ages the other side shows and the verified-photo mark, the same as on a card.
     const otherIds = [...new Set(rows.map(r => r.other_id))];
     const verified = await photoVerifiedOf(q, otherIds);
+    // A couple without a photo: its partners' photos for the two halves of the avatar.
+    const faces = await facesOf(q, cfg.media, { profileId: rows[0]?.side ?? null, accountId: account.id }, otherIds);
     const agesOf = new Map((await q.query(
       `select p.id, (select coalesce(array_agg(extract(year from age(current_date, a.birth_date))::int) filter (where coalesce(pd.show_age, false)), '{}')
           from feture.profile_member m join feture.account a on a.id = m.account_id left join feture.profile_details pd on pd.profile_id = a.person_profile_id
@@ -471,6 +473,7 @@ const run = {
           id: r.other_id, kind: r.other_kind, handle: r.other_handle, name: r.other_name || r.other_handle,
           ages: agesOf.get(r.other_id) ?? [], photoVerified: verified.get(r.other_id) ?? false, paused: r.other_state === 'paused',
           avatar: asset ? await mediaDto(cfg.media, asset, { viewerProfileId: r.side, place: 'public', showExplicit: false, staff: false }).catch(() => null) : null,
+          ...(faces.get(r.other_id)?.halves ? { halves: faces.get(r.other_id)?.halves } : {}),
         },
         unread: r.incoming ? 0 : r.unread, muted: r.muted, archived: r.archived, last: r.last, at: r.last_message_at ?? r.created_at,
         origin: r.origin, request: requestView(r, r.side),

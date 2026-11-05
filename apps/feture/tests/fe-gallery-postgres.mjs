@@ -226,7 +226,7 @@ test('couple albums: either partner manages them; widening waits for the partner
     assert.equal((await call('ub', pair, { action: 'post.setAlbum', opId: op(), postId: p.id, albumId: al.id })).albumId, al.id);
     assert.deepEqual((await call('uc', c, { action: 'album.list', profileId: pair })).items.map((/** @type {any} */ x) => x.count), [0]);
     // The partner asked to approve changes: opening the post to everyone waits for them.
-    await db.query(`update feture.profile_member set approves_partner = true where profile_id = $1`, [pair]);
+    await db.query(`update feture.profile_member set approves_scope = array['private','profile','posts','links','communities','events','chats'], approves_partner = true where profile_id = $1`, [pair]);
     const wide = await call('ua', pair, { action: 'gallery.bulk', opId: op(), postIds: [p.id], change: 'audience', audience: 'all' });
     assert.equal(wide.pending.length, 1);
     // Narrowing and sorting never wait.

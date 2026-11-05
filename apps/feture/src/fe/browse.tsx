@@ -34,7 +34,7 @@ const personCard=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z
  city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable()}).passthrough();
 const peopleRes=z.object({ok:z.literal(true),items:z.array(personCard)});
 type Person=z.infer<typeof personCard>;
-const follower=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).passthrough();
+const follower=z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).passthrough();
 const followersRes=z.object({ok:z.literal(true),items:z.array(follower)});
 type Follower=z.infer<typeof follower>;
 const profileRes=z.object({ok:z.literal(true),profile:z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),own:z.boolean().optional(),

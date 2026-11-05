@@ -1,10 +1,11 @@
+import {faceFields} from './faces';
 import {Fragment,useCallback,useEffect,useRef,useState,type CSSProperties,type ReactNode} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,ChevronLeft,ChevronRight,Link as LinkIcon,Undo2,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Ask,Av,Btn,Card,Empty,H,IconBtn,Layer,LoadMore,Note,PhotoTrack,Row,Sheet,Skel,VideoBadge,VideoPlayer,useBackClose,type Slide,nickShown} from './kit';
+import {Ask,Av,Btn,Card,Empty,H,IconBtn,Layer,LoadMore,Note,PhotoTrack,Row,Sheet,Skel,VideoBadge,VideoPlayer,useBackClose,type Slide,nickShown,ProfileAv} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 
@@ -240,7 +241,7 @@ export function Poll({postId,poll,onChange,preview=false,mine=false}:{postId:str
 
 /* ---------- people behind likes and votes (V21 likers / pollPeople) ---------- */
 const markPerson=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),mine:z.boolean().optional(),
- avatar:z.string().nullable().optional()}).passthrough();
+ avatar:z.string().nullable().optional(),halves:faceFields.halves}).passthrough();
 export const marksPage=z.object({ok:z.literal(true),total:z.number(),hidden:z.number(),items:z.array(markPerson),next:z.string().nullable()});
 export type MarksPage=z.infer<typeof marksPage>;
 export type MarkPerson=z.infer<typeof markPerson>;
@@ -260,7 +261,7 @@ export function MarksSheet({title,empty,load,onClose,first}:{title:string,empty:
   {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}/>
    :!data?<Skel kind="list"/>
    :!items.length&&!data.hidden?<Empty icon={Users} title={empty}/>
-   :<>{items.length>0&&<Card list>{items.map(p=><Row key={p.id} av={<Av name={personName(p)} seed={p.id} src={p.avatar} size="sm"/>}
+   :<>{items.length>0&&<Card list>{items.map(p=><Row key={p.id} av={<ProfileAv p={p} size="sm"/>}
      title={p.id===acting?.id?t('fe.w3.you'):personName(p)} sub={nickShown(p.handle,p.name)??undefined}
      onClick={()=>{onClose();navigate(p.mine?'/n/me':'/n/people/'+p.id);}}/>)}</Card>}
     <LoadMore more={!!data.next} busy={more} error={moreErr} onMore={next}/>

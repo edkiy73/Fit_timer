@@ -1,17 +1,17 @@
 import {useCallback,useEffect,useState} from 'react';
 import {useNavigate,useParams} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,Bell,CircleHelp,Crown,Download,FileText,Heart,KeyRound,LogOut,ShieldCheck,Smartphone,UserCog,X} from 'lucide-react';
+import {CircleHelp,FileText,X} from 'lucide-react';
 import {feErrorMessage} from '../feture/fe-api';
-import {Bar,Btn,Card,Empty,Group,Row,Skel,View} from './kit';
+import {Bar,Btn,Card,Empty,Row,Skel,View} from './kit';
 import {useFe,useLive,useShown} from './session';
-import {AppRows,BlurRow,CheckRows,ListRows,useAccountSettings,useLogout} from './settings';
+import {AppRows,BlurRow,CheckRows,ListRows,useAccountSettings} from './settings';
 import {HiddenFeedSheet} from './settings-lists';
 import {TermsSheet} from './terms-sheet';
 import {Visibility,profileRes,settingsRes,type Profile,type Settings} from './me';
 
-/** The new «Настройки» (owner's layout, 04.11.2026), next to the current one at /n/settings/new: one list of sections,
- * each opening a section screen (/n/settings/new/:section) or the existing screen of that section. */
+/** Sections of the settings one level down (/n/settings/new/:section): the current rows and controls. Privacy ones
+ * (who, discover, lists) belong to the «Приватность» tab of «Я», the rest to the account settings behind the gear. */
 type Section='who'|'discover'|'checks'|'app'|'lists'|'help';
 const SECTIONS:Section[]=['who','discover','checks','app','lists','help'];
 
@@ -30,33 +30,6 @@ function useProfileSettings(){
  return {p,settings,error,load};
 }
 
-export function SettingsNewScreen(){
- const {acting}=useFe();const {t}=useI18n();const navigate=useNavigate();
- const a=useAccountSettings();const {settings}=useProfileSettings();const out=useLogout();
- const cp=acting?.kind==='couple';const go=(to:string)=>()=>navigate(to);
- const prem=a.premium?t(a.premium.premium?'fe.set.premOn':'fe.set.premOff'):undefined;
- const checks=a.age&&a.photo?(a.age==='ok'&&a.photo==='approved'?t('fe.m2.checks.done'):a.age==='pending'||a.photo==='pending'?t('fe.set.ageVal.pending'):t('fe.m2.checks.todo')):undefined;
- return <>
-  <Bar title={t('fe.set.title')} back="/n/me/new"/>
-  <View className="nodock compact">
-   <Card list>
-    <Row icon={UserCog} title={t('fe.m2.s.who')} onClick={go('/n/settings/new/who')}/>
-    <Row icon={Heart} title={t('fe.m2.s.discover')} val={settings?t('fe.mx.v.mode.'+settings.discoverMode+(cp?'Us':'')):undefined} onClick={go('/n/settings/new/discover')}/>
-    <Row icon={Bell} title={t('fe.set.notifications')} onClick={go('/n/settings/notifications')}/>
-    <Row icon={KeyRound} title={t('fe.m2.s.security')} onClick={go('/n/settings/security')}/>
-    <Row icon={ShieldCheck} title={t('fe.m2.s.checks')} val={checks} onClick={go('/n/settings/new/checks')}/>
-    <Row icon={Crown} title="Premium" val={prem} onClick={go('/n/premium')}/>
-    <Row icon={Smartphone} title={t('fe.m2.s.app')} onClick={go('/n/settings/new/app')}/>
-    <Row icon={Ban} title={t('fe.m2.s.lists')} val={a.blocked?String(a.blocked):undefined} onClick={go('/n/settings/new/lists')}/>
-    <Row icon={Download} title={t('fe.set.myData')} onClick={go('/n/settings/data')}/>
-    <Row icon={CircleHelp} title={t('fe.m2.s.help')} onClick={go('/n/settings/new/help')}/>
-   </Card>
-   <Card list><Row icon={LogOut} danger title={t('fe.set.logout')} onClick={out.ask}/></Card>
-  </View>
-  {out.node}
- </>;
-}
-
 /** One section of the new settings: the current rows and controls, one level down. */
 export function SettingsNewSection(){
  const raw=useParams().section;const section=(SECTIONS.includes(raw as Section)?raw:'who') as Section;
@@ -67,7 +40,7 @@ export function SettingsNewSection(){
  const fail=needsProfile?ps.error&&!ps.p:a.error&&!a.s;
  const ready=needsProfile?!!ps.p&&!!ps.settings:true;
  return <>
-  <Bar title={t('fe.m2.s.'+section)} back="/n/settings/new"/>
+  <Bar title={t('fe.m2.s.'+section)} back={section==='who'||section==='discover'||section==='lists'?'/n/me':'/n/me/v3/settings'}/>
   <View className="nodock compact">
    {fail?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(needsProfile?ps.error:a.error,t)}><Btn kind="soft" onClick={needsProfile?ps.load:a.load}>{t('fe.retry')}</Btn></Empty>
     :!ready?<Skel kind="list" rows={5}/>

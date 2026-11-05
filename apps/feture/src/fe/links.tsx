@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {CircleAlert,Link2,Pencil,Trash2,User,Users,X} from 'lucide-react';
 import {useToast as useToastV21} from './toast';
 import {newOpId} from '../feture/fe-api';
-import {AddBtn,AddCard,Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,Note,PersonLine,RadioList,RequestCard,Row,SearchInput,SectionLabel,Seg,SelectRow,Skel,Spacer,useLeaveGuard,useScrollTo,View,Who,useKept} from './kit';
+import {AddBtn,AddCard,Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,Note,PersonLine,RadioList,RequestCard,Row,SearchInput,SectionLabel,Seg,SelectRow,Skel,Spacer,useLeaveGuard,useScrollTo,View,Who,ProfileAv,useKept} from './kit';
 import {useFe,useKeyChange,useShown} from './session';
 import {NameBadges,faceFields,withAge} from './faces';
 import {KINDS,SIDES,Sheet,linkLabel,linksMineRes,mediaSrc,personName,personProfileRes,pxError,type Kind,type LinkView,type LinksMine,type PersonProfile} from './profile-extras';
@@ -46,7 +46,7 @@ export function LinksBlock({onChanged}:{onChanged?:()=>void}){
  return <Group title={title} action={(list.length||inc.length)?<button type="button" onClick={manage}>{t('fe.mx.lk.manage')}</button>:null}>
   {inc.length>0&&<div className="lk-inc">{inc.map(l=><LinkRequest key={l.id} l={l} couple={couple} small busy={busy} onAnswer={a=>void answer(l,a)}/>)}</div>}
   {list.length?<Card list>{list.slice(0,4).map(l=>{const name=nameOf(l);const v=l.vis;
-   return <Row key={l.id} av={<Av name={name} seed={l.other.id} size="sm" src={l.other.avatar}/>} title={<>{name}<NameBadges p={l.other}/></>}
+   return <Row key={l.id} av={<ProfileAv p={l.other} size="sm"/>} title={<>{name}<NameBadges p={l.other}/></>}
     sub={linkLabel(t,l.kind,l.side)+(v!=='all'?' · '+(v==='us'?t('fe.mx.lk.visUs'):t('fe.mx.lk.visFollowers')):'')} onClick={()=>navigate('/n/people/'+l.other.id)}/>;})}</Card>
    :<AddCard icon={Link2} title={t('fe.mx.lk.add')} sub={couple?t('fe.mx.lk.addSubCouple'):t('fe.mx.lk.addSub')} onClick={manage}/>}
  </Group>;
@@ -57,7 +57,7 @@ export function LinksBlock({onChanged}:{onChanged?:()=>void}){
 function LinkRequest({l,couple,small,busy,onAnswer}:{l:LinkView,couple:boolean,small?:boolean,busy:boolean,onAnswer:(accept:boolean)=>void}){
  const {t}=useI18n();const navigate=useNavigate();const name=nameOf(l);const go=()=>navigate('/n/people/'+l.other.id);
  const who=<>{withAge(name,l.other)}<NameBadges p={l.other}/></>;
- return <RequestCard id={'link-'+l.id} className="lk-req" person={<PersonLine small={small} av={<Av name={name} seed={l.other.id} size={small?'sm':''} src={l.other.avatar}/>} label={name} onOpen={go} name={who}
+ return <RequestCard id={'link-'+l.id} className="lk-req" person={<PersonLine small={small} av={<ProfileAv p={l.other} size={small?'sm':''}/>} label={name} onOpen={go} name={who}
   sub={l.change?fill(t('fe.ln.proposesChange'),{from:linkLabel(t,l.kind,l.side),to:t('fe.px.lk.k.'+l.change.kind)}):fill(couple?t('fe.ln.proposesCouple'):t('fe.ln.proposes'),{label:linkLabel(t,l.kind,l.side)})}/>}
   actions={<><Btn size="md" disabled={busy} onClick={()=>onAnswer(true)}>{t('fe.ln.confirm')}</Btn><Btn size="md" kind="soft" disabled={busy} onClick={()=>onAnswer(false)}>{t('fe.ln.decline')}</Btn></>}/>;
 }
@@ -65,22 +65,22 @@ function LinkRequest({l,couple,small,busy,onAnswer}:{l:LinkView,couple:boolean,s
 /** «+» in «Мои связи» (V21 linkAdd / linkPick): whom to propose a link to — people the profile knows (follows or is
  * followed by) or anyone found by name / nickname. Someone already linked (or with a request either way) shows why
  * and cannot be picked; the rest open the link editor (P22). */
-const knownRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).passthrough())});
-const searchRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable(),
+const knownRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).passthrough())});
+const searchRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable(),halves:faceFields.halves,
  avatar:z.object({pending:z.boolean().optional(),src:z.record(z.string(),z.string()).nullable().optional()}).passthrough().nullable().optional()}).passthrough())});
-type Pickable={id:string,kind:string,handle:string|null,name:string|null,src:string|null};
+type Pickable={id:string,kind?:string|undefined,handle:string|null,name:string|null,src:string|null,halves?:{name:string|null,avatar?:string|null}[]|undefined};
 function LinkPicker({mine,onClose}:{mine:LinksMine,onClose:()=>void}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();
  const [tab,setTab]=useKept<'known'|'all'>('tab','known');const [q,setQ]=useState('');
  const [known,setKnown]=useState<Pickable[]|null>(null);const [found,setFound]=useState<Pickable[]|null>(null);
  useEffect(()=>{if(!acting)return;
   Promise.all([call('profile.followers',{profileId:acting.id,following:true},knownRes),call('profile.followers',{profileId:acting.id},knownRes)])
-   .then(([a,b])=>{const seen=new Set<string>();setKnown([...a.items,...b.items].filter(x=>!seen.has(x.id)&&seen.add(x.id)).map(x=>({id:x.id,kind:x.kind,handle:x.handle,name:x.name,src:x.avatar??null})));})
+   .then(([a,b])=>{const seen=new Set<string>();setKnown([...a.items,...b.items].filter(x=>!seen.has(x.id)&&seen.add(x.id)).map(x=>({id:x.id,kind:x.kind,handle:x.handle,name:x.name,src:x.avatar??null,halves:x.halves})));})
    .catch(()=>setKnown([]));},[call,acting]);
  const term=q.trim();
  useEffect(()=>{setFound(null);if(tab!=='all'||term.length<2)return;const ctl=new AbortController();
   const timer=setTimeout(()=>call('people.search',{q:term},searchRes,{signal:ctl.signal})
-   .then(r=>setFound(r.items.filter(x=>x.id!==acting?.id).map(x=>({id:x.id,kind:x.kind,handle:x.handle,name:x.name,src:mediaSrc(x.avatar?{src:x.avatar.src??null,...(x.avatar.pending!==undefined?{pending:x.avatar.pending}:{})}:null)})))).catch(()=>{if(!ctl.signal.aborted)setFound([]);}),350);
+   .then(r=>setFound(r.items.filter(x=>x.id!==acting?.id).map(x=>({id:x.id,kind:x.kind,halves:x.halves,handle:x.handle,name:x.name,src:mediaSrc(x.avatar?{src:x.avatar.src??null,...(x.avatar.pending!==undefined?{pending:x.avatar.pending}:{})}:null)})))).catch(()=>{if(!ctl.signal.aborted)setFound([]);}),350);
   return ()=>{clearTimeout(timer);ctl.abort();};},[tab,term,call,acting?.id]);
  const why=(id:string)=>mine.confirmed.some(l=>l.other.id===id)?t('fe.w7.lp.linked'):mine.sent.some(l=>l.other.id===id)?t('fe.w7.lp.sent')
   :mine.incoming.some(l=>l.other.id===id)?t('fe.w7.lp.incoming'):'';
@@ -94,7 +94,7 @@ function LinkPicker({mine,onClose}:{mine:LinksMine,onClose:()=>void}){
    :list===null?<Skel kind="list" rows={3}/>
    :!list.length?<Note>{tab==='known'&&!needle?t('fe.w7.lp.noKnown'):t('fe.w7.lp.none')}</Note>
    :<Card list>{list.map(p=>{const name=personName(p)||'?';const w=why(p.id);
-    return <Row key={p.id} av={<Av name={name} seed={p.id} size="sm" src={p.src}/>} title={<Who name={name} nick={p.handle}/>} sub={w||undefined} disabled={!!w}
+    return <Row key={p.id} av={<ProfileAv p={{id:p.id,kind:p.kind,name:p.name,handle:p.handle,avatar:p.src,halves:p.halves}} size="sm"/>} title={<Who name={name} nick={p.handle}/>} sub={w||undefined} disabled={!!w}
      onClick={()=>{onClose();navigate('/n/people/'+p.id+'/link');}}/>;})}</Card>}
  </Sheet>;
 }
@@ -129,7 +129,7 @@ export function LinksScreen(){
  useScrollTo(lid&&waiting.some(l=>l.id===lid)?'link-'+lid:null,!!r);
  const visWord=(v:Vis)=>v==='us'?t('fe.ln.visUs'):v==='followers'?t('fe.ln.visFollowers'):'';
  const row=(l:LinkView,pend:boolean,extra:string)=>{const name=nameOf(l);
-  return <Row key={l.id} av={<Av name={name} seed={l.other.id} size="sm" src={l.other.avatar}/>} title={<>{name}<NameBadges p={l.other}/></>}
+  return <Row key={l.id} av={<ProfileAv p={l.other} size="sm"/>} title={<>{name}<NameBadges p={l.other}/></>}
    sub={[linkLabel(t,l.kind,l.side),pend?'':visWord(l.vis),extra].filter(Boolean).join(' · ')} onClick={()=>setMenu({l,pend})}/>;};
  const m=menu?.l;
  return <>

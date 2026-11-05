@@ -168,7 +168,7 @@ test('couples: submit waits for the partner, «идём» waits for the partner,
   const { pg, db, call, coupleOf, a, b, c, ev, decide, publish } = await world();
   try {
     const pair = await coupleOf([a, b]);
-    await db.query(`update feture.profile_member set approves_partner = true where profile_id = $1`, [pair]);
+    await db.query(`update feture.profile_member set approves_scope = array['private','profile','posts','links','communities','events','chats'], approves_partner = true where profile_id = $1`, [pair]);
     const r = await call('ua', pair, { action: 'event.submit', opId: op(), event: ev({ title: 'Вечер от пары' }) });
     assert.equal(r.state, 'pending_partner');
     assert.ok(!(await call('um', null, { action: 'staff.eventQueue' })).items.some((/** @type {any} */ x) => x.id === r.id));
@@ -221,7 +221,7 @@ test('review fixes: announcements for admitted people, real zones only, admissio
 
     // A couple hiding from the list or stepping down does not wait for the partner.
     const pair = await coupleOf([b, c]);
-    await db.query(`update feture.profile_member set approves_partner = true where profile_id = $1`, [pair]);
+    await db.query(`update feture.profile_member set approves_scope = array['private','profile','posts','links','communities','events','chats'], approves_partner = true where profile_id = $1`, [pair]);
     await db.query(`insert into feture.event_rsvp (event_id, profile_id, status, show_in_list, acted_by) select $1, $2, 'going', true, id from feture.account where person_profile_id = $3`, [id, pair, b]);
     assert.equal((await call('ub', pair, { action: 'event.rsvp', opId: op(), eventId: id, status: 'going', showInList: false })).status, 'going');
     assert.equal((await call('ub', pair, { action: 'event.rsvp', opId: op(), eventId: id, status: 'interested' })).status, 'interested');

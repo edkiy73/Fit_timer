@@ -11,6 +11,7 @@ import { photosFor } from './photos.mjs';
 import { photoVerifiedOf } from './verification.mjs';
 import { PREMIUM_SQL, ageOn, withFaces } from './faces.mjs';
 import { partnerOf } from '../sql-rules.mjs';
+import { SETTING_POINT } from '../../contracts/_approve.mjs';
 import { grantedScopes } from '../access.mjs';
 import { enqueue } from '../outbox.mjs';
 import { narrowCouple, needsPartner, registerApprovalKind, requestApproval } from '../approvals.mjs';
@@ -326,7 +327,7 @@ export async function setVisibilityAs(q, acting, setting, value) {
       await enqueue(q, 'couple.changed', acting.profileId, { for: acting.partnerAccountId, what: setting });
       return out;
     }
-    if (needsPartner(acting, 'profile.setVisibility')) {
+    if (needsPartner(acting, 'profile.setVisibility', SETTING_POINT[setting])) {
       await visibilityChecks(q, acting.profileId, setting, value);
       return { pending: await requestApproval(q, acting, { kind: 'profile.setVisibility', targetType: 'setting:' + setting, targetId: null, change: { setting, value }, summary: [setting] }) };
     }
