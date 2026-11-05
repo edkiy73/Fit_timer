@@ -171,5 +171,15 @@ test('«Темы» (owner 05.11.2026): owners and leads add, rename and hide top
     await save('uo', { id: 'tea_party', ru: 'Чай', en: 'Tea', hidden: true });
     assert.equal(await seen(), undefined);
     assert.equal((await db.query(`select count(*)::int n from feture.staff_action where action = 'topic.save'`))[0].n, 1);
+    // A section: only owner/lead add one; a topic goes into it; a hidden section leaves the app's catalog.
+    const sec = (/** @type {string} */ u, /** @type {any} */ x) => call(u, null, { action: 'staff.categorySave', opId: op(), hidden: false, ...x });
+    assert.equal((await sec('um', { id: 'rituals', create: true, ru: 'Ритуалы', en: 'Rituals' })).status, 403);
+    assert.equal((await sec('uo', { id: 'rituals', create: true, ru: 'Ритуалы', en: 'Rituals' })).id, 'rituals');
+    assert.equal((await sec('uo', { id: 'rituals', create: true, ru: 'Ещё', en: 'Again' })).rule, 'category_exists');
+    assert.equal((await save('uo', { id: 'candle', create: true, categoryId: 'rituals', ru: 'Свечи', en: 'Candles' })).id, 'candle');
+    await sec('uo', { id: 'rituals', ru: 'Ритуалы и сцены', en: 'Rituals', hidden: true });
+    const after = await call('uo', null, { action: 'staff.topics' });
+    assert.equal(after.categories.find((/** @type {any} */ c) => c.id === 'rituals').ru, 'Ритуалы и сцены');
+    assert.equal((await sec('uo', { id: 'nope', ru: 'Х', en: 'X' })).status, 404);
   } finally { await pg.close(); }
 });

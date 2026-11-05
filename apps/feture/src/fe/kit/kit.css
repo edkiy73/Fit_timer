@@ -619,6 +619,11 @@ html:has(.fe-v21),html:has(.fe-v21) body{overscroll-behavior-y:none}
 
 /* One even column of fields in a form step: every field the same distance from the next, whatever hint or row it holds. */
 .v21 .k-form{display:grid;gap:var(--s-4)}
+/* A field in a Stack or a row never brings its own bottom margin: the gap is the container's (it doubled inside a Stack). */
+.v21 .k-stack>.field,.v21 .k-row>.field{margin:0}
+/* A checkbox row's box is centred in its first line, the mark in the box; the hint under the list sits close to it. */
+.v21 .radio.k-chk i{width:22px;height:22px;line-height:0}
+.v21 .radio.k-chk i svg{display:block;margin:auto}
 .v21 .k-form>*,.v21 .k-form .field,.v21 .k-form>.row,.v21 .k-form>[data-field]{margin:0}
 .v21 .cov-or{display:flex;align-items:center;gap:var(--s-3);flex-wrap:wrap;margin-top:var(--s-3);color:var(--mute);font:var(--t-sm)}
 .v21 .cov-or>span{flex:none}.v21 .cov-or>.k-swatches{flex:1 1 220px;min-width:0}

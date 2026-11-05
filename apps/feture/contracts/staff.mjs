@@ -54,6 +54,14 @@ export const staffCommands = {
       hidden: z.boolean(),
     }),
   },
+  // A section of the catalog: added, renamed, hidden here (its colour plate is taken in turn; its topics move in «Темы»).
+  'staff.categorySave': {
+    profile: false, write: true,
+    input: z.strictObject({
+      opId, id: z.string().regex(/^[a-z][a-z0-9_-]{1,31}$/), create: z.boolean().default(false),
+      ru: z.string().trim().min(1).max(40), en: z.string().trim().min(1).max(40), hidden: z.boolean(),
+    }),
+  },
   // «Сотрудники» (owner 05.11.2026): who has which role; only the owner reads it.
   'staff.team': { profile: false, write: false, input: z.strictObject({}) },
   'staff.grant': {
