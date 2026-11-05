@@ -13,7 +13,7 @@ async function hostOnline(t) {
   const r = await t.api('event.submit', { opId: t.uuid7(), event: {
     title: 'QA скоро ' + (Date.now() % 100000), kind: 'talk', description: 'Онлайн-разговор для сценария «Скоро» в ленте, без записи.',
     format: 'online', joinUrl: 'https://meet.example.org/qa-soon', tz: 'Europe/Berlin',
-    startsAt: start.toISOString(), endsAt: new Date(+start + 3600e3).toISOString(), price: { kind: 'free' }, plate: 'sea' } }, host.email);
+    startsAt: start.toISOString(), endsAt: new Date(+start + 3600e3).toISOString(), price: { kind: 'free' }, plate: 'sea', coverAssetId: await t.cover('event', host.email) } }, host.email);
   if (!r.id) throw new Error('event.submit: ' + JSON.stringify(r).slice(0, 200));
   const e = (await t.api('event.get', { eventId: r.id }, host.email)).event;
   const d = await t.api('staff.eventDecide', { opId: t.uuid7(), eventId: r.id, rev: e.rev, decision: 'approve' }, staff.email);

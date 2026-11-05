@@ -397,6 +397,8 @@ const run = {
     const acting = need(a);
     await requireUnrestricted(q, acting, 'communities');
     const { opId: _, ...f } = input;
+    // A cover photo is required (owner 06.11.2026): no colour stand-ins.
+    if (!f.coverAssetId) fail(400, 'invalid_input', { fields: ['coverAssetId'] });
     if (await nameTaken(q, f.name)) fail(409, 'conflict', NAME_TAKEN);
     if (needsPartner(acting, 'community.create')) {
       return { pending: await requestApproval(q, acting, { kind: 'community.create', targetType: 'community:' + f.name.toLowerCase(), targetId: null, change: f, summary: [f.name] }) };
@@ -408,6 +410,7 @@ const run = {
     const acting = need(a);
     await requireUnrestricted(q, acting, 'communities');
     await requireHost(q, input.communityId, acting, 'owner');
+    if (input.coverAssetId === null) fail(400, 'invalid_input', { fields: ['coverAssetId'] });
     // A couple's community: its name, description, cover, rules and privacy wait for the partner first («Правки
     // сообщества», audit item 40), then go to staff as usual; topics, place and plate apply now.
     const asked = PARTNER_FIELDS.filter(k => input[k] !== undefined);

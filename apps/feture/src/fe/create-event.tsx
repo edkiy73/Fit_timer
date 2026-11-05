@@ -60,6 +60,7 @@ function validate(f:Form,step:number,t:(k:string,v?:Record<string,string|number>
   const et=tx('eventTitle',ti);if(et)e.title=et;
   if(!f.kind)e.kind=t('fe.ce.err.type');
   const ed=tx('eventDescription',d);if(ed)e.description=ed;
+  if(!f.cover)e.cover=t('fe.ce.err.coverNeeded');
  }
  if(step===2){
   const {start,end}=times(f);
@@ -309,7 +310,7 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
  let body:ReactNode=null;
  if(step===1)body=<>
   {couple&&acting&&<p className="as-line full"><ActingAv p={acting} size="xs"/><span>{t('fe.ce.organiser')} <b>{acting.name}</b></span></p>}
-  <CoverField purpose="event" plate={f.plate} setPlate={k=>set('plate',k)} cover={f.cover} setCover={c=>set('cover',c)}/>
+  <CoverField purpose="event" cover={f.cover} setCover={c=>set('cover',c)}/>
   {err.cover&&<FErr>{err.cover}</FErr>}
   <Field name="title" label={t('fe.ce.name')} ph={t('fe.ce.namePh')} check="eventTitle" value={f.title} onChange={v=>set('title',v)} err={err.title}/>
   <div className={'field'+(err.kind?' err':'')} data-field="type"><span className="flabel">{t('fe.ce.type')}</span>

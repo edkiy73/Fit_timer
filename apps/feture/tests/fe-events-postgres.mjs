@@ -402,3 +402,17 @@ test('applications (owner check 28.10.2026): a declined one cannot be sent again
     assert.equal((await apply()).state, 'pending');
   } finally { await pg.close(); }
 });
+
+test('a cover photo is required: an event cannot be submitted or edited without one', async () => {
+  const { pg, call, a, ev, publish } = await world();
+  try {
+    const none = await call('ua', a, { action: 'event.submit', opId: op(), event: ev({ coverAssetId: null }) });
+    assert.equal(none.status, 400);
+    assert.deepEqual(none.fields, ['coverAssetId']);
+    const id = await publish('ua', a);
+    const g = (await call('ua', a, { action: 'event.get', eventId: id })).event;
+    const off = await call('ua', a, { action: 'event.update', opId: op(), eventId: id, rev: g.rev, event: ev({ coverAssetId: null }) });
+    assert.equal(off.status, 400);
+    assert.deepEqual(off.fields, ['coverAssetId']);
+  } finally { await pg.close(); }
+});
