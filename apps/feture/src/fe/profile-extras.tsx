@@ -57,7 +57,7 @@ export const personProfile=z.object({id:z.uuid(),kind:z.enum(['person','couple']
  /** One of this account's own profiles (my person while acting as the couple, or the reverse): nothing to like, follow or write. */own:z.boolean().optional(),
  /** A couple: who is in it; a person: their couple (active ones only, never across a block). */
  members:z.array(z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.string().nullable().optional()}).passthrough()).optional(),
- couple:z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.string().nullable().optional()}).passthrough().nullable().optional(),
+ couple:z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.string().nullable().optional(),kind:z.string().optional(),halves:faceFields.halves}).passthrough().nullable().optional(),
  age:z.number().nullable(),city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),photos:z.array(media),details:z.record(z.string(),z.unknown()),photoVerified:z.boolean().optional(),premium:z.boolean().optional()}).passthrough();
 export const personProfileRes=z.object({ok:z.literal(true),profile:personProfile});
 export type PersonProfile=z.infer<typeof personProfile>;
@@ -482,7 +482,7 @@ function PairGroup({p,inert}:{p:PersonProfile,inert?:boolean|undefined}){
  if(!people.length)return null;
  return <Group title={t(p.kind==='couple'?'fe.px.pair.members':'fe.px.pair.couple')}><Card list>
   {people.map(x=>{const name=x.name||x.handle||'?';
-   return <Row key={x.id} av={<Av name={name} seed={x.id} size="sm" src={x.avatar??null}/>} title={name} sub={x.handle?'@'+x.handle:undefined}
+   return <Row key={x.id} av={<ProfileAv p={x} size="sm"/>} title={name} sub={x.handle?'@'+x.handle:undefined}
     {...(inert?{}:{onClick:()=>navigate('/n/people/'+x.id)})}/>;})}
  </Card></Group>;
 }
@@ -522,14 +522,14 @@ const byGroup=(c:Compat)=>{const out:Record<Group,CompatItem[]>={complement:[],m
  const min=(i:CompatItem)=>Math.min(i.mine.value??0,i.theirs.value??0);for(const g of GROUPS)out[g].sort((a,b)=>min(b)-min(a));return out;};
 
 /** compatWords / sharedHead: one number («N общих тем»), then how they split; never a score. */
-function compatWords(c:Compat,t:T,locale:string,consent:boolean){
+function compatWords(c:Compat,t:T,locale:string){
  if(c.few)return t('fe.px.cmp.fewText');
  const g=byGroup(c),m=g.match.length,k=g.complement.length,n=m+k,parts:string[]=[];
  if(n)parts.push(plural(t,locale,'fe.px.topic',n)+(m&&k?fill(t('fe.px.cmp.alikeComp'),{m,c:k}):k?t('fe.px.cmp.compOnly'):''));
  if(g.try.length)parts.push(fill(t('fe.px.cmp.tryN'),{n:g.try.length}));
  if(g.discuss.length)parts.push(fill(t('fe.px.cmp.discussN'),{n:g.discuss.length}));
  const s=parts.join(' · ')||t('fe.px.cmp.something');
- return consent?s+'. '+t('fe.px.cmp.notConsent'):s;
+ return s;
 }
 function Venn({n}:{n:number|string}){return <div className="venn mini"><i/><i/><b>{n}</b></div>;}
 
@@ -541,7 +541,7 @@ export function CompatSummary({profileId,pre}:{profileId:string,/** Already read
  if(!c)return null;
  // The full comparison says «совпадение — не согласие»; the summary stays one short line (29.10 sweep).
  return <section className="compat v14c"><button type="button" className="cp-h" onClick={()=>navigate('/n/people/'+profileId+'/compat')}>
-  <Venn n={c.few?'?':c.count}/><span className="grow"><b>{c.few?t('fe.px.cmp.few'):t('fe.px.cmp.hasTalk')}</b><span>{compatWords(c,t,locale,false)}</span></span><ChevronRight/>
+  <Venn n={c.few?'?':c.count}/><span className="grow"><b>{c.few?t('fe.px.cmp.few'):t('fe.px.cmp.hasTalk')}</b><span>{compatWords(c,t,locale)}</span></span><ChevronRight/>
  </button></section>;
 }
 
@@ -606,7 +606,7 @@ export function CompatScreen(){
      <div className="cmp14"><Venn n={c.few?(c.topics.length||'?'):c.count}/><div className="cmp-head">
       <small>{fill(t('fe.px.cmp.you'),{name})}</small>
       <b>{c.few?(c.topics.length?fill(t('fe.px.cmp.fewN'),{topics:plural(t,locale,'fe.px.topic',c.topics.length)}):t('fe.px.cmp.few')):t('fe.px.cmp.talk')}</b>
-      <span>{c.few?c.topics.map(topic).join(', '):compatWords(c,t,locale,false)}</span>
+      <span>{c.few?c.topics.map(topic).join(', '):compatWords(c,t,locale)}</span>
      </div></div>
      <Alert icon={ShieldCheck}>{t('fe.px.cmp.consent')}</Alert>
      {c.few&&<Alert icon={Info}><b>{t('fe.px.cmp.fewTitle')}</b>{t('fe.px.cmp.fewBody')}</Alert>}

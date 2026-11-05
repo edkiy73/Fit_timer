@@ -718,8 +718,8 @@ type MediaDraft={id:string,preview:string,kind?:string|undefined,durationMs?:num
 type Person={id:string,name:string};
 /** `mentionable`: the server says whether a mention by the acting profile reaches the person (their «Кто может
  * упоминать»); false — the name stays text and nobody is notified. */
-type Mention={id:string,handle:string,name:string,avatar:string|null,mentionable?:boolean|undefined};
-const mentionRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.unknown().optional(),mentionable:z.boolean().optional()}).passthrough())});
+type Mention={id:string,handle:string,name:string,avatar:string|null,kind?:string|undefined,halves?:{name:string|null,avatar?:string|null}[]|undefined,mentionable?:boolean|undefined};
+const mentionRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.unknown().optional(),mentionable:z.boolean().optional(),halves:faceFields.halves}).passthrough())});
 const thumbOf=(a:unknown):string|null=>{const src=(a as {src?:Record<string,string>|null}|null)?.src;return src?(src.thumb??src.card??null):null;};
 
 /** A fresh form every time «Новая публикация» is opened (the same route again kept the old mode and text). */
@@ -903,7 +903,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  };
  useEffect(()=>{
   if(!sug||sug.q.length<2){setFound([]);return;}
-  const id=setTimeout(()=>{call('people.search',{q:sug.q},mentionRes).then(r=>setFound(r.items.filter(p=>!!p.handle).map(p=>({id:p.id,handle:p.handle!,name:nameOf(p),avatar:thumbOf(p.avatar),mentionable:p.mentionable})))).catch(()=>setFound([]));},250);
+  const id=setTimeout(()=>{call('people.search',{q:sug.q},mentionRes).then(r=>setFound(r.items.filter(p=>!!p.handle).map(p=>({id:p.id,handle:p.handle!,name:nameOf(p),avatar:thumbOf(p.avatar),kind:p.kind,halves:p.halves,mentionable:p.mentionable})))).catch(()=>setFound([]));},250);
   return ()=>clearTimeout(id);
  },[sug?.q,call]);
  const sugList=sug?[...new Map([...(folks??[]),...found].map(p=>[p.id,p])).values()]
@@ -969,7 +969,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
       extra={<><i/><button type="button" aria-label={t('fe.fd.mention')} title={t('fe.fd.mention')} onMouseDown={e=>e.preventDefault()} onClick={openMention}><AtSign/></button></>}
       placeholder={note?(couple?t('fe.fd.notePhUs'):t('fe.fd.notePh')):poll?(couple?t('fe.fd.pollPhUs'):t('fe.fd.pollPh')):couple?t('fe.fd.composePhUs'):t('fe.fd.composePh')} label={t('fe.fd.text')}/>
      {sug&&sugList.length>0&&<div className="mention-sug" role="listbox" aria-label={t('fe.fd.whoMention')}>{sugList.map(p=><button key={p.id} type="button" role="option" aria-selected={false}
-      onMouseDown={e=>e.preventDefault()} onClick={()=>pickMention(p)}><Av name={p.name} seed={p.id} src={p.avatar} size="xs"/><span><b><Who name={p.name} nick={p.handle}/></b>{p.mentionable===false&&<small> · {t('fe.lo.mention.silent')}</small>}</span></button>)}</div>}
+      onMouseDown={e=>e.preventDefault()} onClick={()=>pickMention(p)}><ProfileAv p={p} size="xs"/><span><b><Who name={p.name} nick={p.handle}/></b>{p.mentionable===false&&<small> · {t('fe.lo.mention.silent')}</small>}</span></button>)}</div>}
      </div>
      <Counter n={body.length} max={max}/>
     </Field>
@@ -1061,7 +1061,7 @@ function PeopleSheet({value,locked,onClose,onApply}:{value:Person[],locked:strin
       if(lock){toast(t('fe.w3.tag.locked'),{type:'info'});return;}
       if(!on&&sel.length>=10){toast(t('fe.w3.tag.max'),{type:'warn'});return;}
       setSel(s=>on?s.filter(x=>x.id!==p.id):[...s,p]);}}
-      av={<Av name={p.name} seed={p.id} size="sm"/>} title={p.name} sub={lock?t('fe.fd.lockedMark'):undefined} val={<span className={'ck'+(on?' on':'')}>{on&&<Check/>}</span>}/>;})}</Card>}
+      av={<ProfileAv p={p} size="sm"/>} title={p.name} sub={lock?t('fe.fd.lockedMark'):undefined} val={<span className={'ck'+(on?' on':'')}>{on&&<Check/>}</span>}/>;})}</Card>}
     <p className="grp-n">{t('fe.fd.marksFoot')}</p>
  </Sheet>;
 }
@@ -1084,7 +1084,7 @@ function MentionSheet({onClose,onPick}:{onClose:()=>void,onPick:(handle:string,m
  const match=(p:Mention)=>!low||p.handle.toLowerCase().startsWith(low)||p.name.toLowerCase().includes(low);
  const mine=(near??[]).filter(match) as (Mention&{kind:string})[];const known=new Set(mine.map(p=>p.id));const rest=found.filter(p=>!known.has(p.id));
  const issue=(p:Mention&{kind:string})=>!p.handle?t('fe.w3.mention.noNick'):'';
- const row=(p:Mention&{kind:string})=>{const why=issue(p);return <Row key={p.id} noChev av={<Av name={p.name} seed={p.id} src={p.avatar} size="sm"/>} title={<Who name={p.name} nick={p.handle}/>}
+ const row=(p:Mention&{kind:string})=>{const why=issue(p);return <Row key={p.id} noChev av={<ProfileAv p={p} size="sm"/>} title={<Who name={p.name} nick={p.handle}/>}
   sub={why||(p.mentionable===false?t('fe.lo.mention.silent'):undefined)}
   onClick={()=>{if(why){toast(why,{type:'info'});return;}onPick(p.handle,p.mentionable,p.id);}}/>;};
  return <Sheet full title={t('fe.fd.mention')} sub={t('fe.w3.mention.sub')} onClose={onClose} search={<SearchInput value={q} onChange={e=>setQ(e.target.value)} label={t('fe.w3.mention.find')}/>}>

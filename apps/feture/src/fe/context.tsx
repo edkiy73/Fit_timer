@@ -84,7 +84,7 @@ function Likes(){
  const items=r.data?.items.slice(0,6)??[];
  return <CtxBlock rows title={t(us?'fe.ctx.likesUs':'fe.ctx.likes')} loading={r.loading} empty={{icon:Heart,title:t('fe.ctx.likesEmpty')}}
   more={(r.data?.items.length??0)>items.length?<Btn kind="text" auto onClick={()=>navigate('/n/people?sub=likes')}>{t('fe.ctx.all',{n:String(r.data!.items.length)})}</Btn>:null}>
-  {items.map(({profile:p,at})=><CtxRow key={p.id} av={<Av name={pname(p)} seed={p.id} size="sm" src={p.avatar?.src?.thumb}/>} title={<Who name={pname(p)} age={p.ages?.length?p.ages.join(' · '):undefined}><NameBadges p={p}/></Who>}
+  {items.map(({profile:p,at})=><CtxRow key={p.id} av={<ProfileAv p={{...p,avatar:p.avatar?.src?.thumb??null}} size="sm"/>} title={<Who name={pname(p)} age={p.ages?.length?p.ages.join(' · '):undefined}><NameBadges p={p}/></Who>}
    sub={[p.kind==='couple'?t('fe.ctx.couple'):null,at?when(at,locale):null].filter(Boolean).join(' · ')||undefined} onClick={()=>navigate('/n/people/'+p.id)}/>)}
  </CtxBlock>;
 }

@@ -132,7 +132,7 @@ function ChatsSide({current,archived:inArchive}:{current:string,/** The open cha
   {searching&&!archived&&<ChatsSearch value={q} onChange={setQ} onClose={toggleSearch}/>}
   {data===null?<Skel kind="list" rows={6}/>:<>
    {!archived&&!needle&&data.requests.length>0&&<Card list><Row icon={Inbox} tone="v" title={t('fe.rq.folder')} badge={data.requests.length} onClick={()=>navigate('/n/chats/requests')}/></Card>}
-   {rows.length?<ChatList>{rows.map(c=><ChatRow key={c.id} on={c.id===current} av={<Av name={nameOf(c.other)} seed={c.other.id} size="lg" src={c.other.avatar?.src?.thumb}/>} name={nameOf(c.other)}
+   {rows.length?<ChatList>{rows.map(c=><ChatRow key={c.id} on={c.id===current} av={<OtherAv o={c.other} size="lg"/>} name={nameOf(c.other)}
     tag={c.side.kind==='couple'&&<CoupleTag>{t('fe.chx.coupleChat')}</CoupleTag>} line={previewOf(c,t)} time={ago(c.at,locale)} unread={c.id===current?0:c.unread} ended={c.state==='ended'||!!c.other.paused}
     onClick={()=>navigate('/n/chats/'+c.id,{replace:true})}/>)}</ChatList>
     :needle?<Empty compact icon={Search} title={t('fe.chx.notFound',{q:q.trim()})}/>
@@ -165,7 +165,7 @@ export function ChatsTab(){
  const fresh=archived?[]:mine.filter(c=>c.newMatch&&c.state==='active');const rows=mine.filter(c=>!fresh.includes(c));
  const unreadFor=(s:'me'|'couple')=>(items??[]).filter(c=>side(c)===s&&c.unread>0).length;
  const preview=(c:Chat)=>previewOf(c,t);const wide=useWide();
- const row=(c:Chat)=><ChatRow key={c.id} av={<Av name={nameOf(c.other)} seed={c.other.id} size="lg" src={c.other.avatar?.src?.thumb}/>} name={nameOf(c.other)}
+ const row=(c:Chat)=><ChatRow key={c.id} av={<OtherAv o={c.other} size="lg"/>} name={nameOf(c.other)}
   tag={c.side.kind==='couple'&&<CoupleTag>{t('fe.chx.coupleChat')}</CoupleTag>} line={preview(c)} time={ago(c.at,locale)} unread={c.unread} ended={c.state==='ended'||!!c.other.paused} onClick={()=>navigate('/n/chats/'+c.id)}/>;
  const toggleSearch=()=>{setSearching(s=>!s);setQ('');};
 
@@ -193,7 +193,7 @@ export function ChatsTab(){
     :items===null?<Skel kind="list" rows={4}/>
     :<>
      {fresh.length>0&&<div><SectionLabel>{t('fe.chats.newMatches')}</SectionLabel>
-      <NewMatches>{fresh.map(c=><NewMatch key={c.id} av={<Av name={nameOf(c.other)} seed={c.other.id} src={c.other.avatar?.src?.thumb}/>} name={nameOf(c.other)}
+      <NewMatches>{fresh.map(c=><NewMatch key={c.id} av={<OtherAv o={c.other} size=""/>} name={nameOf(c.other)}
        us={c.side.kind==='couple'?t('fe.chx.coupleChatSr'):undefined} onClick={()=>navigate('/n/chats/'+c.id)}/>)}</NewMatches></div>}
      {rows.length>0&&<ChatList>{rows.map(row)}</ChatList>}
      {!rows.length&&!fresh.length&&(needle?<Empty icon={Search} title={t('fe.chx.notFound',{q:q.trim()})}><Btn kind="text" auto onClick={()=>setQ('')}>{t('fe.chx.clear')}</Btn></Empty>
@@ -220,7 +220,7 @@ export function RequestsScreen(){
   <View className="nodock" refresh={load}>
    {error&&!items?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :items===null?<Skel kind="list" rows={3}/>
-    :items.length?<ChatList>{items.map(c=><ChatRow key={c.id} av={<Av name={nameOf(c.other)} seed={c.other.id} size="lg" src={c.other.avatar?.src?.thumb}/>} name={senderName(c.other,t)}
+    :items.length?<ChatList>{items.map(c=><ChatRow key={c.id} av={<OtherAv o={c.other} size="lg"/>} name={senderName(c.other,t)}
       tag={c.side.kind==='couple'&&<CoupleTag>{t('fe.chx.coupleChat')}</CoupleTag>} line={preview(c)} note={contextLine(c.request?.context,t,locale,c.side.kind==='couple')}
       time={ago(c.at,locale)} onClick={()=>navigate('/n/chats/'+c.id)}/>)}</ChatList>
     :<Empty icon={Inbox} title={t('fe.rq.empty')} text={t('fe.rq.emptyText')}/>}
