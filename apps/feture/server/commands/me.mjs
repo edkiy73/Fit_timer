@@ -444,7 +444,7 @@ const run = {
     }
     // Case, ё and hyphens do not matter; a name starting with the word first, then a word start, then anywhere; the
     // biggest city first inside each group.
-    const w = input.q.toLowerCase().replace(/ё/g, 'е').replace(/-/g, ' ').replace(/\s+/g, ' ').replace(/[!%_]/g, m => '!' + m);
+    const w = input.q.toLowerCase().replace(/ё/g, 'е').replace(/-/g, ' ').replace(/\s+/g, ' ').replace(/[!%_]/g, (/** @type {string} */ m) => '!' + m);
     const norm = (/** @type {string} */ c) => `lower(translate(replace(coalesce(${c}, ''), '-', ' '), 'ёЁ', 'еЕ'))`;
     const rows = await q.query(
       `select ${PLACE_COLS} from (select p.*, ${norm('p.name_ru')} nr, ${norm('p.name_en')} ne from feture.place p
