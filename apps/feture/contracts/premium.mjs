@@ -13,9 +13,18 @@ export const AGE_METHODS = /** @type {const} */ (['selfie', 'document']);
  * charged by the payment provider; the server only knows the terms. */
 export const PLANS = /** @type {const} */ ({ month: 30, year: 365 });
 export const GIFT_PLANS = /** @type {const} */ ({ m1: 30, m3: 90, m12: 365 });
+/** The ONE place prices live: what the screens show and what the provider is asked to charge. In cents of PRICE_CURRENCY.
+ * A gift to a couple costs PAIR_FACTOR times (both partners get the full term). Changing a price is changing this. */
+export const PRICE_CURRENCY = 'EUR';
+export const PRICES = /** @type {const} */ ({ month: 1199, year: 7999, m1: 1199, m3: 2999, m12: 7999 });
+export const PAIR_FACTOR = 2;
 const nick = z.string().trim().min(3).max(20);
+/** A price in cents of PRICE_CURRENCY: 1.00 to 10 000.00. */
+const price = z.int().min(100).max(1000000);
 export const premiumCommands = {
   'premium.status': { profile: true, write: false, input: z.strictObject({}) },
+  // What became of a purchase (the person came back from the provider's page): pending, paid, failed, canceled or refunded.
+  'premium.purchaseStatus': { profile: false, write: false, input: z.strictObject({ purchaseId: id }) },
   'premium.purchase': { profile: false, write: true, rate: { kind: 'premium.purchase', max: 40, window: '1 day' }, input: z.strictObject({ opId, plan: z.enum(['month', 'year']) }) },
   'premium.restore': { profile: false, write: true, rate: { kind: 'premium.restore', max: 50, window: '1 day' }, input: z.strictObject({ opId }) },
   'premium.setRenewal': { profile: false, write: true, input: z.strictObject({ opId, autoRenew: z.boolean() }) },
@@ -29,7 +38,17 @@ export const premiumCommands = {
     profile: false, write: true,
     input: z.strictObject({ opId, handle: z.string().trim().min(3).max(20), days: z.int().min(1).max(400), reason: field('staffReason') }),
   },
-  'staff.premiumRevoke': { profile: false, write: true, input: z.strictObject({ opId, entitlementId: id, reason: field('staffReason') }) },
+  // The prices (owner 06.11.2026: set in the staff area, not in code). A purchase keeps the price it was made at.
+  'staff.premiumPrices': { profile: false, write: false, input: z.strictObject({}) },
+  'staff.premiumPricesSet': {
+    profile: false, write: true,
+    input: z.strictObject({ opId, prices: z.strictObject({ month: price.optional(), year: price.optional(), m1: price.optional(), m3: price.optional(), m12: price.optional() })
+      .refine(v => Object.keys(v).length > 0, { message: 'empty' }) }),
+  },
+  // A person's or couple's Premium as staff see it: every period with its source, so nobody pastes a number to revoke it.
+  'staff.premiumList': { profile: false, write: false, input: z.strictObject({ handle: z.string().trim().min(3).max(20) }) },
+  // `confirmPaid`: a period someone paid for or was gifted is revoked only on purpose (the refund itself is done at the provider).
+  'staff.premiumRevoke': { profile: false, write: true, input: z.strictObject({ opId, entitlementId: id, reason: field('staffReason'), confirmPaid: z.boolean().optional() }) },
   'verification.ageStart': { profile: false, write: true, rate: { kind: 'verification.age', max: 10, window: '1 day' }, input: z.strictObject({ opId, method: z.enum(AGE_METHODS).default('selfie') }) },
   'verification.ageSubmit': { profile: false, write: true, input: z.strictObject({ opId, checkId: id, assetId: id }) },
   'verification.ageStatus': { profile: false, write: false, input: z.strictObject({}) },

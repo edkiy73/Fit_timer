@@ -25,6 +25,8 @@ import { chats } from '../server/commands/chats.mjs';
 import { inbox } from '../server/commands/inbox.mjs';
 import { people } from '../server/commands/people.mjs';
 import { premium } from '../server/commands/premium.mjs';
+import { providersFromEnv } from '../server/billing/index.mjs';
+import { takePayEvents } from '../server/pay-events.mjs';
 import { verification } from '../server/commands/verification.mjs';
 import { accounts } from '../server/commands/account.mjs';
 import { support, takeHelp } from '../server/commands/support.mjs';
@@ -134,13 +136,15 @@ async function cachedAuth(req) {
   return core;
 }
 
+// Payment providers: the ones whose keys are in the environment (server/billing/); none until the owner adds them.
+const billing = { providers: providersFromEnv(env), returnBase: env.FETURE_APP_URL ?? 'https://app.kinhaze.com' };
+
 const handler = db && createFeHandler({
   db,
   pepper: env.FETURE_ID_PEPPER ?? '',
   cfg: { media: { storage: media.storage, delivery: media.delivery }, realtime: realtimeCfg,
     push: webPush ? { webKey: webPush.publicKey } : null,
-    // Payment providers plug in here once their keys exist (server/commands/premium.mjs «Payments»); none yet.
-    billing: { providers: [] } },
+    billing },
   signals,
   commands: { ...platform, ...me, ...access, ...couples, ...staff, ...staffCounts, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...gallery, ...discover, ...chats, ...inbox, ...people, ...premium, ...verification, ...accounts, ...dsa, ...support },
   authenticate: req => cachedAuth(req),
@@ -216,6 +220,32 @@ export default async function fe(/** @type {any} */ req, /** @type {any} */ res)
     } catch {
       return json(res, 503, { ok: false, error: 'unavailable' });
     }
+  }
+  const q = new URL(String(req.url || '/'), 'http://x').searchParams;
+  if (q.get('pay-events')) {
+    // The payment provider's «paid» call (server/pay-events.mjs): the provider's own signature is checked over the exact body.
+    if (req.method !== 'POST') return json(res, 405, { ok: false });
+    if (!db) return json(res, 503, { ok: false, error: 'unavailable' });
+    try {
+      const out = await takePayEvents(db, { billing }, q.get('pay-events') ?? '', { headers: req.headers ?? {}, rawBody: await rawBody(req), query: q });
+      res.statusCode = out.status;
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      return res.end(out.body);
+    } catch { return json(res, 503, { ok: false, error: 'unavailable' }); }
+  }
+  if (q.get('pay-return')) {
+    // Where the provider sends the person after paying: on to the Premium screen, which asks what became of the purchase.
+    const inv = Number(q.get('InvId') ?? '');
+    let target = `${billing.returnBase}/#/n/premium`;
+    try {
+      const [p] = db && Number.isInteger(inv) && inv > 0 ? await db.query('select id from feture.purchase where inv_id = $1', [inv]) : [];
+      if (p) target += `?purchase=${p.id}`;
+    } catch { /* the Premium screen alone is fine */ }
+    res.statusCode = 302;
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Location', target);
+    return res.end();
   }
   if (flag(req, 'email-events')) {
     // Resend's webhook (bounces and complaints → no more mail to that address). Svix-signed with RESEND_WEBHOOK_SECRET;

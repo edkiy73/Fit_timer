@@ -19,7 +19,7 @@ import { noteAddress } from './email.mjs';
  * @typedef {import('./db.mjs').Db} Db @typedef {import('./db.mjs').Q} Q
  * @typedef {import('./accounts.mjs').AccountRow} AccountRow @typedef {import('./profiles.mjs').Acting} Acting
  * @typedef {{media: import('./media/assets.mjs').MediaConfig, pepper?: string, realtime?: {url: string, key: string, transport?: 'sse'} | null,
- *   push?: {webKey: string} | null, billing?: {providers: import('./commands/premium.mjs').PaymentProvider[]} | null}} Cfg
+ *   push?: {webKey: string} | null, billing?: {providers: import('./commands/premium.mjs').PaymentProvider[], returnBase?: string} | null}} Cfg
  *   pepper is filled in by the handler; realtime: the server's public origin for the SSE stream (`key` and
  *   `transport: 'sse'` are kept for older app builds, which choose their transport by them);
  *   push.webKey: the public VAPID key browsers subscribe with (the private one never leaves the job worker);
