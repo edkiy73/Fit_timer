@@ -10,7 +10,7 @@ import {Uploader,type SendPhoto,type SendVideo,type Uploaded} from './kit/Upload
 import {useSendPhoto,useSendVideo,useSendVoice} from './media-upload';
 import {AgeCheckLink,useAgeResume} from './age-check';
 import {useWide} from './wide';
-import {useFe,useLive,useTypingSignal} from './session';
+import {useFe,useLive,useTypingSignal,useSeen} from './session';
 import {readDraft,useDraftKey,writeDraft} from './drafts';
 import {ReportSheet} from './report';
 import {faceFields} from './faces';
@@ -211,7 +211,7 @@ export function ChatsTab(){
 export function RequestsScreen(){
  const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
  useScreenTag('H01');
- const [items,setItems]=useState<Chat[]|null>(null);const [error,setError]=useState<unknown>(null);
+ const [items,setItems]=useSeen<Chat[]|null>('RequestsScreen.items',()=>null);const [error,setError]=useState<unknown>(null);
  const load=useCallback(()=>{setError(null);call('chats.list',{filter:'all'},list,{asAccount:true}).then(r=>setItems(r.requests??[])).catch(setError);},[call]);
  useEffect(()=>{load();const id=setInterval(load,30000);return ()=>clearInterval(id);},[load]);
  useLive(['chat','notify'],load);
@@ -273,7 +273,7 @@ function ChatView({id,to}:{id:string,to:string}){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();const wide=useWide();
  useScreenTag('H02');
  const [draft,setDraft]=useState<Draft|null>(null);const [req,setReq]=useState<Req|null>(null);const [reqBusy,setReqBusy]=useState('');
- const [meta,setMeta]=useState<Chat|null>(null);const [items,setItems]=useState<Msg[]|null>(null);const [state,setState]=useState('active');const [paused,setPaused]=useState(false);const [otherRead,setOtherRead]=useState(0);const [tag,setTag]=useState<string|null>(null);
+ const [meta,setMeta]=useSeen<Chat|null>('ChatView.meta',()=>null);const [items,setItems]=useSeen<Msg[]|null>('ChatView.items',()=>null);const [state,setState]=useState('active');const [paused,setPaused]=useState(false);const [otherRead,setOtherRead]=useState(0);const [tag,setTag]=useState<string|null>(null);
  // An unsent text (and the message it answers) is kept per account and acting profile (drafts.ts), so it survives leaving
  // the screen or signing out and never shows to another account.
  const dk=useDraftKey();const draftSlot=dk.key(id||'new:'+to);

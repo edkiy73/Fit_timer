@@ -6,7 +6,7 @@ import {Check,ChevronLeft,ChevronRight,Globe,Image as ImageIcon,Images,MoreHoriz
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {AddCard,AlbumCard,AlbumMeta,AlbumRow,Ask,Btn,Card,Counter,Empty,Field,GalleryAdd,GalleryGrid,GalleryTile,Group,IconBtn,Input,LoadMore,Note,Row,SelectRow,SelectionBar,Sheet,Skel,SubBar,View} from './kit';
 import {FIELD,serverFields,softMax,textError,textErrorMessage,textLength} from './kit/validate';
-import {useFe,useShown} from './session';
+import {useFe,useShown,useSeen} from './session';
 import {useToast} from './toast';
 import {useHideDock} from './dock';
 import type {Post} from './feed';
@@ -108,9 +108,9 @@ export function GalleryScreen(){
  const {id=''}=useParams();const [params,setParams]=useSearchParams();const asked=params.get('a');
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
  const [p,setP]=useState<z.infer<typeof profileRes>['profile']|null>(null);
- const [albums,setAlbums]=useState<{own:boolean,items:Album[]}|null>(null);
- const [all,setAll]=useState<z.infer<typeof galleryRes>|null>(null);
- const [inAlbum,setInAlbum]=useState<z.infer<typeof galleryRes>|null>(null);
+ const [albums,setAlbums]=useSeen<{own:boolean,items:Album[]}|null>('GalleryScreen.albums',()=>null);
+ const [all,setAll]=useSeen<z.infer<typeof galleryRes>|null>('GalleryScreen.all',()=>null);
+ const [inAlbum,setInAlbum]=useSeen<z.infer<typeof galleryRes>|null>('GalleryScreen.inAlbum',()=>null);
  const [error,setError]=useState<unknown>(null);const [tick,setTick]=useState(0);
  const [sel,setSel]=useState<Set<string>|null>(null);const [sheet,setSheet]=useState<SheetKind>(null);const [ask,setAsk]=useState<AskKind>(null);
  useHideDock(sel!==null); // the selection mode keeps its own bar at the bottom: no dock under it (V21 SC.P20 dock:false)

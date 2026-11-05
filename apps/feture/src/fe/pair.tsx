@@ -7,7 +7,7 @@ import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicBase} from '../api-url';
 import {copyLink} from './share';
 import {canGoBack,useBack,ToggleRow,Actions,Alert,Av,Bar,Btn,Card,Empty,Field,Group,H,Input,Note,PersonLine,Pill,RadioList,RequestCard,Row,Sheet,Skel,Stack,View,Who,useLeaveGuard} from './kit';
-import {useFe,useLive} from './session';
+import {useFe,useLive,useSeen} from './session';
 import {Ask} from './me';
 import {useToast} from './toast';
 import {when} from './feed';
@@ -86,7 +86,7 @@ function PairMain({onOpen}:{onOpen:(id:string)=>void}){
  const couples=state.status==='ready'?state.boot.profiles.filter(p=>p.kind==='couple'&&p.state!=='deleted'):[];
  const couple=couples.find(p=>!p.ended)??couples[0];
  const person=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='person'):undefined;
- const [inv,setInv]=useState<z.infer<typeof invitesRes>|null>(null);const [c,setC]=useState<Couple|null>(null);
+ const [inv,setInv]=useSeen<z.infer<typeof invitesRes>|null>('PairMain.inv',()=>null);const [c,setC]=useSeen<Couple|null>('PairMain.c',()=>null);
  const [nick,setNick]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [confirmStop,setConfirmStop]=useState(()=>q.get('stop')==='1');
  const [fresh,setFresh]=useState(false);const [askNew,setAskNew]=useState(false);
  const [link,setLink]=useState<{url:string,expiresAt:string}|null>(null);

@@ -7,7 +7,7 @@ import {feErrorMessage,newOpId,sendPublicHelp} from '../feture/fe-api';
 import {Actions,Alert,Btn,Card,ChoiceChips,Empty,Field,Group,Input,KeyValues,LoadMore,Note,ReviewCard,Row,Seg,Sheet,Skel,Stack,TextArea,Thread,useKept} from './kit';
 import {useToast} from './toast';
 import {FIELD,serverFields,softMax,textError,textErrorMessage,useChecks} from './kit/validate';
-import {useFe} from './session';
+import {useFe,useSeen} from './session';
 import {useStaffPage} from './staff-paged';
 import {pullStaffCounts} from './staff-counts';
 import {clearDraft,draftKey,readDraft,writeDraft} from './drafts';
@@ -109,7 +109,7 @@ function TicketSheet({item,onClose,onChange}:{item:Ticket,onClose:()=>void,onCha
 /** «Написать в поддержку» row + «Мои обращения» for the help screen. `?ticket=<id>` (from the inbox) opens one. */
 export function SupportBlock(){
  const {call}=useFe();const {t}=useI18n();const when=useWhen();const [params,setParams]=useSearchParams();
- const [list,setList]=useState<Ticket[]|null>(null);const [error,setError]=useState<unknown>(null);const [writing,setWriting]=useState(false);
+ const [list,setList]=useSeen<Ticket[]|null>('SupportBlock.list',()=>null);const [error,setError]=useState<unknown>(null);const [writing,setWriting]=useState(false);
  const openId=params.get('ticket');
  const load=useCallback(()=>{setError(null);call('support.mine',{},mineRes,{asAccount:true,fresh:true}).then(r=>setList(r.tickets)).catch(setError);},[call]);
  useEffect(()=>{load();},[load]);

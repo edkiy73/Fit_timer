@@ -591,6 +591,8 @@ function Likes({onCount,toDiscover}:{onCount:(n:number)=>void,toDiscover:()=>voi
 }
 
 /* ---------- P01 another person's profile ---------- */
+/** The gallery read of a profile seen before: the page is drawn at once on a return and reads it again behind. */
+const GAL_SEEN=new Map<string,z.infer<typeof galleryList>>();
 export function PersonScreen(){
  const {id=''}=useParams();const {call,acting}=useFe();const {t}=useI18n();
  // «Полный профиль» from a Discover card: the profile that card already read paints the page at once.
@@ -599,10 +601,10 @@ export function PersonScreen(){
  // The whole page is read before it is drawn (the details in one read, the gallery next to it): the skeleton holds the
  // layout and the content comes at once, instead of block after block popping in. `false`: the one read failed — the
  // blocks then read themselves, as before.
- const [pre,setPre]=useState<CardPre|null|false>(()=>acting?cardRead(acting.id,id):null);const [gal,setGal]=useState<z.infer<typeof galleryList>|null|undefined>(undefined);
- useEffect(()=>{if(!acting)return;let live=true;setPre(cardRead(acting.id,id));setGal(undefined);
+ const [pre,setPre]=useState<CardPre|null|false>(()=>acting?cardRead(acting.id,id):null);const [gal,setGal]=useState<z.infer<typeof galleryList>|null|undefined>(()=>acting?GAL_SEEN.get(acting.id+':'+id):undefined);
+ useEffect(()=>{if(!acting)return;let live=true;setPre(cardRead(acting.id,id));setGal(GAL_SEEN.get(acting.id+':'+id));
   readCard(call,acting.id,id).then(v=>{if(live)setPre(v);},()=>{if(live)setPre(false);});
-  call('gallery.list',{profileId:id},galleryList).then(r=>{if(live)setGal(r);},()=>{if(live)setGal(null);});
+  call('gallery.list',{profileId:id},galleryList).then(r=>{GAL_SEEN.set(acting.id+':'+id,r);if(live)setGal(r);},()=>{if(live)setGal(null);});
   return ()=>{live=false;};},[call,acting,id]);
  const ready=pre!==null&&gal!==undefined;
  // Another person starts from the skeleton; reading the same one again (after «Разблокировать») keeps the page.

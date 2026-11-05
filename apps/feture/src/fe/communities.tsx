@@ -6,7 +6,7 @@ import {Ban,ChartColumn,Bell,BellOff,Bookmark,BookmarkCheck,Calendar,CalendarChe
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {useSideNav} from './wide';
 import {Actions,AddBtn,Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventAnswer,EventHero,EventTile,Fact,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,Stack,StatusCard,Text,ToggleRow,useRefreshable,Veil,View,ProfileAv,useKept} from './kit';
-import {useFe,useKeyChange,useOwnProfiles,useShown} from './session';
+import {useFe,useKeyChange,useOwnProfiles,useShown,useSeen} from './session';
 import {mdPlain,RichText} from './post-parts';
 import {evParts,evRange,evTz,evWhere,inTz,usePlaces} from './event-time';
 import {when} from './feed';
@@ -434,7 +434,7 @@ function downloadIcs(e:EventFull){
 
 export function EventScreen(){
  const {id=''}=useParams();const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
- const [e,setE]=useState<EventFull|null>(null);const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);
+ const [e,setE]=useSeen<EventFull|null>('EventScreen.e',()=>null);const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);
  const [comm,setComm]=useState<{id:string,name:string,plate?:string|null|undefined,cover?:z.infer<typeof media>|null|undefined}|null>(null);const [saved,setSaved]=useState(false);const [faces,setFaces]=useState<z.infer<typeof prof>[]>([]);
  const [layer,setLayer]=useState<''|'menu'|'venue'|'report'|'withdraw'|'unwait'|'ticket'|'appeal'>('');
  const op=useRef(newOpId());

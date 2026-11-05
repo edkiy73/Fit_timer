@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,Bell,ChevronRight,CircleCheck,Clock,Copy,Crown,Ellipsis,FileText,Flag,Info,Link as LinkIcon,Lock,MessageCircle,Pencil,Pin,PinOff,Send,Settings,ShieldAlert,Trash2,TrendingDown,TrendingUp,User,UserMinus,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Announcement,Answer,Ask,Av,Btn,Card,IconBtn,Empty,Group,LoadMore,Note,PersonLine,Pill,RequestCard,Row,SectionLabel,Seg,Sheet,Skel,Stack,StatTiles,SubBar,nickShown,useLeaveGuard,ProfileAv} from './kit';
-import {useFe,usePartnerApproves} from './session';
+import {useFe,usePartnerApproves,useSeen} from './session';
 import {WriteBtn,useWriteTo} from './write-to';
 import {useToast} from './toast';
 import {when} from './feed';
@@ -55,8 +55,8 @@ const appList=z.object({ok:z.literal(true),items:z.array(appItem)});
 const attList=z.object({ok:z.literal(true),count:z.number(),hidden:z.number(),items:z.array(prof)});
 
 /** Loads a screen's data with the usual loading / error / retry states. */
-function useLoad<T>(fn:()=>Promise<T>){
- const [data,setData]=useState<T|null>(null);const [error,setError]=useState<unknown>(null);
+function useLoad<T>(fn:()=>Promise<T>,name:string){
+ const [data,setData]=useSeen<T|null>('useLoad.'+name,()=>null);const [error,setError]=useState<unknown>(null);
  const load=useCallback(()=>{setError(null);fn().then(setData).catch(setError);},[fn]);
  useEffect(()=>{load();},[load]);
  return {data,error,load};
@@ -205,7 +205,7 @@ export function MembersList({c,data,onChange}:{c:{id:string,me?:{role:string,sta
 export function CommunityManageScreen(){
  const {id=''}=useParams();const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const location=useLocation();const toast=useToast();
  const fetch=useCallback(()=>Promise.all([call('community.get',{communityId:id},commSchema),call('community.discussions',{communityId:id},discRes).catch(()=>null)]).then(([a,b])=>({c:a.community,discs:b?.items.length??0})),[call,id]);
- const {data,error,load}=useLoad(fetch);const c=data?.c;
+ const {data,error,load}=useLoad(fetch,'h1');const c=data?.c;
  // The edit screen comes back with what happened to the edit (saved, or waiting for staff).
  const notice=useRef((location.state as {notice?:unknown}|null)?.notice);
  useEffect(()=>{if(typeof notice.current==='string'){toast(notice.current,{type:'ok'});notice.current=undefined;}},[toast]);
@@ -288,7 +288,7 @@ export function CommunityRequestsScreen(){
  const loadC=useCallback(()=>{call('community.get',{communityId:id},commSchema).then(r=>setC(r.community)).catch(()=>{});},[call,id]);
  useEffect(()=>{loadC();},[loadC]);
  const fetch=useCallback(()=>call('community.requests',{communityId:id,tab},reqList).then(r=>r.items),[call,id,tab]);
- const {data:items,error,load}=useLoad(fetch);
+ const {data:items,error,load}=useLoad(fetch,'h2');
  // A decision goes out 5 s later: by then the host may be on «Решения», so the list read again is the one shown now.
  const reload=useRef(load);reload.current=load;
  const [busy,setBusy]=useState('');
@@ -324,7 +324,7 @@ export function CommunityRequestsScreen(){
 export function CommunityMembersScreen(){
  const {id=''}=useParams();const {call}=useFe();const {t}=useI18n();
  const fetch=useCallback(()=>Promise.all([call('community.get',{communityId:id},commSchema),call('community.members',{communityId:id},memList)]).then(([a,b])=>({c:a.community,m:b})),[call,id]);
- const {data,error,load}=useLoad(fetch);
+ const {data,error,load}=useLoad(fetch,'h3');
  return <>
   <SubBar title={t('fe.host.membersTitle')} sub={data?.c.name} back={`/n/communities/${id}`}/>
   <div className="view nodock"><div className="wrap">
@@ -357,7 +357,7 @@ export function useEventApplication(e:{requiresApplication:boolean,me:Record<str
 export function EventApplyScreen(){
  const {id=''}=useParams();const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
  const fetch=useCallback(()=>call('event.get',{eventId:id},evSchema).then(r=>r.event),[call,id]);
- const {data:e,error,load}=useLoad(fetch);
+ const {data:e,error,load}=useLoad(fetch,'h4');
  const [answers,setAnswers]=useState<string[]>([]);const [note,setNote]=useState('');
  const [err,setErr]=useState<Record<string,string>>({});const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
  const guard=useLeaveGuard(!busy&&(answers.some(a=>a.trim())||!!note.trim()));
@@ -410,7 +410,7 @@ const asCard=(e:Ev)=>({id:e.id,title:e.title,kind:e.kind,format:e.format,area:e.
 export function EventManageScreen(){
  const {id=''}=useParams();const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const location=useLocation();const toast=useToast();
  const fetch=useCallback(()=>call('event.get',{eventId:id},evSchema).then(r=>r.event),[call,id]);
- const {data:e,error,load}=useLoad(fetch);
+ const {data:e,error,load}=useLoad(fetch,'h5');
  const [mode,setMode]=useState<''|'announce'|'cancel'>('');const [body,setBody]=useState('');const [reason,setReason]=useState('');
  const [err,setErr]=useState('');const [busy,setBusy]=useState(false);
  const notice=useRef((location.state as {notice?:unknown}|null)?.notice);
@@ -474,7 +474,7 @@ export function EventApplicationsScreen(){
  const fetch=useCallback(()=>Promise.all([call('event.get',{eventId:id},evSchema).then(r=>r.event),
   ...(['pending','approved','declined'] as const).map(s=>call('event.applications',{eventId:id,state:s},appList).then(r=>r.items))])
   .then(([e,p,a,d])=>({e:e as Ev,lists:{pending:p as z.infer<typeof appItem>[],approved:a as z.infer<typeof appItem>[],declined:d as z.infer<typeof appItem>[]}})),[call,id]);
- const {data,error,load}=useLoad(fetch);
+ const {data,error,load}=useLoad(fetch,'h6');
  const [busy,setBusy]=useState('');const [confirm,setConfirm]=useState<z.infer<typeof appItem>|null>(null);
  // The card leaves its tab at once and its buttons stay locked; the decision goes out once «Отменить» is gone (V21 appDecide).
  const [held,setHeld]=useState<Set<string>>(new Set());const {later,cancel}=useLater();
@@ -519,7 +519,7 @@ export function EventAttendeesScreen(){
  const {id=''}=useParams();const [sp,setSp]=useSearchParams();const {call,acting}=useFe();const {t}=useI18n();
  const k=sp.get('k')==='interested'?'interested':'going';
  const fetch=useCallback(()=>Promise.all([call('event.get',{eventId:id},evSchema).then(r=>r.event),call('event.attendees',{eventId:id,kind:k},attList)]).then(([e,l])=>({e,l})),[call,id,k]);
- const {data,error,load}=useLoad(fetch);
+ const {data,error,load}=useLoad(fetch,'h7');
  const org=data?.e.organizer?.id===acting?.id;
  return <>
   <SubBar title={t('fe.cm.crowdTitle')} sub={data?.e.title}/>
