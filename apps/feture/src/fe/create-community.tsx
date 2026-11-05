@@ -4,9 +4,10 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {CircleAlert,Clock,Image as ImageIcon,Lock,RefreshCw,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActingAv,AddCard,Alert,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,FilePick,Group,Input,Note,SelectRow as KitSelectRow,Skel,Stack,Swatches,TextArea,useLeaveGuard,View} from './kit';
+import {ActingAv,AddCard,Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Counter,Empty,FilePick,Group,Input,Note,SelectRow as KitSelectRow,Skel,Stack,Swatches,TextArea,useLeaveGuard,View} from './kit';
 import {useFe} from './session';
 import {Uploader} from './kit/Uploader';
+import {CityField} from './kit/Place';
 import {PhotoTiles} from './kit/PhotoTiles';
 import {useSendPhoto} from './media-upload';
 
@@ -155,6 +156,7 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const catalog=useCatalog();const {opFor,done}=useOp();
  const pend=pendingOf(edit);
  const [name,setName]=useState(pend.name??edit?.name??'');const [desc,setDesc]=useState(pend.description??edit?.description??'');const [topics,setTopics]=useState<string[]>(edit?.topics??[]);
+ const lastCity=useRef('');
  const [privacy,setPrivacy]=useState<Privacy>(pend.privacy??edit?.privacy??'open');const [q0,setQ0]=useState((pend.joinQuestion!==undefined?pend.joinQuestion:edit?.joinQuestion)??'');const [where,setWhere]=useState(edit?(edit.placeId??'online'):'online');
  const [rules,setRules]=useState(edit?.rules.join('\n')??'');const [plate,setPlate]=useState<PlateKey>(()=>PLATE_KEYS.find(k=>k===edit?.plate)??'lilac');const [cover,setCover]=useState<Cover|null>(()=>coverOf(edit));
  const [err,setErr]=useState<Errors>({});const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [stale,setStale]=useState(false);const [topicsMax,setTopicsMax]=useState(false);
@@ -178,6 +180,7 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
   if(!topics.length)e.topics=t('fe.cc.err.topics');
   const eq=privacy!=='open'?textError(t,'joinQuestion',q0):undefined;if(eq)e.q0=eq;
   const er=rulesError(rules);if(er)e.rules=er;
+  if(!where)e.where=t('fe.cc.err.cityNeeded');
   setErr(e);return !Object.keys(e).length;
  };
  /** The edit as `community.update` takes it: only the fields that differ from what was loaded. */
@@ -229,9 +232,6 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
 
  const topicItems:[string,string][]=(catalog?.topics??[]).map(x=>[x.id,locale==='en'?x.en:x.ru]);
  const known=(catalog?.places??[]).map(p=>[p.id,placeName(p,locale)] as [string,string]);
- // A place that is not approved yet (the owner's own suggestion) is not in the catalog but stays selectable.
- const extra:[string,string][]=where!=='online'&&catalog&&!known.some(([id])=>id===where)?[[where,t('fe.ece.c.placeCurrent')]]:[];
- const places:[string,string][]=[...known,...extra,['online',t('fe.cc.online')]];
  const published=edit?.state==='published';
  return <>
   {guard.node}
@@ -249,7 +249,11 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
     </div>
     <div className="field" data-field="privacy"><SelectRow label={t('fe.cc.privacy')} value={privacy} onChange={setPrivacy} items={(['open','closed','hidden'] as const).map(k=>[k,t('fe.cc.privacy.'+k)])}/></div>
     {privacy!=='open'&&<Field name="q0" label={t('fe.cc.question')} opt ph={t('fe.cc.questionPh')} check="joinQuestion" value={q0} onChange={v=>{setQ0(v);clear('q0');}} err={err.q0}/>}
-    <div className={'field'+(err.where?' err':'')} data-field="where"><SelectRow label={t('fe.cc.where')} value={where} onChange={v=>{setWhere(v);clear('where');}} items={places}/>{err.where&&<FErr>{err.where}</FErr>}</div>
+    <div className="field" data-field="where"><span className="flabel">{t('fe.cc.where')}</span>
+     <ChoiceChips label={t('fe.cc.where')} value={where==='online'?'online':'city'} options={[['online',t('fe.cc.online')],['city',t('fe.cc.inCity')]]}
+      onChange={v=>{if(v==='online'){if(where!=='online'&&where)lastCity.current=where;setWhere('online');}else setWhere(lastCity.current);clear('where');}}/></div>
+    {where!=='online'&&<CityField label={t('fe.ce.city')} placeholder={t('fe.ce.cityPh')} places={catalog?.places??[]} value={where||null} error={err.where} fallbackName={t('fe.ece.c.placeCurrent')}
+     onChange={id=>{if(id){setWhere(id);lastCity.current=id;clear('where');}}}/>}
     <Field name="rules" label={t('fe.cc.rules')} ph={t('fe.cc.rulesPh')} max={1000} check={rulesError} textarea rows={4} value={rules} onChange={v=>{setRules(v);clear('rules');}} err={err.rules}/>
     <CoverField purpose="community" plate={plate} setPlate={setPlate} cover={cover} setCover={setCover}/>
    </Card></Group>
