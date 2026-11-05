@@ -10,6 +10,7 @@ import {useFe,useKeyChange,useOwnProfiles,useShown,useSeen} from './session';
 import {mdPlain,RichText} from './post-parts';
 import {evParts,evRange,evTz,evWhere,inTz} from './event-time';
 import {usePlaces} from './places';
+import {ModActions,ModRow} from './mod-row';
 import {when} from './feed';
 import {Composer} from './create-entry';
 import {useCopyLink} from './share';
@@ -316,7 +317,7 @@ export function CommunityScreen(){
  // What was seen last time (this community) shows at once, and the reads replace it: Back from a profile or a post does not start over.
  const [c,setC]=useShown<Community|null>('cm.c.'+id,()=>null);const [discs,setDiscs]=useShown<z.infer<typeof discRes>|null>('cm.d.'+id,()=>null);const [mem,setMem]=useShown<z.infer<typeof memList>|null>('cm.m.'+id,()=>null);
  const [evs,setEvs]=useShown<Ev[]>('cm.e.'+id,()=>[]);const [error,setError]=useState<unknown>(null);
- const [layer,setLayer]=useState<''|'menu'|'join'|'leave'|'withdraw'|'unwait'|'report'|'appeal'>('');const [busy,setBusy]=useState(false);const [hostToolsId,setHostTools]=useState<string|null>(null);
+ const [layer,setLayer]=useState<''|'menu'|'join'|'leave'|'withdraw'|'unwait'|'report'|'appeal'|'mod'>('');const [busy,setBusy]=useState(false);const [hostToolsId,setHostTools]=useState<string|null>(null);
  const [reportPost,setReportPost]=useState<string|null>(null);
  const load=useCallback(()=>{setError(null);
   // A hidden community seen through an invite link (or a pending request) shows only its card: its discussions,
@@ -409,7 +410,10 @@ export function CommunityScreen(){
    {member&&<Row icon={c.me?.muted?Bell:BellOff} title={t(c.me?.muted?'fe.cm.unmute':'fe.cm.mute')} noChev disabled={busy} onClick={mute}/>}
    {member&&!owner&&<Row icon={X} danger title={t('fe.cm.leave')} noChev onClick={()=>setLayer('leave')}/>}
    {!ownedByMe&&<Row icon={Flag} danger title={t('fe.cm.report')} noChev onClick={()=>setLayer('report')}/>}
+   <ModRow own={ownedByMe} onClick={()=>setLayer('mod')}/>
   </Card></Sheet>}
+  {c&&layer==='mod'&&<ModActions target={{kind:'community',id:c.id,title:c.name,owner:c.hosts?.find(h=>h.role==='owner')??null}} onClose={()=>setLayer('')}
+   onDone={w=>{setLayer('');if(w==='removed')navigate('/n/communities',{replace:true});else load();}}/>}
   {c&&layer==='join'&&<JoinSheet c={banned&&c.privacy==='open'?{...c,privacy:'closed',joinQuestion:null}:c} invite={invite} onClose={()=>setLayer('')} onDone={msg=>{setLayer('');toast(msg,{type:'ok'});load();}}/>}
   {c&&layer==='leave'&&<Ask icon={Users} danger title={fill(t(couple?'fe.cm.leaveQUs':'fe.cm.leaveQ'),{name:c.name})} text={t(c.privacy==='open'?'fe.cm.leaveTextOpen':'fe.cm.leaveTextClosed')} ok={t(couple?'fe.cm.leaveUs':'fe.comm.leave')} busy={busy}
    onOk={()=>void act(()=>call('community.leave',{opId:newOpId(),communityId:c.id},okRes),t(couple?'fe.cm.leftUs':'fe.cm.left'))} onCancel={()=>setLayer('')}/>}
@@ -445,7 +449,7 @@ export function EventScreen(){
  const {id=''}=useParams();const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
  const [e,setE]=useSeen<EventFull|null>('EventScreen.e',()=>null);const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);
  const [comm,setComm]=useState<{id:string,name:string,plate?:string|null|undefined,cover?:z.infer<typeof media>|null|undefined}|null>(null);const [saved,setSaved]=useState(false);const [faces,setFaces]=useState<z.infer<typeof prof>[]>([]);
- const [layer,setLayer]=useState<''|'menu'|'venue'|'report'|'withdraw'|'unwait'|'ticket'|'appeal'>('');
+ const [layer,setLayer]=useState<''|'menu'|'venue'|'report'|'withdraw'|'unwait'|'ticket'|'appeal'|'mod'>('');
  const op=useRef(newOpId());
  const load=useCallback(()=>{setError(null);call('event.get',{eventId:id},evRes).then(r=>{setE(r.event);
   const cid=r.event.communityId;if(cid)call('community.get',{communityId:cid},commRes).then(x=>setComm(x.community)).catch(()=>setComm(null));
@@ -582,7 +586,10 @@ export function EventScreen(){
    {/* An approved application is withdrawn here too (the API takes pending and approved ones). */}
    {application?.st==='approved'&&<Row icon={FileText} danger title={t('fe.host.app.withdraw')} noChev onClick={()=>setLayer('withdraw')}/>}
    {!orgMine&&<Row icon={Flag} danger title={t('fe.cm.report')} noChev onClick={()=>setLayer('report')}/>}
+   <ModRow own={orgMine} onClick={()=>setLayer('mod')}/>
   </Card></Sheet>}
+  {e&&layer==='mod'&&<ModActions target={{kind:'event',id:e.id,title:e.title,owner:e.organizer??null}} onClose={()=>setLayer('')}
+   onDone={w=>{setLayer('');if(w==='removed')navigate('/n/communities?sub=events',{replace:true});else load();}}/>}
   {e&&layer==='venue'&&<Sheet title={t(e.format==='online'?'fe.cm.joinT':'fe.cm.addressT')} onClose={()=>setLayer('')}
    foot={<>{e.format==='online'?(e.joinUrl&&<LinkBtn kind="primary" icon={ExternalLink} href={e.joinUrl}>{t('fe.cm.openLink')}</LinkBtn>)
     :(e.exactAddress&&<LinkBtn kind="primary" icon={MapIcon} href={'https://www.openstreetmap.org/search?query='+encodeURIComponent(e.exactAddress)}>{t('fe.cm.openMaps')}</LinkBtn>)}

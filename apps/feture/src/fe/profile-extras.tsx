@@ -47,6 +47,7 @@ export function pxError(e:unknown,t:T){
 
 /** `div.layer > div.scrim.on + div.sheet.on` — the prototype's sheet; Esc, ✕ and the scrim close it. */
 import {Sheet,useBack,type Slide} from './kit';
+import {ModActions,ModRow} from './mod-row';
 import {FollowButton} from './follow';
 export {Sheet};
 
@@ -687,7 +688,7 @@ function Block({profileId,name,onClose,onDone}:{profileId:string,name:string,onC
  </Sheet>;
 }
 
-type MenuStep='menu'|'report'|'block'|'end'|'gift'|null;
+type MenuStep='menu'|'report'|'block'|'end'|'gift'|null|'mod';
 /** End a connection (ACT.endConn): withdraws the like; for a match the chat closes too (`match.end`). */
 function EndConnection({profileId,name,mutual,onClose,onDone}:{profileId:string,name:string,mutual:boolean,onClose:()=>void,onDone:(msg:string)=>void}){
  const {call,acting}=useFe();const {t}=useI18n();const us=acting?.kind==='couple';const u=(k:string)=>t(us?k+'Us':k);const [revoke,setRevoke]=useState(true);const [busy,setBusy]=useState(false);const setErr=useFail();
@@ -735,8 +736,10 @@ export function PersonMenu({profileId,name,handle,partner,step,setStep,blocked,s
    {handle&&row(Crown,t('fe.w8.gift.menu'),()=>setStep('gift'))}
    {!own&&row(Flag,t('fe.px.menu.report'),()=>setStep('report'),undefined,true)}
    {!own&&!partner&&row(Ban,t('fe.px.menu.block'),()=>setStep('block'),t('fe.px.menu.blockSub'),true)}
+   <ModRow own={own} onClick={()=>setStep('mod')}/>
   </>}
  </Card></Sheet>;
+ if(step==='mod')return <ModActions target={{kind:'profile',id:profileId,owner:{id:profileId,name,handle:handle??null}}} onClose={()=>setStep('menu')} onDone={()=>close()}/>;
  if(step==='end')return <EndConnection profileId={profileId} name={name} mutual={!!rel?.mutual} onClose={close} onDone={msg=>{close();toast(msg);onRel?.();}}/>;
  if(step==='report')return <Report profileId={profileId} onClose={close} onDone={(msg,b)=>{close();if(b)setBlocked(true);toast(msg);}}/>;
  if(step==='gift'&&handle)return <GiftSheet handle={handle} onClose={close}/>;

@@ -14,6 +14,7 @@ import type {Post,Reply} from './feed';
 import {PostAlbumSheet,inGallery} from './gallery';
 import {useCopyLink} from './share';
 import {useFollow} from './follow';
+import {ModActions,ModRow} from './mod-row';
 
 /** V21 `ACT.postMenu` / `ACT.rMore` with the prototype's markup (`div.layer > div.scrim.on + div.sheet.on`).
  * Own post — edit / copy link / delete; someone else's — answers about a photo mark, hide the post, mute the author,
@@ -67,7 +68,7 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
  // The one follow action (`useFollow`, the same as `FollowButton`): the same call, wording and «Отменить».
  const fol=useFollow({profileId:post.author.id,name,onChange:on=>{setFollows(on);onChange?.({...post,author:{...post.author,iFollow:on}});}});
  const follow=(next:boolean)=>{onClose();void fol.toggle(next);};
- const [view,setView]=useState<'menu'|'delete'|'report'|'album'|'object'>('menu');const [busy,setBusy]=useState(false);const setFailure=useFail();
+ const [view,setView]=useState<'menu'|'delete'|'report'|'album'|'object'|'mod'>('menu');const [busy,setBusy]=useState(false);const setFailure=useFail();
  useEscape(onClose);
  const go=(v:typeof view)=>{setFailure('');setView(v);};
  const run=async(key:string,fn:(opId:string)=>Promise<Removal|void>)=>{
@@ -113,6 +114,7 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
  if(view==='report')return <ReportSheet targetType="post" targetId={post.id} block={false} onClose={onClose}
   onDone={alsoBlock=>{const notice=t(couple?'fe.ca.reported':'fe.pm.done.reported');onRemove(alsoBlock?{authorId:post.author.id,notice}:{postId:post.id,notice});}}/>;
  if(view==='album')return <PostAlbumSheet post={post} onClose={onClose} onChange={onChange}/>;
+ if(view==='mod')return <ModActions target={{kind:'post',id:post.id,owner:post.author}} onClose={()=>setView('menu')} onDone={w=>{if(w==='removed')onRemove({postId:post.id,notice:t('fe.mod.removed')});else onClose();}}/>;
  const published=!post.state||post.state==='published';
  return <Sheet title={t('fe.pm.title')} onClose={onClose}>
   <Card list>
@@ -139,6 +141,7 @@ export function PostMenu({post,onClose,onChange,onRemove}:{post:Post,onClose:()=
     <Row noChev icon={BellOff} title={t('fe.pm.mute')} sub={t('fe.pm.muteSub',{name})} onClick={()=>hide('author')} disabled={busy}/>
     <Row noChev icon={LinkIcon} title={t('fe.pm.copyLink')} onClick={copy}/>
     {!own&&<Row noChev icon={Flag} title={t('fe.pm.report')} danger onClick={()=>go('report')}/>}
+    <ModRow own={own} onClick={()=>go('mod')}/>
    </>}
   </Card>
   
@@ -174,7 +177,7 @@ function DisputeExplainSheet({post,onClose,onDone}:{post:Post,onClose:()=>void,o
 /** `ACT.rMore` — the «⋯» of a reply. */
 export function ReplyMenu({reply,postId,onClose,onEdit,onDone}:{reply:Reply,postId:string,onClose:()=>void,onEdit:(r:Reply)=>void,onDone:(notice:string)=>void}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const {op,drop}=useOps();
- const [view,setView]=useState<'menu'|'delete'|'block'|'report'>('menu');const [busy,setBusy]=useState(false);const setFailure=useFail();
+ const [view,setView]=useState<'menu'|'delete'|'block'|'report'|'mod'>('menu');const [busy,setBusy]=useState(false);const setFailure=useFail();
  useEscape(onClose);
  const name=nameOf(reply.author);const couple=acting?.kind==='couple';const own=useOwnProfiles().has(reply.author?.id??'');
  const run=async(key:string,fn:(opId:string)=>Promise<string>)=>{
@@ -185,6 +188,7 @@ export function ReplyMenu({reply,postId,onClose,onEdit,onDone}:{reply:Reply,post
   onOk={()=>run('delete',async opId=>{await call('reply.delete',{opId,replyId:reply.id},okOnly);return t('fe.feed.replyDeleted');})}/>;
  if(view==='block'&&reply.author)return <Ask icon={Ban} title={t('fe.pm.blockTitle',{name})} text={couple?t('fe.pm.blockTextCouple'):t('fe.pm.blockText')} ok={t(couple?'fe.ca.block':'fe.pm.block')} busy={busy} onCancel={()=>setView('menu')}
   onOk={()=>run('block',async opId=>{await call('block.set',{opId,profileId:reply.author!.id,on:true},okOnly);return t(couple?'fe.ca.blocked':'fe.pm.done.blocked');})}/>;
+ if(view==='mod'&&reply.author)return <ModActions target={{kind:'reply',id:reply.id,owner:reply.author}} onClose={()=>setView('menu')} onDone={w=>{if(w==='removed')onDone(t('fe.mod.removed'));else onClose();}}/>;
  if(view==='report')return <ReportSheet targetType="reply" targetId={reply.id} block={false} onClose={onClose} onDone={()=>onDone(t(couple?'fe.ca.reported':'fe.pm.done.reported'))}/>;
  return <Sheet title={t('fe.pm.r.title')} onClose={onClose}>
   <Card list>
@@ -197,6 +201,7 @@ export function ReplyMenu({reply,postId,onClose,onEdit,onDone}:{reply:Reply,post
      onClick={()=>run('unmention',async opId=>{await call('post.unmentionMe',{opId,postId,replyId:reply.id},okOnly);return t('fe.w3.unmention.done');})}/>}
     {!own&&<Row noChev icon={Flag} title={t('fe.pm.report')} danger onClick={()=>setView('report')}/>}
     {reply.author&&!own&&<Row noChev icon={Ban} title={t('fe.pm.r.block',{name})} sub={t('fe.pm.r.blockSub')} danger onClick={()=>setView('block')}/>}
+    {reply.author&&<ModRow own={own} onClick={()=>setView('mod')}/>}
    </>}
   </Card>
   

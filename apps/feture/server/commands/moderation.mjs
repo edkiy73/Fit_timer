@@ -8,7 +8,7 @@ import { DISPUTE_LIMITS } from '../../contracts/posts.mjs';
 import { narrowCouple } from '../approvals.mjs';
 import { closeAll } from './access.mjs';
 import { settleAvatar } from './photos.mjs';
-import { CREATED_KEYS, pageInfo, queuePageSql } from '../queue-page.mjs';
+import { CREATED_KEYS, pageInfo, plainRows, queuePageSql } from '../queue-page.mjs';
 import { staffOwn, staffOwnAccount, staffPerson } from '../sql-rules.mjs';
 import { closeDisputes, closeReports } from '../reports.mjs';
 import { hideEvent } from './events.mjs';
@@ -271,6 +271,31 @@ const run = {
     await journal(q, account.id, 'report.' + input.decision, input.targetType, input.targetId,
       { from: t.state, rule: input.rule ?? null, reports: resolved, note: input.note, author: side ?? t.owner, ...(gone ? { gone: true } : {}) });
     return { resolved, action: input.decision };
+  },
+
+  async 'staff.takedown'(q, { account, input }) {
+    await requireStaff(q, account, MODERATORS);
+    const t = await targetOwner(q, account.id, input.targetType, input.targetId); // never one's own, never a missing one
+    if (!(LIVE[input.targetType] ?? []).includes(t.state)) fail(409, 'conflict', { state: t.state });
+    await removeContent(q, input.targetType, input.targetId, t.owner, input.rule);
+    // Reports still open on it are answered by this decision.
+    const resolved = await closeReports(q, input.targetType, [input.targetId], 'removed', null);
+    // Journalled as the report decision it equals, so the author can appeal it and the transparency count has it.
+    await journal(q, account.id, 'report.remove', input.targetType, input.targetId,
+      { from: t.state, rule: input.rule, reports: resolved, note: input.note, author: t.owner, direct: true });
+    return { removed: true, resolved };
+  },
+
+  async 'staff.history'(q, { account, input }) {
+    await requireStaff(q, account, [...MODERATORS, 'auditor']);
+    // Decisions about the thing itself, and — for a person — about what they published (`detail.author`).
+    const rows = await q.query(
+      `select s.id, s.action, s.target_type, s.target_id, s.detail->>'rule' rule, s.detail->>'note' note, s.created_at,
+              p.handle staff_handle, p.name staff_name
+       from feture.staff_action s left join feture.account a on a.id = s.staff_account_id left join feture.profile p on p.id = a.person_profile_id
+       where s.target_id = $1 or ($2 = 'profile' and s.detail->>'author' = $1::text)
+       order by s.created_at desc, s.id desc limit $3`, [input.targetId, input.targetType, input.limit]);
+    return { items: plainRows(rows) };
   },
 
   async 'staff.disputeQueue'(q, { account, input }) {

@@ -288,3 +288,70 @@ test('stage 5 (owner 05.11.2026): «под наблюдением» with a note,
     assert.equal((await call('uo', null, { action: 'staff.claim', opId: op(), item: 'report:x', on: true })).claimed, true);
   } finally { await pg.close(); }
 });
+
+test('a moderator takes a thing down from the thing itself, with no report: the author is told and may appeal; own and missing things are refused; history reads back', async () => {
+  const { pg, db, call, member } = await world();
+  try {
+    const a = await member('ua', 'Alex'), b = await member('ub', 'Kira');
+    const down = (/** @type {string} */ user, /** @type {string} */ targetType, /** @type {string} */ targetId, rule = 'community_rules', note = '') =>
+      call(user, null, { action: 'staff.takedown', opId: op(), targetType, targetId, rule, note });
+    const told = async (/** @type {string} */ id) => (await db.query(`select count(*)::int n from feture.outbox where topic = 'content.removed' and payload->>'targetId' = $1`, [id]))[0].n;
+
+    // A community: gone from the catalog, the author is told, the decision is in the journal as a report decision.
+    const cr = await call('ub', b, { action: 'community.create', opId: op(), name: 'Лишний клуб', privacy: 'open', ...base });
+    const qrev = (await call('um', null, { action: 'staff.communityQueue' })).items.find((/** @type {any} */ x) => x.id === cr.id).rev;
+    await call('um', null, { action: 'staff.communityDecide', opId: op(), communityId: cr.id, rev: qrev, decision: 'approve' });
+    assert.equal((await call('ua', a, { action: 'community.get', communityId: cr.id })).status, 200);
+    assert.equal((await down('ua', 'community', cr.id)).status, 403, 'a person without a role cannot');
+    assert.equal((await down('um', 'community', cr.id, 'spam', 'проба')).removed, true);
+    assert.equal((await call('ua', a, { action: 'community.get', communityId: cr.id })).status, 404);
+    assert.equal(await told(cr.id), 1);
+    assert.equal((await down('um', 'community', cr.id)).status, 409, 'already gone');
+    // The author can appeal it, as any staff decision.
+    assert.equal((await call('ub', b, { action: 'appeal.create', opId: op(), targetType: 'community', targetId: cr.id, body: 'Там нет нарушений, проверьте' })).status, 200);
+
+    // An event, a post and a reply.
+    const ev = { title: 'Вечер знакомств', kind: 'meetup', description: 'Спокойный вечер для знакомства, без спешки и давления.',
+      format: 'online', joinUrl: 'https://meet.example/x', tz: 'Europe/Berlin', startsAt: new Date(Date.now() + 20 * 36e5).toISOString(), endsAt: new Date(Date.now() + 23 * 36e5).toISOString() };
+    const e = await call('ub', b, { action: 'event.submit', opId: op(), event: ev });
+    const erev = (await call('um', null, { action: 'staff.eventQueue' })).items.find((/** @type {any} */ x) => x.id === e.id).rev;
+    await call('um', null, { action: 'staff.eventDecide', opId: op(), eventId: e.id, rev: erev, decision: 'approve' });
+    assert.equal((await down('ul', 'event', e.id, 'illegal')).removed, true);
+    assert.notEqual((await db.query('select state from feture.event where id = $1', [e.id]))[0].state, 'published');
+    assert.equal(await told(e.id), 1);
+
+    const d = await call('ub', b, { action: 'post.saveDraft', opId: op(), post: { type: 'post', body: 'Лишняя публикация', audience: 'all', inFeed: true, topics: [], mediaIds: [], interests: [], tags: [] } });
+    await call('ub', b, { action: 'post.publish', opId: op(), postId: d.id });
+    const r = await call('ua', a, { action: 'reply.create', opId: op(), postId: d.id, body: 'Лишний комментарий' });
+    assert.equal((await down('um', 'reply', r.id, 'spam')).removed, true);
+    assert.equal((await db.query('select state from feture.reply where id = $1', [r.id]))[0].state, 'removed');
+    assert.equal((await down('um', 'post', d.id, 'threats')).removed, true);
+    assert.equal((await db.query('select state from feture.post where id = $1', [d.id]))[0].state, 'removed');
+    assert.equal(await told(d.id), 1);
+
+    // Open reports are answered by the decision.
+    const d2 = await call('ub', b, { action: 'post.saveDraft', opId: op(), post: { type: 'post', body: 'Ещё одна', audience: 'all', inFeed: true, topics: [], mediaIds: [], interests: [], tags: [] } });
+    await call('ub', b, { action: 'post.publish', opId: op(), postId: d2.id });
+    await call('ua', a, { action: 'report.create', opId: op(), targetType: 'post', targetId: d2.id, reason: 'spam', details: 'Подробности для модератора' });
+    assert.equal((await down('um', 'post', d2.id, 'spam')).resolved, 1);
+    assert.equal((await db.query(`select count(*)::int n from feture.report where target_id = $1 and state = 'open'`, [d2.id]))[0].n, 0);
+
+    // Never one's own thing; a thing that does not exist is not found; the rule is required.
+    await call('uo', null, { action: 'staff.grant', opId: op(), handle: 'Kira', role: 'moderator', grant: true });
+    const own = await call('ub', b, { action: 'community.create', opId: op(), name: 'Клуб модератора', privacy: 'open', ...base });
+    assert.equal(own.status, 200);
+    const orev = (await call('um', null, { action: 'staff.communityQueue' })).items.find((/** @type {any} */ x) => x.id === own.id).rev;
+    await call('um', null, { action: 'staff.communityDecide', opId: op(), communityId: own.id, rev: orev, decision: 'approve' });
+    assert.equal((await down('ub', 'community', own.id)).status, 403, 'a moderator never acts on their own');
+    assert.equal((await down('um', 'community', '00000000-0000-4000-8000-000000000000')).status, 404);
+    assert.equal((await call('um', null, { action: 'staff.takedown', opId: op(), targetType: 'post', targetId: d.id })).status, 400);
+
+    // History: moderators and the owner read it, others do not; the person's page shows what happened to what they posted.
+    const h = await call('um', null, { action: 'staff.history', targetType: 'community', targetId: cr.id });
+    assert.deepEqual(h.items.map((/** @type {any} */ x) => [x.action, x.rule]).slice(0, 1), [['report.remove', 'spam']]);
+    assert.equal(h.items[0].note, 'проба');
+    const hp = await call('um', null, { action: 'staff.history', targetType: 'profile', targetId: b });
+    assert.ok(hp.items.filter((/** @type {any} */ x) => x.action === 'report.remove').length >= 4, 'the person history counts their removed things');
+    assert.equal((await call('ua', a, { action: 'staff.history', targetType: 'community', targetId: cr.id })).status, 403);
+  } finally { await pg.close(); }
+});

@@ -71,6 +71,21 @@ export const moderationCommands = {
     input: z.strictObject({ handle: z.string().trim().min(1).max(40).optional(), profileId: id.optional() }).refine(v => !!v.handle !== !!v.profileId, { message: 'handle_or_id' }),
   },
   // «Под наблюдением» (owner 05.11.2026): a staff mark with a note; the list of marked people.
+  // A moderator takes live content down from the thing itself, with no report open on it (owner 06.11.2026): the same
+  // takedown, notice to the author and journal entry as staff.reportDecide «remove».
+  'staff.takedown': {
+    profile: false, write: true,
+    input: z.strictObject({
+      opId, targetType: z.enum(['post', 'reply', 'community', 'event']), targetId: id,
+      rule: z.enum(['minors', 'threats', 'private_material', 'spam', 'illegal', 'community_rules']),
+      note: field('staffNote').default(''),
+    }),
+  },
+  // What staff decided about one thing (or one person: their content too), newest first.
+  'staff.history': {
+    profile: false, write: false,
+    input: z.strictObject({ targetType: z.enum(['profile', 'post', 'reply', 'community', 'event']), targetId: id, limit: z.int().min(1).max(50).default(20) }),
+  },
   'staff.watch': { profile: false, write: true, input: z.strictObject({ opId, profileId: id, on: z.boolean(), note: z.string().trim().max(300).default('') }) },
   'staff.watchList': { profile: false, write: false, input: z.strictObject({}) },
   // «Взять в работу»: the item open on this moderator's screen; others see who has it.
