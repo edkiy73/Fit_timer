@@ -654,3 +654,10 @@ html:has(.fe-v21),html:has(.fe-v21) body{overscroll-behavior-y:none}
 /* A Seg in place of a header title (Bar `seg`, «Как видят» on the photo): on a 360 phone three full labels
    («С доступом», «Знакомства») fit in the smaller caption size instead of being cut. */
 @media (max-width:374px){.v21 .bar>.seg.seg button,.v21 .p3-seg .seg.seg button{font-size:var(--fs-cap);padding:0 2px}}
+
+/* CityField: the row and the aim icon on one line; the icon is a square as tall as the input. */
+.v21 .k-city-row{display:flex;gap:var(--s-2)}
+.v21 .k-city-row>.sel-btn{flex:1;min-width:0}
+.v21 .k-city-loc{flex:none;display:grid;place-items:center;width:50px;min-height:50px;border-radius:var(--r);border:1px solid var(--line2);background:var(--surf);color:var(--ink);cursor:pointer}
+.v21 .k-city-loc svg{width:22px;height:22px}
+.v21 .k-city-loc:disabled{opacity:.45;cursor:default}
