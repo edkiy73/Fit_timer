@@ -5,7 +5,7 @@ import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {Power,RefreshCw,Wrench} from 'lucide-react';
 import {FeError,feErrorMessage,feRequest,newOpId,MAINTENANCE_EVENT} from '../feture/fe-api';
 import {Alert,Ask,Btn,Card,Field,Form,Group,Input,Maintenance,Note,Row,Skel} from './kit';
-import {useFe} from './session';
+import {useFe,useSeen} from './session';
 import {softMax,textError} from './kit/validate';
 import {useFail} from './toast';
 
@@ -47,7 +47,7 @@ function MaintenanceView({message,onRetry}:{message:string|null,onRetry:()=>Prom
 /** Staff: the maintenance switch with a message (owner / lead). */
 export function StaffMaintenance(){
  const {call}=useFe();const {t}=useI18n();
- const [st,setSt]=useState<{active:boolean,message:string|null}|null>(null);const [msg,setMsg]=useState('');
+ const [st,setSt]=useSeen<{active:boolean,message:string|null}|null>('StaffMaintenance.st',()=>null);const [msg,setMsg]=useState('');
  const [ask,setAsk]=useState(false);const [busy,setBusy]=useState(false);const setError=useFail();const [loadError,setLoadError]=useState('');
  const load=useCallback(()=>{setLoadError('');call('platform.maintenance',{},statusRes,{asAccount:true,fresh:true}).then(r=>{setSt(r);setMsg(r.message??'');}).catch(e=>setLoadError(feErrorMessage(e,t)));},[call,t]);
  useEffect(()=>{load();},[load]);

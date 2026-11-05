@@ -6,7 +6,7 @@ import {AlarmClock,AtSign,Bell,Calendar,CalendarClock,CalendarX,Check,CircleChec
 import {DECIDE_KINDS,FILTERS as KINDS,actOf,destination,entryFor,noteLine,textOf,type Entry} from '../../contracts/notifications.mjs';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {ActingAv,Actions,Answer,Av,Bar,Btn,Card,Chip,Chips,Empty,IconBtn,LoadMore,NoteDecision,NoteEvent,NoteNews,NoteResult,NoteSafety,NoteSummary,PersonLine,Pill,Row,SafetyDecision,SectionLabel,Seg,Sheet,Skel,type NoteTone,useScrollTo,View,ProfileAv} from './kit';
-import {useFe,useLive,useRealtime} from './session';
+import {useFe,useLive,useRealtime,useSeen} from './session';
 import {useSideNav} from './wide';
 import {useToast} from './toast';
 import {when} from './feed';
@@ -368,7 +368,7 @@ export function InboxScreen(){
  * report says only its outcome. */
 export function InboxNoteScreen(){
  const {id=''}=useParams();const {call,state}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
- const [r,setR]=useState<z.infer<typeof noteRes>|null>(null);const [error,setError]=useState<unknown>(null);const [appealing,setAppealing]=useState(false);
+ const [r,setR]=useSeen<z.infer<typeof noteRes>|null>('InboxNoteScreen.r',()=>null);const [error,setError]=useState<unknown>(null);const [appealing,setAppealing]=useState(false);
  const load=useCallback(()=>{setError(null);call('notifications.get',{id},noteRes,{asAccount:true,fresh:true}).then(x=>{setR(x);
   if(!x.item.read)call('notifications.read',{id},ok,{asAccount:true}).catch(()=>{/* the inbox row stays unread; nothing else depends on it */});}).catch(setError);},[call,id]);
  useEffect(()=>{load();},[load]);

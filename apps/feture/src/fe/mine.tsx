@@ -6,7 +6,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Archive,Bookmark,Calendar,Clock,LockOpen,MessageCircle,Newspaper,Pencil,Trash2,TriangleAlert,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {ActingAv,AddBtn,Alert,Ask,Bar,Btn,Card,DraftCard,Empty,Group,IconBtn,Note,Row,Skel,Stack,useRefreshable,View} from './kit';
-import {useFe,useLive} from './session';
+import {useFe,useLive,useSeen} from './session';
 import {PostCard,SavedEditSheet,postSchema,savedEdit,when,type Post,type SavedEdit} from './feed';
 import {EventRow,type Ev} from './browse';
 import {CreateSheet} from './create-entry';
@@ -31,7 +31,7 @@ const nameOf=(p:z.infer<typeof who>)=>p?(p.name||(p.handle?'@'+p.handle:'?')):'�
 type Counts={posts:number,drafts:number,events:number,followers:number,following:number,saved:number,withMe:number,out:number};
 export function MineLayer(){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const location=useLocation();
- const [c,setC]=useState<Counts|null>(null);
+ const [c,setC]=useSeen<Counts|null>('MineLayer.c',()=>null);
  const notice=(location.state as {notice?:unknown}|null)?.notice;
  // Old links `?layer=mine&part=…` (after creating an event or a post) open the matching list screen.
  useEffect(()=>{const part=new URLSearchParams(location.search).get('part');if(part==='events'||part==='posts'||part==='saved'||part==='communities')navigate('/n/me/'+part,{replace:true,state:location.state});},[location.search,location.state,navigate]);
@@ -81,7 +81,7 @@ const mineComm=z.object({ok:z.literal(true),hosting:z.array(z.object({id:z.uuid(
  member:z.array(z.object({id:z.uuid(),name:z.string(),state:z.string(),privacy:z.string()}).passthrough()),requests:z.array(z.object({id:z.uuid(),community_id:z.uuid(),name:z.string()}).passthrough())});
 function MyCommunities(){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const cp=acting?.kind==='couple';
- const {data,error,load}=useLoad(useCallback(()=>call('community.mine',{},mineComm),[call]));
+ const {data,error,load}=useLoad(useCallback(()=>call('community.mine',{},mineComm),[call]),'comm');
  if(error)return <Failed error={error} retry={load}/>;
  if(!data)return <Skel kind="list"/>;
  if(!data.hosting.length&&!data.member.length&&!data.requests.length)return <Empty icon={Users} title={t(cp?'fe.w7.c02.emptyUs':'fe.w7.c02.empty')} text={t('fe.w7.c02.emptyText')}>
@@ -98,8 +98,8 @@ function MyCommunities(){
 
 /** `fn` gets a setter for `onFresh`: a list answered from memory is replaced when the server's answer differs (an
  * article published a minute ago shows its cover, not the plate of the moment its photo was still being checked). */
-function useLoad<T>(fn:(fresh:(v:T)=>void)=>Promise<T>){
- const [data,setData]=useState<T|null>(null);const [error,setError]=useState<unknown>(null);
+function useLoad<T>(fn:(fresh:(v:T)=>void)=>Promise<T>,name:string){
+ const [data,setData]=useSeen<T|null>('useLoad.'+name,()=>null);const [error,setError]=useState<unknown>(null);
  const load=useCallback(()=>{setError(null);fn(setData).then(setData).catch(setError);},[fn]);
  useEffect(()=>{load();},[load]);useRefreshable(load);
  // A post published after its review, returned, removed, or a file checked: the list follows (server/live.mjs).
@@ -110,7 +110,7 @@ function Failed({error,retry}:{error:unknown,retry:()=>void}){const {t}=useI18n(
 
 function MyPosts(){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
- const {data,setData,error,load}=useLoad(useCallback((fresh:(v:z.infer<typeof posts>)=>void)=>call('me.posts',{},posts,{onFresh:fresh}),[call]));
+ const {data,setData,error,load}=useLoad(useCallback((fresh:(v:z.infer<typeof posts>)=>void)=>call('me.posts',{},posts,{onFresh:fresh}),[call]),'posts');
  if(error)return <Failed error={error} retry={load}/>;
  if(!data)return <Skel kind="post"/>;
  if(!data.items.length)return <Empty icon={Newspaper} title={t('fe.mine.noPosts')} text={t(acting?.kind==='couple'?'fe.mine.noPostsTextUs':'fe.mine.noPostsText')}><Btn kind="soft" onClick={()=>navigate('/n/feed/new')}>{t('fe.feed.new')}</Btn></Empty>;
@@ -125,7 +125,7 @@ const evsWithDrafts=evs.extend({drafts:z.array(draftRow).optional()});
 const okRes=z.object({ok:z.literal(true)}).passthrough();
 function MyEvents(){
  const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
- const {data,setData,error,load}=useLoad(useCallback(()=>call('event.mine',{},evsWithDrafts),[call]));
+ const {data,setData,error,load}=useLoad(useCallback(()=>call('event.mine',{},evsWithDrafts),[call]),'events');
  const [asking,setAsking]=useState<z.infer<typeof draftRow>|null>(null);const [busy,setBusy]=useState(false);const setFailure=useFail();
  if(error)return <Failed error={error} retry={load}/>;
  if(!data)return <Skel kind="post"/>;
@@ -154,7 +154,7 @@ function MyEvents(){
 
 function Saved(){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();
- const {data,error,load}=useLoad(useCallback(()=>call('saved.list',{},saved),[call]));
+ const {data,error,load}=useLoad(useCallback(()=>call('saved.list',{},saved),[call]),'saved');
  if(error)return <Failed error={error} retry={load}/>;
  if(!data)return <Skel kind="post"/>;
  if(!data.items.length)return <Empty icon={Bookmark} title={t('fe.mine.noSaved')} text={t('fe.mine.noSavedText')}/>;
@@ -184,7 +184,7 @@ const draftText=(p:Post)=>[p.title,mdPlain(p.body)||p.poll?.question].filter(Boo
 export function MyPostsScreen(){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
  const couple=acting?.kind==='couple';
- const {data,setData,error,load}=useLoad(useCallback((fresh:(v:z.infer<typeof postsRev>)=>void)=>call('me.posts',{},postsRev,{onFresh:fresh}),[call]));
+ const {data,setData,error,load}=useLoad(useCallback((fresh:(v:z.infer<typeof postsRev>)=>void)=>call('me.posts',{},postsRev,{onFresh:fresh}),[call]),'postsRev');
  const [create,setCreate]=useState(false);
  const [edits,setEdits]=useState<SavedEdit|null>(null);const [menu,setMenu]=useState<Post|null>(null);
  // «Изменён 29 окт, 14:20»; within the hour «Изменён 5 минут назад».
@@ -239,7 +239,7 @@ export function MyPostsScreen(){
 type SavedItem={kind:string,id:string};
 export function SavedScreen(){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();
- const [list,setList]=useState<{posts:Post[],events:Ev[],discussions:Post[],gone:number}|null>(null);const [error,setError]=useState<unknown>(null);
+ const [list,setList]=useSeen<{posts:Post[],events:Ev[],discussions:Post[],gone:number}|null>('SavedScreen.list',()=>null);const [error,setError]=useState<unknown>(null);
  const load=useCallback(()=>{setError(null);
   call('saved.list',{},savedRes).then(async r=>{
    const items:SavedItem[]=r.items.map(x=>({kind:x.kind,id:x.target_id}));

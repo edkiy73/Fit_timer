@@ -2,16 +2,16 @@ import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Calendar,Check,ChevronLeft,CircleAlert,Clock,EyeOff,Link as LinkIcon,Lock,MapPin,RefreshCw,Ticket,Unlock,Video} from 'lucide-react';
+import {Calendar,Check,ChevronLeft,CircleAlert,Clock,Link as LinkIcon,Lock,MapPin,RefreshCw,Ticket,Video} from 'lucide-react';
 import {FeError,feErrorMessage} from '../feture/fe-api';
-import {ActingAv,Alert,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,EventHero,Fact,Group,Note,RichEditor,Row,Seg,Select,Skel,Stack,Steps,ToggleRow,useLeaveGuard,View} from './kit';
+import {ActingAv,Alert,Bar,Btn,Card,Chip,Chips,Counter,Empty,EventHero,Fact,Group,Note,RichEditor,Row,Seg,Select,Skel,Stack,Steps,ToggleRow,useLeaveGuard,View,useBack} from './kit';
 import {NamedPlate} from './comm-kit';
 import {RichText} from './post-parts';
 import {CityField} from './kit/Place';
 import {useFe} from './session';
 import {ONLINE_ZONES,placeZone,zoneLabel} from './event-time';
 import {FIELD,lineRule,serverFields,textError,textErrorMessage,type FieldName} from './kit/validate';
-import {ChipGroup,CoverField,FErr,Field,PLATE_KEYS,SelectRow,namedPlate,placeName,reviewNotice,shakeFirstErr,useCatalog,useOp,type Cover,type PlateKey} from './create-community';
+import {ChipGroup,CoverField,FErr,Field,PLATE_KEYS,SelectRow,placeName,reviewNotice,shakeFirstErr,useCatalog,useOp,type Cover,type PlateKey} from './create-community';
 
 /** V21 E11 «Новое событие»: four steps (basics, time and place, admission, review), the draft saved on the server at
  * every step and on «В черновик», then `event.submit` (staff review). The client checks the limits of `eventFields`;
@@ -255,7 +255,8 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
   finally{setBusy(false);}
   setStep(step+1);
  };
- const back=()=>{if(step>1){setErr({});setNotice(null);setStep(step-1);}else navigate(-1);};
+ const goBack=useBack('/n/communities?sub=events');
+ const back=()=>{if(step>1){setErr({});setNotice(null);setStep(step-1);}else goBack();};
  const submit=async()=>{
   if(busy)return;setNotice(null);
   setStale(false);

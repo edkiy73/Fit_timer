@@ -2,11 +2,11 @@ import {useCallback,useEffect,useMemo,useRef,useState,type ReactNode} from 'reac
 import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,ChartColumn,Bell,BellOff,Bookmark,BookmarkCheck,Calendar,CalendarCheck,CalendarPlus,Check,ChevronLeft,Clock,Ellipsis,Eye,ExternalLink,FileText,Flag,Globe,Image as ImageIcon,Link as LinkIcon,Lock,Map as MapIcon,MapPin,MessageCircle,Search,Settings,Share,SlidersHorizontal,Ticket,TriangleAlert,Users,Video,X} from 'lucide-react';
+import {Ban,Bell,BellOff,Bookmark,BookmarkCheck,Calendar,CalendarCheck,CalendarPlus,Check,Clock,Ellipsis,Eye,ExternalLink,FileText,Flag,Globe,Link as LinkIcon,Lock,Map as MapIcon,MapPin,MessageCircle,Search,Settings,Share,SlidersHorizontal,Ticket,TriangleAlert,Users,Video,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {useSideNav} from './wide';
-import {Actions,AddBtn,Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventAnswer,EventHero,EventTile,Fact,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,Stack,StatusCard,Text,ToggleRow,useRefreshable,Veil,View,ProfileAv,useKept} from './kit';
-import {useFe,useKeyChange,useOwnProfiles,useShown} from './session';
+import {Actions,AddBtn,Alert,Announcement,Ask,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventAnswer,EventHero,EventTile,Fact,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,Stack,StatusCard,Text,ToggleRow,useRefreshable,Veil,View,ProfileAv,useKept} from './kit';
+import {useFe,useKeyChange,useOwnProfiles,useShown,useSeen} from './session';
 import {mdPlain,RichText} from './post-parts';
 import {evParts,evRange,evTz,evWhere,inTz,usePlaces} from './event-time';
 import {when} from './feed';
@@ -15,10 +15,9 @@ import {useCopyLink} from './share';
 import {BellButton} from './inbox';
 import {AppealSheet} from './appeal';
 import {useToast} from './toast';
-import {Field as FormField,placeName,shakeFirstErr,useCatalog} from './create-community';
+import {placeName,useCatalog} from './create-community';
 import {CommPlate,NamedPlate,ReportSheet,appUrl,fill,okRes,pl} from './comm-kit';
 import {faceFields} from './faces';
-import {textError} from './kit/validate';
 import {CommunityHostEntry,type DiscussionChange,DiscussionHostSheet,JoinSheet,MembersList,isCommunityHost,useEventApplication} from './host';
 
 /** «Комьюнити» (V21 C01 catalogue with interests and filters, C03 community page with discussions, events, members
@@ -434,7 +433,7 @@ function downloadIcs(e:EventFull){
 
 export function EventScreen(){
  const {id=''}=useParams();const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
- const [e,setE]=useState<EventFull|null>(null);const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);
+ const [e,setE]=useSeen<EventFull|null>('EventScreen.e',()=>null);const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);
  const [comm,setComm]=useState<{id:string,name:string,plate?:string|null|undefined,cover?:z.infer<typeof media>|null|undefined}|null>(null);const [saved,setSaved]=useState(false);const [faces,setFaces]=useState<z.infer<typeof prof>[]>([]);
  const [layer,setLayer]=useState<''|'menu'|'venue'|'report'|'withdraw'|'unwait'|'ticket'|'appeal'>('');
  const op=useRef(newOpId());

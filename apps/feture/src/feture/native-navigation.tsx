@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router';
-import { Capacitor } from '@capacitor/core';
-import { App } from '@capacitor/app';
-import { useI18n } from '@appbase/ui-react/i18n.js';
-import { ActionButton, AppDialog } from './components/primitives';
+import {useEffect,useRef,useState} from 'react';
+import {useLocation,useNavigate} from 'react-router';
+import {Capacitor} from '@capacitor/core';
+import {App} from '@capacitor/app';
+import {useI18n} from '@appbase/ui-react/i18n.js';
+import {ActionButton,AppDialog} from './components/primitives';
+import {tabsBack,tabsReady} from '../fe/tabs';
 
 export function NativeNavigation(){
   const { t } = useI18n();
@@ -27,6 +28,10 @@ export function NativeNavigation(){
         // Earlier screens close on this event; kit sheets and dialogs (src/fe/kit) close on Escape.
         window.dispatchEvent(new Event('feture:dismiss-overlay'));
         document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
+      }else if(tabsReady()){
+        // The app's own stacks of screens, one per dock tab (src/fe/tabs.ts): a screen steps back inside its tab, a tab's
+        // root goes to the feed, the feed's root asks before closing.
+        if(!tabsBack(navigate,undefined,location.pathname))setExitPrompt(true);
       }else if((window.history.state?.idx||0)>0)navigate(-1);
       // Any other screen goes to the feed, the feed asks before closing.
       else if(location.pathname!=='/n/feed')navigate('/n/feed',{replace:true});

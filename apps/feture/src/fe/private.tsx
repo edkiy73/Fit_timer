@@ -9,7 +9,7 @@ import {Uploader} from './kit/Uploader';
 import {FIELD,textLength,useChecks} from './kit/validate';
 import {useSendPhoto} from './media-upload';
 import {agePath,useAgeFix,useAgeResume} from './age-check';
-import {useFe} from './session';
+import {useFe,useSeen} from './session';
 import {when} from './feed';
 import {useToast,useFail} from './toast';
 import {Ask} from './me-parts';
@@ -278,7 +278,7 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged,askHere=true,a
  /** Off on the new «Я»: «Кто может просить доступ» lives in Settings → «Кто может…». */ askHere?:boolean,
  /** Off on «Я» v3: «Доступы» is its own row next to «Приватная часть» (owner 05.11.2026: not twice). */ accessHere?:boolean}){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();const w=useAccessWords();
- const [mine,setMine]=useState<Priv|null>(null);const [reqs,setReqs]=useState<z.infer<typeof incoming>|null>(null);const [given,setGiven]=useState<GrantItem[]>([]);
+ const [mine,setMine]=useSeen<Priv|null>('PrivateLayer.mine',()=>null);const [reqs,setReqs]=useSeen<z.infer<typeof incoming>|null>('PrivateLayer.reqs',()=>null);const [given,setGiven]=useState<GrantItem[]>([]);
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);
  const [asking,setAsking]=useState<'off'|null>(null);
  const [sheet,setSheet]=useState<{k:'desc'}|{k:'media',i:number}|null>(null);
