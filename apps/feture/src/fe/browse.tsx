@@ -5,7 +5,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Newspaper,BookOpen,ChevronLeft,ChevronRight,CircleCheck,Ellipsis,History,Pencil,Plus,Search as SearchIcon,SlidersHorizontal,User,UserMinus,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {useBack,ActingAv,Alert,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LoadMore,Note,Pill,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Stack,View,plate,Who,nickShown} from './kit';
+import {useBack,useKept,useReturning,ActingAv,Alert,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,H,IconBtn,LoadMore,Note,Pill,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Stack,View,plate,Who,nickShown} from './kit';
 import {useFe,useKeyChange} from './session';
 import {PostCard,postSchema,type Post} from './feed';
 import {InterestSheet,Jars,useInterests} from './interests';
@@ -144,16 +144,20 @@ const sfCount=(f:SearchFilters,k:'posts'|'events'|'communities')=>k==='posts'?f.
  :k==='events'?Number(f.events.format!=='all')+Number(f.events.when!=='any')+Number(f.events.price!=='any'):Number(f.communities.privacy!=='any');
 const POST_TYPES=['note','text','photo','poll','interests'] as const;
 
+/** Search answers kept for this tab's life (same account, scope, words and filters). */
+const SEARCH=new Map<string,Results>();
 export function SearchScreen(){
  const {call,state}=useFe();const account=state.status==='ready'?state.boot.account.id:'';const {t,locale}=useI18n();const navigate=useNavigate();const goBack=useBack();const [params,setParams]=useSearchParams();
  const scope:Scope=(SCOPES as readonly string[]).includes(params.get('scope')??'')?params.get('scope') as Scope:'all';
- const [q,setQ]=useState(()=>params.get('q')??'');const [recent,setRecent]=useState(()=>readRecent(account));
+ const [q,setQ]=useKept('q',()=>params.get('q')??'');const [recent,setRecent]=useState(()=>readRecent(account));
  const {data:catalog}=useCatalog();const topics=useMemo(()=>catalog?.topics??[],[catalog]);
  const tname=useCallback((x:string)=>{const v=topics.find(o=>o.id===x);return v?(locale==='en'?v.en:v.ru):x;},[topics,locale]);
- const [res,setRes]=useState<Results|null>(null);const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);
+ const [sf,setSf]=useKept<SearchFilters>('sf',NO_SF);const [fOpen,setFOpen]=useState(false);
+ // Back from a result: the same search shows at once (the answer is asked again quietly behind it).
+ const returning=useReturning();const memoKey=account+'\n'+scope+'\n'+q.trim()+'\n'+JSON.stringify(sf);
+ const [res,setRes]=useState<Results|null>(()=>(returning?SEARCH.get(memoKey):undefined)??null);const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);
  const input=useRef<HTMLInputElement>(null);
  useEffect(()=>{input.current?.focus({preventScroll:true});},[]);
- const [sf,setSf]=useState<SearchFilters>(NO_SF);const [fOpen,setFOpen]=useState(false);
  const fk=scope==='posts'||scope==='events'||scope==='communities'?scope:null;const nF=fk?sfCount(sf,fk):0;
  const term=q.trim();
  useEffect(()=>{
@@ -181,11 +185,13 @@ export function SearchScreen(){
     const val=<T,>(r:PromiseSettledResult<T[]|null>)=>r.status==='fulfilled'?r.value??[]:[];
     const failed=out.find(r=>r.status==='rejected');
     if(failed&&out.every(r=>r.status==='rejected'||r.value===null))setError((failed as PromiseRejectedResult).reason);
-    setRes({people:val(out[0]),posts:val(out[1]),communities:val(out[2]),events:val(out[3]),topics:want('topics')?matched:[]});
+    const got:Results={people:val(out[0]),posts:val(out[1]),communities:val(out[2]),events:val(out[3]),topics:want('topics')?matched:[]};
+    SEARCH.set(memoKey,got);setRes(got);
     setBusy(false);
    });
   },300);
   return ()=>{clearTimeout(timer);ctl.abort();};
+ // eslint-disable-next-line react-hooks/exhaustive-deps
  },[term,scope,topics,call,sf]);
  const setScope=(s:Scope)=>{commit();setParams(p=>{const n=new URLSearchParams(p);n.set('scope',s);return n;},{replace:true});};
  const commit=()=>{if(term.length<2||recent.includes(term))return;const list=[term,...recent].slice(0,6);setRecent(list);writeRecent(account,list);};

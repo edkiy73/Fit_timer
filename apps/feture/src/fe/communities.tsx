@@ -305,8 +305,9 @@ export function CommunityScreen(){
  const [sp,setSp]=useSearchParams();const invite=sp.get('invite')??undefined;
  const tab=((['disc','events','members','rules'] as const).find(x=>x===sp.get('t'))??'disc') as CTab;
  const setTab=(v:CTab)=>{const n=new URLSearchParams(sp);if(v==='disc')n.delete('t');else n.set('t',v);setSp(n,{replace:true});};
- const [c,setC]=useState<Community|null>(null);const [discs,setDiscs]=useState<z.infer<typeof discRes>|null>(null);const [mem,setMem]=useState<z.infer<typeof memList>|null>(null);
- const [evs,setEvs]=useState<Ev[]>([]);const [error,setError]=useState<unknown>(null);
+ // What was seen last time (this community) shows at once, and the reads replace it: Back from a profile or a post does not start over.
+ const [c,setC]=useShown<Community|null>('cm.c.'+id,()=>null);const [discs,setDiscs]=useShown<z.infer<typeof discRes>|null>('cm.d.'+id,()=>null);const [mem,setMem]=useShown<z.infer<typeof memList>|null>('cm.m.'+id,()=>null);
+ const [evs,setEvs]=useShown<Ev[]>('cm.e.'+id,()=>[]);const [error,setError]=useState<unknown>(null);
  const [layer,setLayer]=useState<''|'menu'|'join'|'leave'|'withdraw'|'unwait'|'report'|'appeal'>('');const [busy,setBusy]=useState(false);const [hostToolsId,setHostTools]=useState<string|null>(null);
  const [reportPost,setReportPost]=useState<string|null>(null);
  const load=useCallback(()=>{setError(null);
