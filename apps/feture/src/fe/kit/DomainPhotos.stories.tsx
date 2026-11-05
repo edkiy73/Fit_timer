@@ -17,6 +17,7 @@ export const Слоты:S={render:a=><PhotoSlots {...a}>
  <PhotoSlot id="2" src={PIC} review="На проверке" openLabel="Фото 2 из 2" onOpen={fn()}/>
  <PhotoAdd label="Добавить фото" onClick={fn()}/><PhotoAdd ghost/>
 </PhotoSlots>};
+export const СВидео:S={name:'Видео в слотах: метка с длиной (не первым)',render:a=><PhotoSlots {...a}><PhotoSlot id="1" big src={PIC} main="Главное" openLabel="Фото 1 из 3" onOpen={fn()}/><PhotoSlot id="2" src={PIC} video durationMs={3000} openLabel="Видео 2 из 3" onOpen={fn()}/><PhotoSlot id="3" src={PIC} openLabel="Фото 3 из 3" onOpen={fn()}/><PhotoAdd label="Добавить фото или видео" onClick={fn()}/></PhotoSlots>};
 export const ОдноФото:S={name:'Одно фото: «Ещё фото»',render:()=><PhotoSlots><PhotoSlot id="1" big src={PIC} main="Главное" openLabel="Фото 1" onOpen={fn()}/><PhotoAdd tall label="Добавить фото" hint="Ещё фото" onClick={fn()}/></PhotoSlots>};
 export const Пусто:S={name:'Пусто: главный слот',render:()=><PhotoSlots><PhotoAdd big label="Добавить фото" hint="Главное фото" onClick={fn()}/><PhotoAdd ghost/><PhotoAdd ghost/></PhotoSlots>};
 export const Приватные:S={args:{priv:true},render:a=><PhotoSlots {...a}><PhotoSlot id="1" src={PIC} openLabel="Фото 1" onOpen={fn()}/><PhotoSlot id="2" waiting openLabel="Фото 2" onOpen={fn()}/><PhotoAdd label="Добавить" busy/></PhotoSlots>};

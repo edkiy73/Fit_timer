@@ -4,17 +4,18 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {KeyRound,Camera,ChevronRight,Clock,Eye,Lock,LockOpen,PenLine,Send,ShieldCheck,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {AddCard,Alert,Btn,Card,CheckList,Chips,ChoiceChips,Counter,Empty,Field,FilePick,Group,MultiChips,Note,PersonLine,PhotoAdd,PhotoSlot,PhotoSlots,Pill,RequestCard,Row,SectionLabel,SelectRow,Sheet,Skel,Stack,TextArea,VaultHead,Veil,ProfileAv} from './kit';
+import {type Slide,AddCard,Alert,Btn,Card,CheckList,Chips,ChoiceChips,Counter,Empty,Field,FilePick,Group,MultiChips,Note,PersonLine,PhotoAdd,PhotoSlot,PhotoSlots,Pill,RequestCard,Row,SectionLabel,SelectRow,Sheet,Skel,Stack,TextArea,VaultHead,Veil,ProfileAv} from './kit';
 import {Uploader} from './kit/Uploader';
 import {FIELD,textLength,useChecks} from './kit/validate';
-import {useSendPhoto} from './media-upload';
+import {useSendPhoto,useSendVideo} from './media-upload';
+import {VIDEO_TYPES} from './kit/media';
 import {agePath,useAgeFix,useAgeResume} from './age-check';
 import {useFe,useSeen} from './session';
 import {when} from './feed';
 import {useToast,useFail} from './toast';
 import {Ask} from './me-parts';
 import {faceFields,NameBadges,withAge} from './faces';
-import {PhotoViewer,mediaSrc,plural} from './profile-extras';
+import {PhotoViewer,mediaSrc,plural,slideOf} from './profile-extras';
 
 /** Wave 4 «Приватное и доступы» (V21 X01, P06–P09, P11). Before access the server sends nothing real — only whether a
  * private part exists and what can be asked for; access is per profile, per part and for a term. Everything a person
@@ -38,7 +39,7 @@ const outItem=z.object({id:z.uuid(),scopes,state:z.string(),created_at:z.string(
  granted:open.nullable().optional(),profile:who});
 export type OutItem=z.infer<typeof outItem>;
 export const outRes=z.object({ok:z.literal(true),items:z.array(outItem),next:z.string().nullable().optional(),quota:quotaShape.optional()});
-const privMedia=z.object({id:z.uuid().optional(),src:z.record(z.string(),z.string()).nullable(),pending:z.boolean().optional(),kind:z.string().optional(),watermark:z.string().nullable().optional()}).passthrough();
+const privMedia=z.object({id:z.uuid().optional(),src:z.record(z.string(),z.string()).nullable(),pending:z.boolean().optional(),kind:z.enum(['image','video']).optional(),durationMs:z.number().nullable().optional(),watermark:z.string().nullable().optional()}).passthrough();
 const priv=z.object({ok:z.literal(true),exists:z.boolean(),own:z.boolean().optional(),on:z.boolean().optional(),scopes:scopes.optional(),until:z.string().nullable().optional(),
  text:z.string().nullable().optional(),media:z.array(privMedia).optional(),
  interests:z.array(z.object({topicId:z.string(),value:z.number().nullable().optional(),mark:z.enum(['discuss','hard']).nullable().optional(),dir:z.array(z.string()).nullable().optional(),vis:z.enum(['public','granted','only']).nullable().optional()})).optional(),available:scopes.optional(),canRequest:z.boolean().optional(),reason:z.string().nullable().optional(),
@@ -266,7 +267,7 @@ export function RequestCards({data,onChanged}:{data:IncomingList,onChanged:()=>v
 
 /* ---------------- «Я → Приватное» (X01) ---------------- */
 
-const PRIV_MAX=18;
+const PRIV_MAX=18;const PRIV_VIDEOS=6;
 const ownSrc=(m:{src:Record<string,string>|null})=>m.src?(m.src.thumb??m.src.card??m.src.full??null):null;
 
 /** `mePrivLayer()` — the tab IS the private part (owner, 29.10.2026): its switch and «Кто может просить доступ» on top,
@@ -283,7 +284,7 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged,askHere=true,a
  const [asking,setAsking]=useState<'off'|null>(null);
  const [sheet,setSheet]=useState<{k:'desc'}|{k:'media',i:number}|null>(null);
  const [viewing,setViewing]=useState<number|null>(null);const [picked,setPicked]=useState<File[]|null>(null);
- const file=useRef<HTMLInputElement>(null);const sendPrivate=useSendPhoto('private');
+ const file=useRef<HTMLInputElement>(null); const sendPrivate=useSendPhoto('private');const sendPrivateVideo=useSendVideo('private');
  const cp=acting?.kind==='couple';
  const load=useCallback(()=>{setError(null);Promise.all([call('private.get',{profileId},priv,{fresh:true}),call('access.lists',{tab:'incoming'},incoming,{fresh:true}),call('access.lists',{tab:'byme'},grantsRes,{fresh:true})])
   .then(([a,b,c])=>{setMine(a);setReqs(b);setGiven(c.items);}).catch(setError);},[call,profileId]);
@@ -300,6 +301,8 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged,askHere=true,a
  if(!mine||!reqs)return <Skel kind="card" rows={2}/>;
  // `interests` is the private part's own list (private.get); the profile's «По доступу» ones while a server without it answers.
  const media=mine.media??[];const txt=mine.text??'';
+ // Clips in the private part: up to six (server: private_media_limit).
+ const clipsLeft=media.filter(m=>m.kind==='video').length<PRIV_VIDEOS;
  const empty=!txt&&!media.length; // interests are always public now (owner 05.11.2026): the part holds words and media only
  // Adding the first thing to a switched-off part switches it on: an empty part has nothing to switch.
  const ensureOn=async()=>{if(on)return;try{await call('private.setOn',{opId:newOpId(),on:true},ok);}catch{/* the content is saved either way */}};
@@ -327,7 +330,7 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged,askHere=true,a
     :<AddCard icon={PenLine} title={t('fe.mp.descAdd')} sub={t('fe.mp.descAddSub')} onClick={()=>setSheet({k:'desc'})}/>}
   </Group>
   <Group id="privMedia" title={<>{t('fe.mp.media')}{media.length?' · '+media.length:''}</>}>
-   {media.length?<PhotoSlots priv>{[...media.map((m,i)=><PhotoSlot key={m.id??i} id={m.id??String(i)} src={ownSrc(m)} waiting={!m.src} review={m.pending?t('fe.mx.ph.review'):undefined}
+   {media.length?<PhotoSlots priv>{[...media.map((m,i)=><PhotoSlot key={m.id??i} id={m.id??String(i)} src={ownSrc(m)} waiting={!m.src} review={m.pending?t('fe.mx.ph.review'):undefined} video={m.kind==='video'} durationMs={m.durationMs}
      openLabel={t('fe.mx.ph.nOf',{n:i+1,total:media.length})} onOpen={()=>setSheet({k:'media',i})}/>),
      ...(media.length<PRIV_MAX?[<PhotoAdd key="add" disabled={busy} busy={busy} onClick={()=>file.current?.click()} label={t('fe.mp.mediaAdd')}/>]:[])]}</PhotoSlots>
     :<AddCard icon={Camera} title={t('fe.mp.mediaAdd')} sub={t('fe.mp.mediaAddSub')} disabled={busy} busy={busy} onClick={()=>file.current?.click()}/>}
@@ -350,9 +353,9 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged,askHere=true,a
     <Row icon={Trash2} title={t('fe.mx.ph.remove')} danger disabled={busy} onClick={()=>{const id=cur.id;setSheet(null);void saveMedia(ids.filter(x=>x!==id),t('fe.mp.mediaRemoved'));}}/>
    </Card>
   </Sheet>}
-  {viewing!==null&&<PhotoViewer srcs={media.map(m=>m.src?.full??m.src?.card??ownSrc(m)).filter((x):x is string=>!!x)} index={viewing} onClose={()=>setViewing(null)}/>}
-  <FilePick ref={file} accept="image/*" multiple onFiles={f=>setPicked([...f])}/>
-  {picked&&<Uploader files={picked} aspects={['orig','4:5','1:1']} max={PRIV_MAX-media.length} send={sendPrivate} onClose={()=>setPicked(null)}
+  {viewing!==null&&<PhotoViewer srcs={media.map(m=>slideOf(m,m.src?.card??ownSrc(m))).filter((x):x is Slide=>!!x)} index={viewing} onClose={()=>setViewing(null)}/>}
+  <FilePick ref={file} accept={clipsLeft?'image/*,'+VIDEO_TYPES.join(','):'image/*'} multiple onFiles={f=>setPicked([...f])}/>
+  {picked&&<Uploader files={picked} aspects={['orig','4:5','1:1']} max={PRIV_MAX-media.length} send={sendPrivate} sendVideo={clipsLeft?sendPrivateVideo:undefined} onClose={()=>setPicked(null)}
    onDone={got=>{setPicked(null);if(got.length)void saveMedia([...ids,...got.map(g=>g.id)],t('fe.mp.mediaSaved'));}}/>}
  </>;
 }
@@ -420,7 +423,7 @@ export function PrivateVault({profileId,name,preview,pre}:{profileId:string,name
    {!desc&&!photos.length&&<Empty compact icon={Lock} title={t('fe.px.pr.nothing')}/>}
    {more}{more&&ageLine}
   </div>
-  {view!==null&&<PhotoViewer srcs={photos.map(m=>m.src?.full??mediaSrc(m)!)} index={view} wm={wm} onClose={()=>setView(null)}/>}
+  {view!==null&&<PhotoViewer srcs={photos.map(m=>slideOf(m,mediaSrc(m))!)} index={view} wm={wm} onClose={()=>setView(null)}/>}
   {sheets}</section>;
  }
  const action=preview?<Btn kind="dark" disabled aria-disabled="true">{t('fe.px.pr.ask')}</Btn>

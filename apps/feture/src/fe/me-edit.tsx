@@ -1,4 +1,5 @@
 import {useCallback,useEffect,useId,useRef,useState,type ReactNode} from 'react';
+import {flushSync} from 'react-dom';
 import {useLocation,useNavigate,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
@@ -7,8 +8,9 @@ import {FeError,dayMonth,feErrorMessage,newOpId} from '../feture/fe-api';
 import {AddCard,Bar,Btn,Card,Counter,Empty,Field,FilePick,Group,Input,Note,PhotoAdd,PhotoSlot,PhotoSlots,RadioList,Row,Sheet,Skel,TextArea,VaultHead,useLeaveGuard,useBack} from './kit';
 import {useFe,usePartnerApproves} from './session';
 import {Uploader} from './kit/Uploader';
+import {VIDEO_TYPES} from './kit/media';
 import {CityField,PickField,type Place} from './kit/Place';
-import {useSendPhoto} from './media-upload';
+import {useSendPhoto,useSendVideo} from './media-upload';
 import {useToast,useFail} from './toast';
 import {useDragOrder} from './reorder';
 import {Ask,AudTag,COUPLE_ROWS,DETAIL_ROWS,MAX_PHOTOS,catalogRes,ok,photoSrc,profileRes,settingsRes,type Profile} from './me';
@@ -23,17 +25,17 @@ import {AboutEditor,aboutDraft,aboutPatch,type AboutDraft} from './about-facts';
  * catalog answers), `about` («Обо мне» facts, about-facts.tsx) or `priv` (the private part); without `only` the whole profile. Nothing is written until
  * «Сохранить»; a couple's widening change comes back `pending` and waits for the partner (server rule). */
 type Only='media'|'basics'|'details'|'priv'|'about'|null;
-type Ph={id:string,src:string|null,pending:boolean};
+type Ph={id:string,src:string|null,pending:boolean,/** A clip (its poster is the picture). */ video?:boolean|undefined,durationMs?:number|null|undefined};
 const intent=z.object({ok:z.literal(true),assetId:z.uuid(),upload:z.object({url:z.string(),method:z.string(),headers:z.record(z.string(),z.string())})});
-const privMedia=z.object({id:z.uuid(),src:z.record(z.string(),z.string()).nullable().optional(),pending:z.boolean().optional()}).passthrough();
+const privMedia=z.object({id:z.uuid(),src:z.record(z.string(),z.string()).nullable().optional(),pending:z.boolean().optional(),kind:z.enum(['image','video']).optional(),durationMs:z.number().nullable().optional()}).passthrough();
 const privRes=z.object({ok:z.literal(true),on:z.boolean().optional(),text:z.string().nullable().optional(),media:z.array(privMedia).optional(),counts:z.object({grants:z.number()}).passthrough().optional()}).passthrough();
 const interestsRes=z.object({ok:z.literal(true),items:z.array(z.object({vis:z.string().nullable().optional()}).passthrough())});
 const MIME=['image/jpeg','image/png','image/webp'];
-const PRIV_MAX=18;
+const PRIV_MAX=18;const PRIV_VIDEOS=6;
 const MULTI_MAX:Record<string,number>={genders:5,orients:5,roles:5,formats:5,seeks:9};
 
 type Draft={name:string,handle:string,bio:string,cityId:string|null,showAge:boolean,details:Record<string,string[]|string|null>,photos:Ph[],privOn:boolean,privText:string,privMedia:Ph[]};
-const toPh=(m:{id:string,src?:Record<string,string>|null|undefined,pending?:boolean|undefined})=>({id:m.id,src:m.src?photoSrc({src:m.src}):null,pending:!!m.pending});
+const toPh=(m:{id:string,src?:Record<string,string>|null|undefined,pending?:boolean|undefined,kind?:'image'|'video'|undefined,durationMs?:number|null|undefined}):Ph=>({id:m.id,src:m.src?photoSrc({src:m.src}):null,pending:!!m.pending,...(m.kind==='video'?{video:true,durationMs:m.durationMs}:{})});
 
 export function MeEditScreen(){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
@@ -49,7 +51,7 @@ export function MeEditScreen(){
  const [ab,setAb]=useState<{base:AboutDraft,d:AboutDraft}|null>(null);
  const file=useRef<HTMLInputElement>(null);const fileKind=useRef<'photos'|'privMedia'>('photos');const fid=useId();
  // Press and drag to change the order in the draft; «Сохранить» writes it.
- const drag=useDragOrder<'photos'|'privMedia'>((k,ids)=>setD(x=>{if(!x)return x;const by=new Map(x[k].map(p=>[p.id,p]));const next=ids.map(i=>by.get(i)).filter((p):p is Ph=>!!p);return next.length===x[k].length?{...x,[k]:next}:x;}));
+ const drag=useDragOrder<'photos'|'privMedia'>((k,ids)=>setD(x=>{if(!x)return x;const by=new Map(x[k].map(p=>[p.id,p]));const next=ids.map(i=>by.get(i)).filter((p):p is Ph=>!!p);return next.length===x[k].length&&!(k==='photos'&&next[0]?.video)?{...x,[k]:next}:x;}));
  const cp=acting?.kind==='couple';const toPartner=usePartnerApproves();
  const load=useCallback(()=>{
   if(!acting)return;setError(null);
@@ -87,9 +89,12 @@ export function MeEditScreen(){
 
  // Profile photos are 4:5 (the profile's frame); private ones may keep their shape. Kit uploader: crop, compress, no metadata.
  const [picked,setPicked]=useState<{k:'photos'|'privMedia',files:File[]}|null>(null);
- const sendAvatar=useSendPhoto('avatar');const sendPrivate=useSendPhoto('private');
+ const sendAvatar=useSendPhoto('avatar');const sendPrivate=useSendPhoto('private');const sendAvatarVideo=useSendVideo('avatar');const sendPrivateVideo=useSendVideo('private');
  const upload=(files:File[],k:'photos'|'privMedia')=>{setFailure('');setPicked({k,files});};
- const pick=(k:'photos'|'privMedia')=>{fileKind.current=k;file.current?.click();};
+ // A clip may go into the profile's photos only behind the first photo and only one (server: video_rules); the private part takes several.
+ const clipOk=(k:'photos'|'privMedia')=>k==='privMedia'?(d?.privMedia.filter(x=>x.video).length??0)<PRIV_VIDEOS:!!d&&d.photos.length>0&&!d.photos.some(x=>x.video);
+ const [accept,setAccept]=useState('image/*');
+ const pick=(k:'photos'|'privMedia')=>{fileKind.current=k;flushSync(()=>setAccept(clipOk(k)?'image/*,'+VIDEO_TYPES.join(','):'image/*'));file.current?.click();};
 
  const save=async()=>{
   if(!d||!base||!p||busy)return;
@@ -128,7 +133,7 @@ export function MeEditScreen(){
  const slots=(k:'photos'|'privMedia',base:Ph[],max:number)=>{
   const list=drag.arrange(k,base);const ids=base.map(x=>x.id);
   const cells:ReactNode[]=list.map((ph,i)=><PhotoSlot key={ph.id} id={ph.id} big={k==='photos'&&i===0} dragging={drag.preview?.drag===ph.id} src={ph.src}
-   main={k==='photos'&&i===0?t('fe.me.mainPhoto'):undefined} review={ph.pending?t('fe.mx.ph.review'):undefined} onPointerDown={e=>drag.down(e,k,ids,ph.id)}
+   main={k==='photos'&&i===0?t('fe.me.mainPhoto'):undefined} review={ph.pending?t('fe.mx.ph.review'):undefined} onPointerDown={e=>drag.down(e,k,ids,ph.id)} video={!!ph.video} durationMs={ph.durationMs}
    openLabel={t('fe.mx.ph.nOf',{n:i+1,total:list.length})} onOpen={()=>setPhSheet({k,i})}/>);
   const n=k==='photos'?Math.min(max,Math.max(list.length+1,3)):list.length+(list.length<max?1:0);
   for(let i=list.length;i<n;i++)cells.push(i===list.length
@@ -140,7 +145,11 @@ export function MeEditScreen(){
  const sheetList=phSheet&&d?d[phSheet.k]:[];const sheetPh=phSheet?sheetList[phSheet.i]:undefined;
  // V21 phRemove: the last profile photo of a profile shown in Discover — it would drop out of Discover; ask first.
  const remove=(k:'photos'|'privMedia',i:number)=>{if(d&&k==='photos'&&d.photos.length===1&&discoverOn){setPhSheet(null);setAskLast(i);return;}move(k,i,'remove');};
- const move=(k:'photos'|'privMedia',i:number,to:'main'|'remove')=>{if(!d)return;const list=[...d[k]];const [x]=list.splice(i,1);if(to==='main'&&x)list.unshift(x);set({[k]:list} as Partial<Draft>);setPhSheet(null);};
+ const move=(k:'photos'|'privMedia',i:number,to:'main'|'remove')=>{if(!d)return;const list=[...d[k]];const [x]=list.splice(i,1);if(to==='main'&&x)list.unshift(x);
+  if(k==='photos'&&list[0]?.video){ // a clip is never the first: the next picture takes the place; none left — the photo stays
+   const j=list.findIndex(y=>!y.video);if(j<0){toast(t('fe.mx.ph.clipNeedsPhoto'),{type:'info'});setPhSheet(null);return;}
+   const [y]=list.splice(j,1);list.unshift(y!);}
+  set({[k]:list} as Partial<Draft>);setPhSheet(null);};
  // A city the person added is pending (not in the catalog yet): its name comes from the profile or the picker.
  const placeName=(id:string|null)=>{const x=id?cat?.places?.find(y=>y.id===id)??(added?.id===id?added:null):null;
   if(x)return (locale==='en'?x.en:x.ru)??null;return id&&id===base?.cityId&&p?.city?(locale==='en'?p.city.en:p.city.ru):null;};
@@ -211,10 +220,19 @@ export function MeEditScreen(){
     </>}
   </div></div>
   {d&&<div className="ctabar"><div className="wrap"><Btn onClick={save} disabled={!dirty||busy} busy={busy}>{toPartner?t('fe.me.saveToPartner'):t('fe.me.save')}</Btn></div></div>}
-  <FilePick ref={file} accept="image/*" multiple onFiles={f=>upload([...f],fileKind.current)}/>
+  <FilePick ref={file} accept={accept} multiple onFiles={f=>upload([...f],fileKind.current)}/>
   {picked&&d&&<Uploader files={picked.files} aspects={picked.k==='photos'?['4:5']:['orig','4:5','1:1']} max={(picked.k==='photos'?MAX_PHOTOS:PRIV_MAX)-d[picked.k].length}
-   send={picked.k==='photos'?sendAvatar:sendPrivate} onClose={()=>setPicked(null)}
-   onDone={got=>{const k=picked.k;setPicked(null);setD(v=>v?{...v,[k]:[...v[k],...got.map(g=>({id:g.id,src:g.url,pending:true}))]}:v);}}/>}
+   send={picked.k==='photos'?sendAvatar:sendPrivate} sendVideo={clipOk(picked.k)?(picked.k==='photos'?sendAvatarVideo:sendPrivateVideo):undefined} onClose={()=>setPicked(null)}
+   onDone={got=>{const k=picked.k;setPicked(null);setD(v=>{if(!v)return v;
+    const add=got.map((g):Ph=>({id:g.id,src:g.url,pending:true,...(g.kind==='video'?{video:true,durationMs:g.durationMs}:{})}));
+    if(k==='privMedia')return {...v,privMedia:[...v.privMedia,...add]};
+    // Profile photos: one clip at most and never the first (the main photo is a picture).
+    const had=v.photos.some(x=>x.video);const clips=add.filter(x=>x.video);const keep=add.filter(x=>!x.video||(!had&&x===clips[0]));
+    if(keep.length<add.length)toast(t('fe.mx.ph.oneClip'),{type:'info'});
+    const next=[...v.photos,...keep];const first=next.findIndex(x=>!x.video);
+    if(first>0){const [x]=next.splice(first,1);next.unshift(x!);}
+    if(!next.some(x=>!x.video))return v;
+    return {...v,photos:next};});}}/>}
   {ageSheet&&d&&p?.age&&<Sheet title={t('fe.mb.age')} onClose={()=>setAgeSheet(false)}>
    <RadioList label={t('fe.mb.age')} value={d.showAge?'show':'hide'} onChange={v=>{set({showAge:v==='show'});setAgeSheet(false);}}
     options={[['show',t('fe.mb.ageShow',{n:String(p.age)})],['hide',t('fe.mb.ageHide')]] as const}/>
@@ -222,7 +240,7 @@ export function MeEditScreen(){
   {phSheet&&sheetPh&&<Sheet title={phSheet.k==='photos'&&phSheet.i===0?t('fe.mx.ph.main'):t('fe.mx.ph.nOf',{n:phSheet.i+1,total:sheetList.length})} onClose={()=>setPhSheet(null)}>
    <div className="ph-sheet-prev">{sheetPh.src&&<img src={sheetPh.src} alt="" draggable={false}/>}</div>
    <Card list>
-    {phSheet.k==='photos'&&phSheet.i>0&&<Row icon={Star} title={t('fe.mx.ph.makeMain')} sub={t('fe.mx.ph.makeMainSub')} noChev onClick={()=>move(phSheet.k,phSheet.i,'main')}/>}
+    {phSheet.k==='photos'&&phSheet.i>0&&!sheetPh.video&&<Row icon={Star} title={t('fe.mx.ph.makeMain')} sub={t('fe.mx.ph.makeMainSub')} noChev onClick={()=>move(phSheet.k,phSheet.i,'main')}/>}
     <Row icon={Trash2} title={t('fe.mx.ph.remove')} sub={t('fe.mx.ed.onSave')} danger onClick={()=>remove(phSheet.k,phSheet.i)}/>
    </Card>
   </Sheet>}
