@@ -46,12 +46,12 @@ export function pxError(e:unknown,t:T){
 }
 
 /** `div.layer > div.scrim.on + div.sheet.on` — the prototype's sheet; Esc, ✕ and the scrim close it. */
-import {Sheet,useBack} from './kit';
+import {Sheet,useBack,type Slide} from './kit';
 import {FollowButton} from './follow';
 export {Sheet};
 
 /* ---------- the person card shared by PersonScreen and «Как видят» ---------- */
-const media=z.object({src:z.record(z.string(),z.string()).nullable(),pending:z.boolean().optional()}).passthrough();
+const media=z.object({src:z.record(z.string(),z.string()).nullable(),pending:z.boolean().optional(),kind:z.enum(['image','video']).optional(),durationMs:z.number().nullable().optional()}).passthrough();
 export const personProfile=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),bio:z.string(),
  /** My partner (one couple with me): never blocked (audit item 42). */partner:z.boolean().optional(),
  /** One of this account's own profiles (my person while acting as the couple, or the reverse): nothing to like, follow or write. */own:z.boolean().optional(),
@@ -71,6 +71,11 @@ export function viewedBy(p:PersonProfile,lv:'all'|'granted'|'card'):PersonProfil
  return {...p,age:p.kind==='person'&&x.showAge===false?null:p.age,details:p.details,city};
 }
 export const mediaSrc=(m:z.infer<typeof media>|null|undefined)=>m&&!m.pending?m.src?.card??m.src?.full??m.src?.thumb??null:null;
+/** What the viewer shows for one media: the picture, or a clip that plays (its poster until it starts). */
+export const slideOf=(m:{src?:Record<string,string>|null|undefined,kind?:'image'|'video'|undefined,durationMs?:number|null|undefined}|null|undefined,fallback?:string|null):Slide|null=>{
+ if(!m)return fallback??null;
+ if(m.kind==='video'&&m.src?.file)return {video:m.src.file,poster:m.src.full??m.src.card??m.src.thumb??null,durationMs:m.durationMs};
+ return m.src?.full??fallback??null;};
 export const personName=(p:{name:string|null,handle:string|null}|null)=>p?.name||(p?.handle?'@'+p.handle:'');
 
 /** The bio with its line breaks, lists and emphasis (owner 04.11.2026), the same as in «Я». */
@@ -227,7 +232,7 @@ export function ProfileHero({p,rel,inert,onOpen}:{p:PersonProfile,rel:Relation|n
 }
 
 /** `openViewer()` — full-screen photos: ‹ ›, arrows, swipe, Esc. */
-export function PhotoViewer({srcs,index,onClose,wm}:{srcs:string[],index:number,onClose:()=>void,/** Someone else's private photos: the viewer's handle. */ wm?:string|null|undefined}){
+export function PhotoViewer({srcs,index,onClose,wm}:{srcs:Slide[],index:number,onClose:()=>void,/** Someone else's private photos: the viewer's handle. */ wm?:string|null|undefined}){
  const {t}=useI18n();const [i,setI]=useState(index);const [on,setOn]=useState(false);const closeBtn=useRef<HTMLButtonElement>(null);const sx=useRef<number|null>(null);
  const step=useCallback((d:number)=>setI(v=>Math.max(0,Math.min(srcs.length-1,v+d))),[srcs.length]);
  useEffect(()=>{const r=requestAnimationFrame(()=>{setOn(true);closeBtn.current?.focus({preventScroll:true});});return ()=>cancelAnimationFrame(r);},[]);
@@ -470,7 +475,7 @@ export function ProfilePage({p,preview,seg,bar,onMore,menu,onRefresh,pre,gal,chi
    <AboutGroup p={p} inert={inert}/>
    <ProfileBody p={p} inert={inert} preview={preview} onOpen={setView} {...(pre?{pre}:{})} {...(gal!==undefined?{gal}:{})}/>
   </div></PullRefresh></div>
-  {view!==null&&<PhotoViewer srcs={list.map(m=>m.src?.full??mediaSrc(m)!)} index={view} onClose={()=>setView(null)}/>}
+  {view!==null&&<PhotoViewer srcs={list.map(m=>slideOf(m,mediaSrc(m))!)} index={view} onClose={()=>setView(null)}/>}
   {menu?.(rel,reloadRel)}
  </>;
 }

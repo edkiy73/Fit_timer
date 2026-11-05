@@ -14,7 +14,8 @@ import {useDragOrder} from './reorder';
 import {Viewer} from './post-parts';
 
 export const media=z.object({id:z.uuid(),pending:z.boolean(),blurred:z.boolean().optional(),src:z.record(z.string(),z.string()).nullable(),
- /** A photo taken from one of the profile's own posts (wave 5): «Открыть публикацию». */ postId:z.uuid().optional()});
+ /** A photo taken from one of the profile's own posts (wave 5): «Открыть публикацию». */ postId:z.uuid().optional(),
+ /** A clip: its poster is `src`; at most one in the profile's photos, never the first. */ kind:z.enum(['image','video']).optional(),durationMs:z.number().nullable().optional()});
 export const profile=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),own:z.boolean(),bio:z.string(),
  age:z.number().nullable(),chosenName:z.string().optional(),nickAt:z.string().nullable().optional(),nameAt:z.string().nullable().optional(),nickFirst:z.boolean().optional(),city:z.object({id:z.string().optional(),ru:z.string().nullable(),en:z.string().nullable(),pending:z.boolean()}).nullable(),avatar:media.nullable(),photos:z.array(media),
  details:z.record(z.string(),z.unknown()),rev:z.number().optional(),detailsVis:z.string().nullable().optional(),showAge:z.boolean().optional(),cityId:z.string().nullable().optional()}).passthrough();

@@ -2,7 +2,7 @@ import React,{useEffect,useRef,useState,type CSSProperties,type ReactNode} from 
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,Check,ChevronLeft,ChevronRight,X,Clock,Heart,Image as ImageIcon,Lock,MessageCircle,Pencil,Plus,Ticket,Users,type LucideIcon} from 'lucide-react';
 import {Alert,Av,Btn,Card,IconBtn,Note,Row,Sheet,Skel,Stack,Switch,plate,useBack} from './index';
-import {VideoPlayer} from './av';
+import {VideoBadge,VideoPlayer} from './av';
 import './domain.css';
 
 /** FetUre domain pieces (Storybook «Домен»): the parts of screens that are product-specific but repeat or carry their
@@ -374,11 +374,13 @@ export function PhotoSlots({children,priv,loading}:{children?:ReactNode,priv?:bo
 }
 /** One photo in PhotoSlots: picture (the small thumb paints first), «Главное», «На проверке», a tap opens it,
  * press-and-drag reorders (the screen passes onPointerDown). */
-export function PhotoSlot({id,src,thumb,big,main,review,dragging,waiting,openLabel,onOpen,onPointerDown}:{id:string,src?:string|null|undefined,thumb?:string|null|undefined,big?:boolean|undefined,
- main?:ReactNode,review?:ReactNode,dragging?:boolean|undefined,/** No served copy yet: it blinks. */ waiting?:boolean|undefined,openLabel:string,onOpen:()=>void,onPointerDown?:((e:React.PointerEvent<HTMLDivElement>)=>void)|undefined}){
+export function PhotoSlot({id,src,thumb,big,main,review,dragging,waiting,video,durationMs,openLabel,onOpen,onPointerDown}:{id:string,src?:string|null|undefined,thumb?:string|null|undefined,big?:boolean|undefined,
+ main?:ReactNode,review?:ReactNode,dragging?:boolean|undefined,/** No served copy yet: it blinks. */ waiting?:boolean|undefined,
+ /** A clip: its poster with the play mark (and the length when known). */ video?:boolean|undefined,durationMs?:number|null|undefined,openLabel:string,onOpen:()=>void,onPointerDown?:((e:React.PointerEvent<HTMLDivElement>)=>void)|undefined}){
  return <div data-id={id} className={'mi'+(big?' big':'')+(dragging?' mi-ph':'')+(waiting?' nosrc':'')+(thumb?' has-thumb':'')} onPointerDown={onPointerDown}
   style={thumb?{'--thumb':`url("${thumb}")`} as CSSProperties:undefined}>
   {src&&<img src={src} alt="" draggable={false} loading="lazy" decoding="async"/>}
+  {video&&<VideoBadge durationMs={durationMs}/>}
   {main&&<span className="mainph">{main}</span>}
   {review&&<span className="ph-rev"><Clock/><span>{review}</span></span>}
   <button type="button" className="vw" aria-label={openLabel} onClick={onOpen}/>
