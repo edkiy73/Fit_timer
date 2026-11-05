@@ -1,6 +1,6 @@
 import {forwardRef,useEffect,useLayoutEffect,useRef,useState,type ButtonHTMLAttributes,type CSSProperties,type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
-import {useLocation,useNavigate} from 'react-router';
+import {useLocation,useNavigate,useNavigationType} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ChevronDown,ChevronLeft,type LucideIcon} from 'lucide-react';
 import {PLATE_KEYS,articlePlate,type PlateKey} from '../../contracts/_plates.mjs';
@@ -128,21 +128,45 @@ export function Seg<T extends string>({value,options,onChange,label}:{value:T,op
 
 /** View body: `.view > .wrap`. `refresh` — pull-to-refresh on touch screens (kit/pull.tsx): a function runs on
  * release, and so does every `useRefreshable` inside; `true` when only those blocks read. */
-/** Scroll positions kept per route for this tab's life (`View keep`). */
+/** Scroll positions kept per route for this tab's life. */
 const SCROLLS=new Map<string,number>();
+/** How long a returning screen keeps trying to reach its old place while its content is still arriving. */
+const RESTORE_MS=3000;
 
 export function View({children,className,refresh,keep}:{children:ReactNode,className?:string|undefined,refresh?:true|(()=>unknown)|undefined,
- /** Keeps the scroll position under this key (the route with its tab and filter) and puts it back when the screen is
-  * opened again; `null` while the content is still loading (nothing is put back onto a skeleton). */
+ /** Every screen puts its scroll back when the person comes BACK to it (the Back button or swipe); a fresh open starts
+  * at the top. The place is kept under the route by default; pass a key to split one route into tabs or filters, or
+  * `null` to opt out (a step form that must start from the top). */
  keep?:string|null|undefined}){
  const ref=useRef<HTMLDivElement>(null);
- const restored=useRef<string|null>(null);
+ const {pathname,search}=useLocation();const back=useNavigationType()==='POP';
+ const key=keep===undefined?pathname+search:keep;
  useEffect(()=>{
-  const el=ref.current;if(!el||!keep)return;
-  if(restored.current!==keep){restored.current=keep;const y=SCROLLS.get(keep);if(y)el.scrollTop=y;}
-  const on=()=>{SCROLLS.set(keep,el.scrollTop);};
-  el.addEventListener('scroll',on,{passive:true});return ()=>el.removeEventListener('scroll',on);
- },[keep]);
+  const el=ref.current;if(!el||!key)return;
+  const want=back?SCROLLS.get(key)??0:0;
+  let pending=want>0;
+  const stop=()=>{pending=false;};
+  const reach=()=>{
+   if(!pending)return;
+   el.scrollTop=want;
+   if(Math.abs(el.scrollTop-want)<2)pending=false;
+  };
+  reach();
+  // The content (lists, photos) may still be loading: try again as the screen grows, until it is reached, the person
+  // touches the screen, or a few seconds pass.
+  const wrap=el.firstElementChild;
+  const ro=pending&&wrap&&typeof ResizeObserver!=='undefined'?new ResizeObserver(reach):null;
+  if(ro&&wrap)ro.observe(wrap);
+  const timer=pending?window.setTimeout(stop,RESTORE_MS):0;
+  const on=()=>{if(!pending)SCROLLS.set(key,el.scrollTop);};
+  el.addEventListener('scroll',on,{passive:true});
+  for(const ev of ['wheel','touchstart','keydown','pointerdown'])el.addEventListener(ev,stop,{passive:true});
+  return ()=>{
+   el.removeEventListener('scroll',on);
+   for(const ev of ['wheel','touchstart','keydown','pointerdown'])el.removeEventListener(ev,stop);
+   ro?.disconnect();window.clearTimeout(timer);
+  };
+ },[key,back]);
  const body=<div className="wrap">{children}</div>;
  return <div ref={ref} className={'view'+(className?' '+className:'')}>{refresh?<PullRefresh target={ref} onRefresh={refresh===true?undefined:refresh}>{body}</PullRefresh>:body}</div>;
 }
