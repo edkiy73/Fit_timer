@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Check,Inbox,LifeBuoy,MessageCircle,RefreshCw} from 'lucide-react';
 import {feErrorMessage,newOpId,sendPublicHelp} from '../feture/fe-api';
-import {Actions,Alert,Btn,Card,ChoiceChips,Empty,Field,Group,Input,KeyValues,LoadMore,Note,ReviewCard,Row,Seg,Sheet,Skel,Stack,TextArea,Thread} from './kit';
+import {Actions,Alert,Btn,Card,ChoiceChips,Empty,Field,Group,Input,KeyValues,LoadMore,Note,ReviewCard,Row,Seg,Sheet,Skel,Stack,TextArea,Thread,useKept} from './kit';
 import {useToast} from './toast';
 import {FIELD,serverFields,softMax,textError,textErrorMessage,useChecks} from './kit/validate';
 import {useFe} from './session';
@@ -134,7 +134,7 @@ export function SupportBlock(){
 /** Staff: the support queue with replies (owner / lead / moderator / support). */
 export function StaffSupport(){
  const {call}=useFe();const {t}=useI18n();const when=useWhen();
- const [state,setState]=useState<'open'|'answered'|'closed'>('open');
+ const [state,setState]=useKept<'open'|'answered'|'closed'>('state','open');
  const fetchPage=useCallback((after?:string)=>call('staff.supportQueue',{state,limit:20,...(after?{after}:{})},queueRes,{asAccount:true,fresh:true}),[call,state]);
  const {items,setItems,error,reload:load,moreProps}=useStaffPage(fetchPage,x=>x.id);
  return <Stack gap={3}>

@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Archive,AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,FileText,Globe,Hash,Heart,Image as ImageIcon,KeyRound,Lock,MessageCircle,MessageSquareText,Newspaper,Pencil,Plus,Search,SendHorizontal,Share,SlidersHorizontal,Sparkles,Trash2,User,Users,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActionLine,Actions,ActivityCard,ActivityItem,AddBtn,AddCard,Alert,ArticleCard,ArticleImage,articlePlate,Ask,Av,BAD_CHARS,Bar,Btn,Card,Chip,Chips,Counter,Empty,ExpandRow,FeedEvents,Field,FilePick,Group,H,hasLongWord,IconBtn,Input,LikesLine,LoadMore,mdImages,NewPill,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,type RichEditorHandle,useLeaveGuard,VideoBadge,View,ViewerPostBar,Who,ProfileAv} from './kit';
+import {ActionLine,Actions,ActivityCard,ActivityItem,AddBtn,AddCard,Alert,ArticleCard,ArticleImage,articlePlate,Ask,Av,BAD_CHARS,Bar,Btn,Card,Chip,Chips,Counter,Empty,ExpandRow,FeedEvents,Field,FilePick,Group,H,hasLongWord,IconBtn,Input,LikesLine,LoadMore,mdImages,NewPill,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,type RichEditorHandle,useLeaveGuard,VideoBadge,View,ViewerPostBar,Who,ProfileAv,useKept,useReturning,keptList,keepList} from './kit';
 import {shakeFirstErr} from './kit/validate';
 import {refreshReads,useFe,usePartnerApproves} from './session';
 import {useNewerPosts} from './feed-newer';
@@ -133,10 +133,10 @@ function SoonBlock({s}:{s:ReturnType<typeof useSoon>}){
 export function FeedTab(){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const location=useLocation();const toast=useToast();
  const {name:tname,topics:catalog,cats,ready:topicsReady}=useTopics();const {items:jars}=useInterests();
- const [tab,setTab]=useState<Tab>('forYou');
+ const [tab,setTab]=useKept<Tab>('tab','forYou');
  // Filters per tab (F02). Right after sign-up the feed opens on the topics chosen at step 2 (V21 AUTH-018); «Показать всё» clears them.
  const arrived=location.state as {topics?:unknown,welcome?:unknown,hello?:unknown,warn?:unknown}|null;
- const [filters,setFilters]=useState<Record<Tab,Filters>>(()=>({forYou:{...NO_FILTERS,topics:Array.isArray(arrived?.topics)?arrived.topics.filter((x):x is string=>typeof x==='string'):[]},following:NO_FILTERS,popular:NO_FILTERS}));
+ const [filters,setFilters]=useKept<Record<Tab,Filters>>('filters',()=>({forYou:{...NO_FILTERS,topics:Array.isArray(arrived?.topics)?arrived.topics.filter((x):x is string=>typeof x==='string'):[]},following:NO_FILTERS,popular:NO_FILTERS}));
  const f=filters[tab];const sel=f.topics;
  const [popTag,setPopTag]=useState('');
  const [welcome,setWelcome]=useState(arrived?.welcome===true);
@@ -184,7 +184,18 @@ export function FeedTab(){
   call('feed.list',{...input,...(cursor?{cursor}:{})},mixedPage,cursor?{}:{onFresh:later}).then(put).catch(e=>{if(n===req.current)setError(e);}).finally(()=>{if(n===req.current)setMore(false);});
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[call,input,f,tab,acting?.id]);
- useEffect(()=>{load();},[load]);
+ // Back from a post or a profile: the pages already read come back as they were (not only the first one), and the list is not asked again.
+ const returning=useReturning();const listKey='feed:'+acting?.id+':'+JSON.stringify(input);const firstLoad=useRef(true);
+ useEffect(()=>{
+  if(firstLoad.current){
+   firstLoad.current=false;
+   const k=keptList<{items:FeedItem[],next:string|null}>(listKey,returning);
+   if(k){shown.current=JSON.stringify(input);setItems(k.items);setNext(k.next);return;}
+  }
+  load();
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[load]);
+ useEffect(()=>{if(items)keepList(listKey,{items,next});},[items,next,listKey]);
  const loadHidden=useCallback(()=>{call('feedHide.list',{},hiddenList).then(r=>setHidden(r.items.filter(x=>x.kind==='post'||x.kind==='author').length)).catch(()=>setHidden(h=>h??0));},[call]);
  useEffect(()=>{loadHidden();},[loadHidden]);
  const soon=useSoon();

@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {CircleAlert,Link2,Pencil,Trash2,User,Users,X} from 'lucide-react';
 import {useToast as useToastV21} from './toast';
 import {newOpId} from '../feture/fe-api';
-import {AddBtn,AddCard,Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,Note,PersonLine,RadioList,RequestCard,Row,SearchInput,SectionLabel,Seg,SelectRow,Skel,Spacer,useLeaveGuard,useScrollTo,View,Who,ProfileAv} from './kit';
+import {AddBtn,AddCard,Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,Note,PersonLine,RadioList,RequestCard,Row,SearchInput,SectionLabel,Seg,SelectRow,Skel,Spacer,useLeaveGuard,useScrollTo,View,Who,ProfileAv,useKept} from './kit';
 import {useFe,useKeyChange,useShown} from './session';
 import {NameBadges,faceFields,withAge} from './faces';
 import {KINDS,SIDES,Sheet,linkLabel,linksMineRes,mediaSrc,personName,personProfileRes,pxError,type Kind,type LinkView,type LinksMine,type PersonProfile} from './profile-extras';
@@ -71,7 +71,7 @@ const searchRes=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid()
 type Pickable={id:string,kind?:string|undefined,handle:string|null,name:string|null,src:string|null,halves?:{name:string|null,avatar?:string|null}[]|undefined};
 function LinkPicker({mine,onClose}:{mine:LinksMine,onClose:()=>void}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();
- const [tab,setTab]=useState<'known'|'all'>('known');const [q,setQ]=useState('');
+ const [tab,setTab]=useKept<'known'|'all'>('tab','known');const [q,setQ]=useState('');
  const [known,setKnown]=useState<Pickable[]|null>(null);const [found,setFound]=useState<Pickable[]|null>(null);
  useEffect(()=>{if(!acting)return;
   Promise.all([call('profile.followers',{profileId:acting.id,following:true},knownRes),call('profile.followers',{profileId:acting.id},knownRes)])

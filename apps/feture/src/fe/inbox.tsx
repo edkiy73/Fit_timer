@@ -98,13 +98,14 @@ function rich(text:string,names:Record<'name'|'couple',string>):ReactNode{
 /** Pages of the history kept for this tab's life, per filter: going back shows what was loaded, then the first page is
  * read again and merged in (no duplicates, the server's order). */
 const PAGES=new Map<InboxFilter,{items:Note[],next:string|null}>();
+let lastDecide:Decision[]|null=null;
 
 export function InboxScreen(){
  const {call,state,acting,reload}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();const sideNav=useSideNav();
  const [params,setParams]=useSearchParams();const url=readInboxUrl(params);
  const [chosen,setChosen]=useState<InboxTab|null>(url.tab);
  const filter=url.filter;
- const [decide,setDecide]=useState<Decision[]|null>(null);
+ const [decide,setDecide]=useState<Decision[]|null>(lastDecide);
  const [page,setPage]=useState<{items:Note[],next:string|null}|null>(()=>PAGES.get(filter)??null);
  const [counts,setCounts]=useState<Counts|null>(null);
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState('');const [readAllBusy,setReadAllBusy]=useState(false);
@@ -119,7 +120,7 @@ export function InboxScreen(){
    return keep(filter,{items:mergeRows(had?.items??[],r.items),next});});
  }),[call,filter]);
  const load=useCallback((fresh=false)=>{setError(null);
-  Promise.all([call('decide.list',{},decideRes,{asAccount:true,fresh}).then(r=>setDecide(r.items.filter(d=>d.kind!=='status'))),loadNotes(fresh),
+  Promise.all([call('decide.list',{},decideRes,{asAccount:true,fresh}).then(r=>{const d=r.items.filter(x=>x.kind!=='status');lastDecide=d;setDecide(d);}),loadNotes(fresh),
    call('inbox.counts',{},countsRes,{asAccount:true,fresh}).then(setCounts)]).catch(setError);},[call,loadNotes]);
  useEffect(()=>{setPage(PAGES.get(filter)??null);setMoreErr(null);load();},[load,filter]);
  // Live data: another device, the partner or staff changed something (live.ts).

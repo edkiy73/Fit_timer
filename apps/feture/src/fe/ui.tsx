@@ -1,4 +1,4 @@
-import {forwardRef,useEffect,useLayoutEffect,useRef,useState,type ButtonHTMLAttributes,type CSSProperties,type ReactNode} from 'react';
+import {forwardRef,useCallback,useEffect,useLayoutEffect,useRef,useState,type ButtonHTMLAttributes,type CSSProperties,type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
 import {useLocation,useNavigate,useNavigationType} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
@@ -128,6 +128,24 @@ export function Seg<T extends string>({value,options,onChange,label}:{value:T,op
 
 /** View body: `.view > .wrap`. `refresh` — pull-to-refresh on touch screens (kit/pull.tsx): a function runs on
  * release, and so does every `useRefreshable` inside; `true` when only those blocks read. */
+/** Choices a person made on a screen (a tab, a filter) for this tab's life, per route. */
+const KEPT=new Map<string,unknown>();
+/** `useState` for a tab or filter: coming BACK to the screen (Back button or swipe) shows what was chosen, a fresh open starts from `initial`. */
+export function useKept<T>(name:string,initial:T|(()=>T)):[T,(next:T|((prev:T)=>T))=>void]{
+ const {pathname,search}=useLocation();const back=useNavigationType()==='POP';
+ const key=pathname+search+'#'+name;
+ const [value,setValue]=useState<T>(()=>back&&KEPT.has(key)?KEPT.get(key) as T:typeof initial==='function'?(initial as ()=>T)():initial);
+ const set=useCallback((next:T|((prev:T)=>T))=>{
+  setValue(prev=>{const v=typeof next==='function'?(next as (p:T)=>T)(prev):next;KEPT.set(key,v);return v;});
+ },[key]);
+ return [value,set];
+}
+/** A long list's loaded pages, for the same reason: Back shows as much as was loaded and does not start over. */
+const KEPT_LISTS=new Map<string,unknown>();
+export function keptList<T>(key:string,back:boolean):T|undefined{return back?KEPT_LISTS.get(key) as T|undefined:undefined;}
+export function keepList(key:string,value:unknown){KEPT_LISTS.set(key,value);}
+export function useReturning(){return useNavigationType()==='POP';}
+
 /** Scroll positions kept per route for this tab's life. */
 const SCROLLS=new Map<string,number>();
 /** How long a returning screen keeps trying to reach its old place while its content is still arriving. */

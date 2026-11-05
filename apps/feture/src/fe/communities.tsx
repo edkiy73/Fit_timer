@@ -5,8 +5,8 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,ChartColumn,Bell,BellOff,Bookmark,BookmarkCheck,Calendar,CalendarCheck,CalendarPlus,Check,ChevronLeft,Clock,Ellipsis,Eye,ExternalLink,FileText,Flag,Globe,Image as ImageIcon,Link as LinkIcon,Lock,Map as MapIcon,MapPin,MessageCircle,Search,Settings,Share,SlidersHorizontal,Ticket,TriangleAlert,Users,Video,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {useSideNav} from './wide';
-import {Actions,AddBtn,Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventAnswer,EventHero,EventTile,Fact,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,Stack,StatusCard,Text,ToggleRow,useRefreshable,Veil,View,ProfileAv} from './kit';
-import {useFe,useKeyChange,useOwnProfiles} from './session';
+import {Actions,AddBtn,Alert,Announcement,Ask,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventAnswer,EventHero,EventTile,Fact,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,Stack,StatusCard,Text,ToggleRow,useRefreshable,Veil,View,ProfileAv,useKept} from './kit';
+import {useFe,useKeyChange,useOwnProfiles,useShown} from './session';
 import {mdPlain,RichText} from './post-parts';
 import {evParts,evRange,evTz,evWhere,inTz,usePlaces} from './event-time';
 import {when} from './feed';
@@ -124,15 +124,17 @@ const passes=(c:Card,f:CommFilter)=>(!f.topics.length||f.topics.some(x=>c.topics
 
 function Catalog(){
  const {call}=useFe();const {t,locale}=useI18n();const cat=useCatalog();const mine=useMyCommunities();
- const [all,setAll]=useState<Card[]|null>(null);const [error,setError]=useState<unknown>(null);
- const [f,setF]=useState<CommFilter>(CF0);const [sheet,setSheet]=useState(false);
+ const [all,setAll]=useShown<Card[]|null>('cm.catalog',()=>null);const [error,setError]=useState<unknown>(null);
+ const [f,setF]=useKept<CommFilter>('filter',CF0);const [sheet,setSheet]=useState(false);
  // The whole catalogue (it is small) so that the interest chips, the filter counts and the list agree.
  const load=useCallback(async(keep=false)=>{
   setError(null);if(!keep)setAll(null);
   try{const out:Card[]=[];let cursor:string|null=null;for(let i=0;i<10;i++){const r:z.infer<typeof catalog>=await call('community.catalog',cursor?{cursor}:{},catalog);out.push(...r.items);cursor=r.next;if(!cursor)break;}setAll(out);}
   catch(e){setError(e);}
  },[call]);
- useEffect(()=>{void load();},[load]);useRefreshable(()=>load(true));
+ // Seen before: shown at once and read again behind it (no skeleton, the place scrolled to stays).
+ const seen=useRef(all!==null);
+ useEffect(()=>{void load(seen.current);},[load]);useRefreshable(()=>load(true));
  const tname=(id:string)=>{const x=cat?.topics.find(v=>v.id===id);return x?(locale==='en'?x.en:x.ru):id;};
  const used=useMemo(()=>[...new Set((all??[]).flatMap(c=>c.topics))],[all]);
  const items=(all??[]).filter(c=>passes(c,f));
@@ -251,10 +253,11 @@ export function EventCard({e,row,brief,status,org,pill:own}:{e:EventRowLike,row?
 
 function EventList(){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const mine=useMyEvents();
- const [f,setF]=useState<EvFilter>(EF0);const [sheet,setSheet]=useState(false);
- const [items,setItems]=useState<Ev[]|null>(null);const [error,setError]=useState<unknown>(null);
+ const [f,setF]=useKept<EvFilter>('filter',EF0);const [sheet,setSheet]=useState(false);
+ const [items,setItems]=useShown<Ev[]|null>('cm.events',()=>null);const [error,setError]=useState<unknown>(null);
  const load=useCallback((keep=false)=>{setError(null);if(!keep)setItems(null);call('event.catalog',evInput(f),evList).then(r=>setItems(r.items)).catch(setError);},[call,f]);
- useEffect(()=>{load();},[load]);useRefreshable(()=>load(true));
+ const seen=useRef(items!==null);
+ useEffect(()=>{load(seen.current);},[load]);useRefreshable(()=>load(true));
  const badge=(f.when!=='any'?1:0)+(f.kinds.length?1:0)+(f.price!=='any'?1:0)+(f.openOnly?1:0);
  const week=Date.now()+7*864e5;const live=(items??[]).filter(e=>e.state!=='cancelled');
  const soon=live.filter(e=>Date.parse(e.starts_at)<week),later=live.filter(e=>Date.parse(e.starts_at)>=week),canc=(items??[]).filter(e=>e.state==='cancelled');
@@ -302,8 +305,9 @@ export function CommunityScreen(){
  const [sp,setSp]=useSearchParams();const invite=sp.get('invite')??undefined;
  const tab=((['disc','events','members','rules'] as const).find(x=>x===sp.get('t'))??'disc') as CTab;
  const setTab=(v:CTab)=>{const n=new URLSearchParams(sp);if(v==='disc')n.delete('t');else n.set('t',v);setSp(n,{replace:true});};
- const [c,setC]=useState<Community|null>(null);const [discs,setDiscs]=useState<z.infer<typeof discRes>|null>(null);const [mem,setMem]=useState<z.infer<typeof memList>|null>(null);
- const [evs,setEvs]=useState<Ev[]>([]);const [error,setError]=useState<unknown>(null);
+ // What was seen last time (this community) shows at once, and the reads replace it: Back from a profile or a post does not start over.
+ const [c,setC]=useShown<Community|null>('cm.c.'+id,()=>null);const [discs,setDiscs]=useShown<z.infer<typeof discRes>|null>('cm.d.'+id,()=>null);const [mem,setMem]=useShown<z.infer<typeof memList>|null>('cm.m.'+id,()=>null);
+ const [evs,setEvs]=useShown<Ev[]>('cm.e.'+id,()=>[]);const [error,setError]=useState<unknown>(null);
  const [layer,setLayer]=useState<''|'menu'|'join'|'leave'|'withdraw'|'unwait'|'report'|'appeal'>('');const [busy,setBusy]=useState(false);const [hostToolsId,setHostTools]=useState<string|null>(null);
  const [reportPost,setReportPost]=useState<string|null>(null);
  const load=useCallback(()=>{setError(null);
