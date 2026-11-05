@@ -9,7 +9,8 @@ import {AddCard,Bar,Btn,Card,Counter,Empty,Field,FilePick,Group,Input,Note,Photo
 import {useFe,usePartnerApproves} from './session';
 import {Uploader} from './kit/Uploader';
 import {VIDEO_TYPES} from './kit/media';
-import {CityField,PickField,type Place} from './kit/Place';
+import {CityField,PickField} from './kit/Place';
+import {useCityApi} from './places';
 import {useSendPhoto,useSendVideo} from './media-upload';
 import {useToast,useFail} from './toast';
 import {useDragOrder} from './reorder';
@@ -53,6 +54,7 @@ export function MeEditScreen(){
  // Press and drag to change the order in the draft; «Сохранить» writes it.
  const drag=useDragOrder<'photos'|'privMedia'>((k,ids)=>setD(x=>{if(!x)return x;const by=new Map(x[k].map(p=>[p.id,p]));const next=ids.map(i=>by.get(i)).filter((p):p is Ph=>!!p);return next.length===x[k].length&&!(k==='photos'&&next[0]?.video)?{...x,[k]:next}:x;}));
  const cp=acting?.kind==='couple';const toPartner=usePartnerApproves();
+ const cityApi=useCityApi(d?.cityId??null);
  const load=useCallback(()=>{
   if(!acting)return;setError(null);
   Promise.all([call('profile.get',{profileId:acting.id},profileRes),call('private.get',{profileId:acting.id},privRes),call('catalog.get',{},catalogRes,{asAccount:true}),
@@ -151,8 +153,9 @@ export function MeEditScreen(){
    const [y]=list.splice(j,1);list.unshift(y!);}
   set({[k]:list} as Partial<Draft>);setPhSheet(null);};
  // A city that is not in the catalog (chosen before it was complete): its name comes from the profile.
- const placeName=(id:string|null)=>{const x=id?cat?.places?.find(y=>y.id===id):null;
-  if(x)return (locale==='en'?x.en:x.ru)??null;return id&&id===base?.cityId&&p?.city?(locale==='en'?p.city.en:p.city.ru):null;};
+ // The city shown before the picker is opened: the profile carries its name; a city picked now comes from the cache.
+ const placeName=(id:string|null)=>{if(!id)return null;const x=cityApi.current?.id===id?cityApi.current:null;
+  if(x)return (locale==='en'?x.en:x.ru)??null;return id===base?.cityId&&p?.city?(locale==='en'?p.city.en:p.city.ru):null;};
  // The same picker as sign-up (kit ChipPick): five chips and «Все · N» for a long list, not a wall of every option.
  const chips=(f:string,kind:string)=>{if(!d)return null;const v=d.details[f];const multi=f!=='status';const sel=multi?(Array.isArray(v)?v as string[]:[]):(typeof v==='string'?[v]:[]);
   const opts=cat?.options.filter(x=>x.kind===kind)??[];
@@ -188,7 +191,7 @@ export function MeEditScreen(){
        <Field id={fid+'h'} name="handle" label={cp?t('fe.nn.nickUs'):t('fe.nn.nick')} error={nickErr||undefined}
         hint={p.nickAt?t('fe.nn.nickAt',{date:dayMonth(p.nickAt)}):p.nickFirst?t('fe.nn.nickFirst'):t('fe.nn.nickEvery')}>
         <div className="inwrap"><AtSign/><Input id={fid+'h'} value={d.handle} maxLength={20} autoCapitalize="off" spellCheck={false} disabled={!!p.nickAt} invalid={!!nickErr} onChange={e=>{set({handle:e.target.value.replace(/^@/,'')});setNickErr('');}}/></div></Field>
-       <CityField label={t('fe.mx.ed.city')} placeholder={t('fe.mx.ed.noCity')} places={cat?.places??[]} value={d.cityId} onChange={id=>set({cityId:id})} clear={t('fe.mx.ed.noCity')} none fallbackName={placeName(d.cityId)}/>
+       <CityField api={cityApi} label={t('fe.mx.ed.city')} placeholder={t('fe.mx.ed.noCity')} value={d.cityId} onChange={id=>set({cityId:id})} clear={t('fe.mx.ed.noCity')} none fallbackName={placeName(d.cityId)}/>
        {!cp&&p.age&&<PickField label={t('fe.mb.age')} icon={Cake} value={d.showAge?t('fe.mb.ageShow',{n:String(p.age)}):t('fe.mb.ageHide')} placeholder="" onClick={()=>setAgeSheet(true)}/>}
        <Field id={fid+'b'} name="bio" label={t('fe.mx.ed.about')} error={checks.error('bio')}><TextArea id={fid+'b'} rows={4} {...checks.input('bio')} value={d.bio} placeholder={t('fe.mx.ed.aboutPh')} onChange={e=>set({bio:e.target.value})}/><Counter n={textLength(d.bio)} max={FIELD.bio.max}/></Field>
       </>}

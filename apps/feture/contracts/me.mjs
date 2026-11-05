@@ -88,6 +88,14 @@ export function notificationSettingsOf(saved) {
 
 export const meCommands = {
   'catalog.get': { profile: false, write: false, input: z.strictObject({}) },
+  // The city catalog is searched on the server, never sent whole (owner 06.11.2026). An empty search lists the popular
+  // cities (or, with a country, its biggest ones).
+  'place.search': {
+    profile: false, write: false, rate: { kind: 'place.search', max: 600, window: '10 minutes' },
+    input: z.strictObject({ q: z.string().trim().max(60).default(''), country: z.string().regex(/^[A-Z]{2}$/).optional(), limit: z.int().min(1).max(60).default(40) }),
+  },
+  'place.get': { profile: false, write: false, input: z.strictObject({ ids: z.array(id).min(1).max(100) }) },
+  'place.nearest': { profile: false, write: false, input: z.strictObject({ lat: z.number().min(-90).max(90), lon: z.number().min(-180).max(180) }) },
   'nick.check': { profile: false, write: false, rate: { kind: 'nick.check', max: 100, window: '10 minutes' }, input: z.strictObject({ handle: z.string().max(40) }) },
   // No idempotency ledger: registration is idempotent by nature, and an under-18 answer must leave no trace.
   'account.create': {

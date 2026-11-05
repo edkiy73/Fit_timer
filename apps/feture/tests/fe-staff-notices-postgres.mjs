@@ -218,6 +218,7 @@ test('every staff decision handler enqueues a user notification (or is named as 
     'staff.disputeClaimantReviewed': 'an internal flag on a claimant, nothing for them',
     'staff.noticeDecide': 'a DSA notice from outside the app: answered by mail (notice.decided)',
     'staff.maintenanceSet': 'a banner everyone sees (support.public)',
+    'staff.placeLimitSet': 'the smallest city the picker offers: about no one in particular (owner 06.11.2026)',
     'staff.premiumPricesSet': 'the Premium prices: about no one in particular, they touch new purchases only (owner 06.11.2026)',
     'staff.premiumPromoSet': 'a switch for new accounts: nobody is told by it, each new account is told when it gets its days',
     'staff.referralSettingsSet': 'switches and numbers of the invitations: about no one in particular, each reward tells its owner',

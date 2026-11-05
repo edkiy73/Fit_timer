@@ -4,7 +4,8 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Cake} from 'lucide-react';
 import {FeError,dayMonth,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Btn,Card,Counter,Field,Group,Input,RadioList,Sheet,Text,TextArea} from './kit';
-import {CityField,PickField,type Place} from './kit/Place';
+import {CityField,PickField} from './kit/Place';
+import {useCityApi} from './places';
 import {FIELD,textLength} from './kit/validate';
 import {useFe} from './session';
 import {useToast,useFail} from './toast';
@@ -19,7 +20,7 @@ const done=z.object({ok:z.literal(true)}).passthrough();
 type Draft={name:string,handle:string,cityId:string|null,showAge:boolean,bio:string};
 const draftOf=(p:Profile):Draft=>({name:p.chosenName??'',handle:p.handle??'',cityId:typeof p.cityId==='string'?p.cityId:p.city?.id??null,showAge:p.showAge!==false,bio:p.bio});
 
-export function BasicsForm({p,places,onSaved}:{p:Profile,places:Place[],onSaved:()=>void}){
+export function BasicsForm({p,onSaved}:{p:Profile,onSaved:()=>void}){
  const {t,locale}=useI18n();const cp=p.kind==='couple';const [open,setOpen]=useState(false);
  const city=p.city?(locale==='en'?p.city.en:p.city.ru):null;
  const rows:[string,string][]=[
@@ -32,11 +33,11 @@ export function BasicsForm({p,places,onSaved}:{p:Profile,places:Place[],onSaved:
   {/* «О себе» last, under its label at full width, with its line breaks, lists and emphasis as on the profile. */}
   <Card><dl className="kv side">{rows.map(([k,v])=><Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}
    <dt className="wide">{t('fe.mx.ed.about')}</dt><dd className="wide">{p.bio?<RichText text={p.bio} className="bio"/>:<Text as="span" tone="mute">{t('fe.mb.noBio')}</Text>}</dd></dl></Card>
-  {open&&<BasicsSheet p={p} places={places} onClose={()=>setOpen(false)} onSaved={()=>{setOpen(false);onSaved();}}/>}
+  {open&&<BasicsSheet p={p} onClose={()=>setOpen(false)} onSaved={()=>{setOpen(false);onSaved();}}/>}
  </Group>;
 }
 
-function BasicsSheet({p,places,onClose,onSaved}:{p:Profile,places:Place[],onClose:()=>void,onSaved:()=>void}){
+function BasicsSheet({p,onClose,onSaved}:{p:Profile,onClose:()=>void,onSaved:()=>void}){
  const {call}=useFe();const {t,locale}=useI18n();const toast=useToast();const id=useId();const cp=p.kind==='couple';
  const [base,setBase]=useState(()=>draftOf(p));const [d,setD]=useState(base);
  useEffect(()=>{const b=draftOf(p);setBase(b);setD(b);},[p]);
@@ -44,7 +45,8 @@ function BasicsSheet({p,places,onClose,onSaved}:{p:Profile,places:Place[],onClos
  const [busy,setBusy]=useState(false);const setFailure=useFail();const [nickErr,setNickErr]=useState('');
  const set=(x:Partial<Draft>)=>setD(v=>({...v,...x}));
  const dirty=JSON.stringify(d)!==JSON.stringify(base);
- const placeName=(cid:string|null)=>{if(!cid)return null;const x=places.find(y=>y.id===cid);
+ const cityApi=useCityApi(d.cityId);
+ const placeName=(cid:string|null)=>{if(!cid)return null;const x=cityApi.current?.id===cid?cityApi.current:null;
   if(x)return (locale==='en'?x.en:x.ru)??null;return cid===base.cityId&&p.city?(locale==='en'?p.city.en:p.city.ru):null;};
  const save=async()=>{
   if(!dirty||busy)return;setFailure('');
@@ -76,7 +78,7 @@ function BasicsSheet({p,places,onClose,onSaved}:{p:Profile,places:Place[],onClos
     hint={p.nickAt?t('fe.nn.nickAt',{date:dayMonth(p.nickAt)}):p.nickFirst?t('fe.nn.nickFirst'):t('fe.nn.nickEvery')}>
     <div className="inwrap"><AtSign/><Input id={id+'h'} value={d.handle} maxLength={20} autoCapitalize="off" spellCheck={false} disabled={!!p.nickAt} invalid={!!nickErr}
      onChange={e=>{set({handle:e.target.value.replace(/^@/,'')});setNickErr('');}}/></div></Field>
-   <CityField label={t('fe.mx.ed.city')} placeholder={t('fe.mx.ed.noCity')} places={places} value={d.cityId} onChange={id=>set({cityId:id})} clear={t('fe.mx.ed.noCity')} none fallbackName={placeName(d.cityId)}/>
+   <CityField api={cityApi} label={t('fe.mx.ed.city')} placeholder={t('fe.mx.ed.noCity')} value={d.cityId} onChange={id=>set({cityId:id})} clear={t('fe.mx.ed.noCity')} none fallbackName={placeName(d.cityId)}/>
    {!cp&&p.age&&<PickField label={t('fe.mb.age')} icon={Cake} value={d.showAge?t('fe.mb.ageShow',{n:String(p.age)}):t('fe.mb.ageHide')} placeholder="" onClick={()=>setAge(true)}/>}
    <Field id={id+'b'} name="bio" label={t('fe.mx.ed.about')}>
     <TextArea id={id+'b'} rows={4} value={d.bio} maxLength={FIELD.bio.max} placeholder={t('fe.mx.ed.aboutPh')} onChange={e=>set({bio:e.target.value})}/><Counter n={textLength(d.bio)} max={FIELD.bio.max}/></Field>

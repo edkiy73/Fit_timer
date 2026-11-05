@@ -183,3 +183,41 @@ test('«Темы» (owner 05.11.2026): owners and leads add, rename and hide top
     assert.equal((await sec('uo', { id: 'nope', ru: 'Х', en: 'X' })).status, 404);
   } finally { await pg.close(); }
 });
+
+test('the city limit (owner 06.11.2026): the picker offers cities from the staff limit, the curated and the chosen stay, owners and leads set it', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    const boss = await person('uo', 'Boss'), lead = await person('ul', 'Lena'), mod = await person('um', 'Mira'), user = await person('uu', 'Alex');
+    await db.query(`insert into feture.staff_role (account_id, role) select id, 'owner' from feture.account where person_profile_id = $1`, [boss]);
+    assert.equal((await call('uo', null, { action: 'staff.grant', opId: op(), handle: 'Lena', role: 'lead', grant: true })).status, 200);
+    assert.equal((await call('uo', null, { action: 'staff.grant', opId: op(), handle: 'Mira', role: 'moderator', grant: true })).status, 200);
+    const [{ id: small }] = await db.query(`insert into feture.place (country, name_ru, name_en, state, lat, lon, population, tz) values ('RU', 'Малоград', 'Malograd', 'approved', 70, 100, 60000, 'Asia/Krasnoyarsk') returning id`);
+    await db.query(`insert into feture.place (country, name_ru, name_en, state, lat, lon, population, tz) values ('RU', 'Большоград', 'Bolshograd', 'approved', 60, 80, 600000, 'Asia/Novosibirsk')`);
+    // The curated cities (Волгоград, Белград…) are always offered: look at the two made up for this test only.
+    const names = async (/** @type {any} */ body) => (await call('uu', null, { action: 'place.search', ...body })).items.map((/** @type {any} */ x) => x.ru).filter((/** @type {string} */ n) => /^(Малоград|Большоград)$/.test(n));
+    assert.ok((await call('uu', null, { action: 'place.search', q: 'волгоград' })).items.some((/** @type {any} */ x) => x.ru === 'Волгоград'), 'a curated city has no size limit');
+
+    // The default limit is 100 000: a smaller city is not offered, a curated one (it has a code) always is.
+    assert.deepEqual(await names({ q: 'град' }), ['Большоград']);
+    assert.equal((await call('uu', null, { action: 'place.nearest', lat: 70, lon: 100 })).place, null, 'the nearest one respects it too');
+    // A city already chosen is read by id as before.
+    assert.deepEqual((await call('uu', null, { action: 'place.get', ids: [small] })).items.map((/** @type {any} */ x) => x.ru), ['Малоград']);
+
+    // Only owners and leads see and change it.
+    assert.equal((await call('um', null, { action: 'staff.placeLimit' })).status, 403);
+    assert.equal((await call('um', null, { action: 'staff.placeLimitSet', opId: op(), minPop: 1000 })).status, 403);
+    assert.equal((await call('uu', null, { action: 'staff.placeLimit' })).status, 403);
+    const read = await call('ul', null, { action: 'staff.placeLimit' });
+    assert.equal(read.minPop, 100000);
+    assert.deepEqual(read.steps.map((/** @type {any} */ s) => s.minPop), [15000, 30000, 50000, 100000, 250000, 500000]);
+    assert.ok(read.steps[0].cities >= read.steps[5].cities, 'a lower limit offers more cities');
+    assert.equal((await call('ul', null, { action: 'staff.placeLimitSet', opId: op(), minPop: -1 })).status, 400);
+    assert.equal((await call('ul', null, { action: 'staff.placeLimitSet', opId: op(), minPop: 50000 })).minPop, 50000);
+
+    // At once: the small city is offered, the journal says who changed the limit.
+    assert.deepEqual(await names({ q: 'град' }), ['Большоград', 'Малоград']);
+    assert.equal((await call('ul', null, { action: 'staff.placeLimit' })).minPop, 50000);
+    assert.equal((await call('uu', null, { action: 'place.nearest', lat: 70, lon: 100 })).place.ru, 'Малоград');
+    assert.ok((await call('uo', null, { action: 'staff.journal' })).items.some((/** @type {any} */ j) => j.action === 'place.limit'));
+  } finally { await pg.close(); }
+});

@@ -37,8 +37,8 @@ export function useMe(){
 export function MeNewSection(){
  const {section}=useParams();const {state,acting,call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
  const {p,settings,error,load}=useMe();
- const [options,setOptions]=useState<z.infer<typeof option>[]>([]);const [places,setPlaces]=useState<Place[]>([]);
- useEffect(()=>{if(section==='profile')call('catalog.get',{},catalogRes,{asAccount:true}).then(r=>{setOptions(r.options);setPlaces(r.places??[]);}).catch(()=>{});},[call,section]);
+ const [options,setOptions]=useState<z.infer<typeof option>[]>([]);
+ useEffect(()=>{if(section==='profile')call('catalog.get',{},catalogRes,{asAccount:true}).then(r=>{setOptions(r.options);}).catch(()=>{});},[call,section]);
  if(state.status!=='ready'||!acting)return null;
  const cp=acting.kind==='couple';
  const couple=state.boot.profiles.find(x=>x.kind==='couple'&&x.state!=='deleted');
@@ -53,7 +53,7 @@ export function MeNewSection(){
     :section==='private'?<PrivateLayer profileId={p.id} on={settings.privateOn!==false} requestsFrom={settings.requestsFrom??'all'} onChanged={load} askHere={false} accessHere={false}/>
     :<>
      <PhotosBlock p={p} settings={settings} onChanged={load}/>
-     <BasicsForm p={p} places={places} onSaved={load}/>
+     <BasicsForm p={p} onSaved={load}/>
      <DetailsBlock p={p} label={label}/>
      <LinksBlock key={'links'+p.id}/>
      <MeAboutBlock p={p}/>

@@ -159,14 +159,15 @@ async function approveAsset(assetId) {
 }
 
 // ---------------------------------------------------------------- phase: accounts
-let docs, places;
+let docs;
+const cities = new Map();
 async function documents() {
   return docs ??= (await fetch(`${PROD}/api/catalog?resource=documents&locale=ru`).then(x => x.json())).documents
     .filter(d => d.requiresAccept).map(d => ({ id: d.id, contentHash: d.hash }));
 }
-async function cityId(name) {
-  places ??= (await api(STAFF, 'catalog.get', {})).places ?? [];
-  return places.find(p => p.ru === name)?.id ?? null;
+async function cityId(name) { // the catalog is searched on the server; the exact Russian name wins (the biggest first)
+  if (!cities.has(name)) cities.set(name, ((await api(STAFF, 'place.search', { q: name })).items ?? []).find(p => p.ru === name)?.id ?? null);
+  return cities.get(name);
 }
 
 async function account(c) {

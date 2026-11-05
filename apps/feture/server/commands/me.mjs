@@ -1,4 +1,5 @@
 // @ts-check
+import { placesMinPop } from '../places.mjs';
 import { checkWords } from '../word-filter.mjs';
 import { ABOUT_FACTS, meCommands, notificationSettingsOf, PROFILE_SETTINGS } from '../../contracts/me.mjs';
 import { emailState } from '../email.mjs';
@@ -416,17 +417,62 @@ async function applyCarriedSanction(q, pepper, coreAccountHash, profileId) {
   }
 }
 
+/** The columns a city row carries to the screens; `code` only for the seeded ones. */
+const PLACE_COLS = `p.id, p.code, p.country, p.name_ru ru, p.name_en en, p.lat, p.lon, p.population pop, p.tz`;
+/** @param {any} r */
+const placeRow = ({ code, dist: _d, ...r }) => (code ? { ...r, code } : r);
+/** The cities offered before anything is typed (seeded codes, in this order). */
+const POPULAR_CODES = ['moscow', 'spb', 'berlin', 'denpasar', 'tbilisi', 'istanbul', 'dubai', 'bangkok', 'almaty', 'belgrade', 'limassol', 'barcelona'];
+
 /** @type {Record<keyof typeof meCommands, Command['run']>} */
 const run = {
   async 'catalog.get'(q) {
-    const [categories, topics, options, places] = await Promise.all([
+    const [categories, topics, options] = await Promise.all([
       q.query('select id, ru, en, plate from feture.topic_category where not hidden order by position'),
       q.query('select id, category_id "categoryId", ru, en, desc_ru "descRu", desc_en "descEn" from feture.topic where not hidden and category_id in (select id from feture.topic_category where not hidden) order by position'),
       q.query('select kind, code, ru, en from feture.profile_option where not hidden order by kind, position'),
-      q.query(`select id, code, country, name_ru ru, name_en en, lat, lon, population pop from feture.place where state = 'approved' order by population desc nulls last, coalesce(name_en, name_ru)`),
     ]);
-    // Only what the screens use; the picker lists the biggest first (the query already orders them), `code` only for the seeded ones.
-    return { categories, topics, options, places: places.map((/** @type {any} */ { code, ...p }) => (code ? { ...p, code } : p)) };
+    return { categories, topics, options };
+  },
+
+  async 'place.search'(q, { input }) {
+    const lim = input.limit, minPop = await placesMinPop(q);
+    if (!input.q) {
+      // Nothing typed: the popular cities, or the biggest ones of the chosen country.
+      const rows = input.country
+        ? await q.query(`select ${PLACE_COLS} from feture.place p where p.state = 'approved' and p.country = $1 and (p.population >= $3 or p.code is not null) order by p.population desc nulls last, p.id limit $2`, [input.country, lim, minPop])
+        : await q.query(`select ${PLACE_COLS} from feture.place p where p.state = 'approved' and p.code = any($1) order by array_position($1::text[], p.code)`, [POPULAR_CODES]);
+      return { items: rows.map(placeRow) };
+    }
+    // Case, ё and hyphens do not matter; a name starting with the word first, then a word start, then anywhere; the
+    // biggest city first inside each group.
+    const w = input.q.toLowerCase().replace(/ё/g, 'е').replace(/-/g, ' ').replace(/\s+/g, ' ').replace(/[!%_]/g, (/** @type {string} */ m) => '!' + m);
+    const norm = (/** @type {string} */ c) => `lower(translate(replace(coalesce(${c}, ''), '-', ' '), 'ёЁ', 'еЕ'))`;
+    const rows = await q.query(
+      `select ${PLACE_COLS} from (select p.*, ${norm('p.name_ru')} nr, ${norm('p.name_en')} ne from feture.place p
+         where p.state = 'approved' and ($2::text is null or p.country = $2) and (p.population >= $4 or p.code is not null)) p
+       where nr like '%' || $1 || '%' escape '!' or ne like '%' || $1 || '%' escape '!'
+       order by case when nr like $1 || '%' escape '!' or ne like $1 || '%' escape '!' then 0
+                     when nr like '% ' || $1 || '%' escape '!' or ne like '% ' || $1 || '%' escape '!' then 1 else 2 end,
+                p.population desc nulls last, p.id limit $3`, [w, input.country ?? null, lim, minPop]);
+    return { items: rows.map(placeRow) };
+  },
+
+  async 'place.get'(q, { input }) {
+    const rows = await q.query(`select ${PLACE_COLS} from feture.place p where p.id = any($1::uuid[])`, [input.ids]);
+    return { items: rows.map(placeRow) };
+  },
+
+  async 'place.nearest'(q, { input }) {
+    // The catalog city nearest to a point, if one is within 150 km (a flat-earth distance is exact enough at this scale).
+    const c = Math.max(0.05, Math.cos(input.lat * Math.PI / 180)), dLon = Math.min(180, 1.7 / c);
+    const minPop = await placesMinPop(q);
+    const [row] = await q.query(
+      `select ${PLACE_COLS}, sqrt(power((p.lat - $1) * 111, 2) + power((p.lon - $2) * 111 * $3, 2)) dist from feture.place p
+       where p.state = 'approved' and p.lat between $1 - 1.7 and $1 + 1.7 and p.lon between $2 - $4 and $2 + $4
+         and (p.population >= $5 or p.code is not null)
+       order by dist limit 1`, [input.lat, input.lon, c, dLon, minPop]);
+    return { place: row && row.dist <= 150 ? placeRow(row) : null };
   },
 
   async 'nick.check'(q, { input }) {

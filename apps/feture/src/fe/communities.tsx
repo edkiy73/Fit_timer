@@ -8,7 +8,8 @@ import {useSideNav} from './wide';
 import {Actions,AddBtn,Alert,Announcement,Ask,Bar,Btn,Card,Chip,Chips,ChoiceChips,CommunityHead,CoverBar,Discussion,Empty,EventAnswer,EventHero,EventTile,Fact,Group,IconBtn,LinkBtn,Note,Pill,Row,Rsvp,SectionLabel,Seg,Sheet,Skel,Spacer,Stack,StatusCard,Text,ToggleRow,useRefreshable,Veil,View,ProfileAv,useKept} from './kit';
 import {useFe,useKeyChange,useOwnProfiles,useShown,useSeen} from './session';
 import {mdPlain,RichText} from './post-parts';
-import {evParts,evRange,evTz,evWhere,inTz,usePlaces} from './event-time';
+import {evParts,evRange,evTz,evWhere,inTz} from './event-time';
+import {usePlaces} from './places';
 import {when} from './feed';
 import {Composer} from './create-entry';
 import {useCopyLink} from './share';
@@ -138,6 +139,7 @@ function Catalog(){
  const tname=(id:string)=>{const x=cat?.topics.find(v=>v.id===id);return x?(locale==='en'?x.en:x.ru):id;};
  const used=useMemo(()=>[...new Set((all??[]).flatMap(c=>c.topics))],[all]);
  const items=(all??[]).filter(c=>passes(c,f));
+ const cities=usePlaces(items.map(c=>c.place_id));
  const badge=(f.privacy!=='all'?1:0)+(f.online?1:0)+f.topics.filter(x=>!used.includes(x)).length;
  const toggle=(v:string)=>setF(x=>({...x,topics:!v?[]:x.topics.includes(v)?x.topics.filter(y=>y!==v):[...x.topics,v]}));
  return <>
@@ -149,7 +151,7 @@ function Catalog(){
   {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>void load()}>{t('fe.retry')}</Btn></Empty>
    :all===null?<Skel kind="card" rows={4}/>
    :!items.length?<Empty icon={Users} title={t('fe.cm.nothing')} text={t('fe.cm.nothingText')}>{(f.topics.length>0||f.privacy!=='all'||f.online)&&<Btn kind="soft" onClick={()=>setF(CF0)}>{t('fe.cm.resetFilters')}</Btn>}</Empty>
-   :items.map(c=><CommCard key={c.id} c={c} tname={tname} place={c.place_id?placeName(cat?.places.find(p=>p.id===c.place_id)??{ru:null,en:null},locale):''} mine={mine}/>)}
+   :items.map(c=><CommCard key={c.id} c={c} tname={tname} place={c.place_id?placeName(cities.get(c.place_id)??{ru:null,en:null},locale):''} mine={mine}/>)}
   {sheet&&all&&<CommFilterSheet all={all} used={used} tname={tname} value={f} onApply={v=>{setF(v);setSheet(false);}} onClose={()=>setSheet(false)}/>}
  </>;
 }
@@ -248,7 +250,7 @@ export type EventRowLike=Omit<Ev,'kind'|'price'|'requires_application'>&Partial<
 export function EventCard({e,row,brief,status,org,pill:own}:{e:EventRowLike,row?:boolean,status?:MyStatus|undefined,org?:string|undefined,/** A status label of the screen's own (the organiser panel). */ pill?:ReactNode,
  /** A short row (the desktop side column): the line above the title is only the city or «Онлайн», no time. */ brief?:boolean}){
  const {t,locale}=useI18n();const navigate=useNavigate();
- const pt=evParts(e,locale);const places=usePlaces();
+ const pt=evParts(e,locale);const places=usePlaces([e.place_id]);
  const cancelled=e.state==='cancelled';
  const pill=own??(cancelled?<Pill tone="bad">{t('fe.cm.st.cancelled')}</Pill>:<StatusPill s={status}/>);
  const place=evWhere(brief?{...e,area:null}:e,places,locale,t('fe.ev.online'),t('fe.ev.offline'));
@@ -333,7 +335,8 @@ export function CommunityScreen(){
  const tname=(x:string)=>{const v=cat?.topics.find(o=>o.id===x);return v?(locale==='en'?v.en:v.ru):x;};
  const member=c?.me?.state==='active';const host=isCommunityHost(c);const owner=member&&c?.me?.role==='owner';
  const mineIds=useOwnProfiles();const ownedByMe=owner||!!c?.hosts?.some(h=>h.role==='owner'&&mineIds.has(h.id));
- const place=c?.placeId?placeName(cat?.places.find(p=>p.id===c.placeId)??{ru:null,en:null},locale):'';
+ const cityOf=usePlaces([c?.placeId]);
+ const place=c?.placeId?placeName(cityOf.get(c.placeId)??{ru:null,en:null},locale):'';
  const names=useMemo(()=>new Map((mem?.items??[]).map(m=>[m.id,m])),[mem]);
  // The «⋯» sheet reads its discussion from the list as it is now, not as it was when opened: a second open right after
  // «Не показывать в «Популярном»» offers «Вернуть», even before the list has been read again.
@@ -486,7 +489,7 @@ export function EventScreen(){
  const withdraw=async()=>{if(!app)return;setBusy(true);try{await call('event.applicationWithdraw',{opId:newOpId(),applicationId:app.id},okRes);setLayer('');toast(t(couple?'fe.cm.appWithdrawnUs':'fe.cm.appWithdrawn'),{type:'ok'});load();}catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}};
  // A couple's application the partner has not approved yet is taken back as that approval (decide.cancel).
  const unwait=async()=>{const w=e?.me.waiting;if(!w)return;setBusy(true);try{await call('decide.cancel',{opId:newOpId(),approvalId:w.id},okRes);setLayer('');toast(t(couple?'fe.cm.appWithdrawnUs':'fe.cm.appWithdrawn'),{type:'ok'});load();}catch(x){toast(feErrorMessage(x,t),{type:'err'});}finally{setBusy(false);}};
- const tz=e?evTz(e):'UTC';const places=usePlaces();const where=e?evWhere(e,places,locale,t('fe.ev.online'),t('fe.ev.offline')):'';
+ const tz=e?evTz(e):'UTC';const places=usePlaces([e?.placeId]);const where=e?evWhere(e,places,locale,t('fe.ev.online'),t('fe.ev.offline')):'';
  const open=!!e&&e.state==='published'&&!e.past;const cancelled=e?.state==='cancelled';
  const admitted=!!e&&(orgMe||(!!e.joinUrl||!!e.exactAddress));
  const application=useEventApplication(e&&!orgMe&&open?e:null,{busy,onWithdraw:()=>setLayer('withdraw'),onCancelWait:()=>setLayer('unwait')});
