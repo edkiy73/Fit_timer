@@ -15,7 +15,8 @@ import {TermsSheet,loadDocuments} from './terms-sheet';
 import {pendingPairLink} from './pair-link';
 import {DiscoverPhotoAsk} from './discover-photo';
 import {ChipPick} from './kit/ChipPick';
-import {CityField,type Place} from './kit/Place';
+import {CityField} from './kit/Place';
+import {useCityApi} from './places';
 
 /** V21 A04 (nickname, date of birth, consent) → A04X (under 18) → A05 «Расскажи о себе» (Discover on by default —
  * owner decision 27.10.2026; who sees the answers: «Все» by default — owner decision 27.10.2026). Each screen has the
@@ -25,8 +26,7 @@ export const NICK=/^[A-Za-z0-9](?:[A-Za-z0-9_.]{1,18})[A-Za-z0-9]$/;
 const created=z.object({ok:z.boolean(),profileId:z.uuid().optional(),rule:z.string().optional()});
 export const nickAnswer=z.object({ok:z.literal(true),available:z.boolean(),reason:z.string().optional()});
 const option=z.object({kind:z.string(),code:z.string(),ru:z.string(),en:z.string()});
-const catalog=z.object({ok:z.literal(true),options:z.array(option),places:z.array(z.object({id:z.string(),code:z.string().nullable().optional(),country:z.string().nullable().optional(),ru:z.string().nullable(),en:z.string().nullable(),lat:z.number().nullable().optional(),lon:z.number().nullable().optional()})).default([])});
-type Cat=z.infer<typeof catalog>['places'][number];
+const catalog=z.object({ok:z.literal(true),options:z.array(option)});
 const onboarded=z.object({ok:z.literal(true),discoverVisible:z.boolean(),photoNeeded:z.boolean()});
 const photoIds=z.object({ok:z.literal(true),profile:z.object({photos:z.array(z.object({id:z.string()}).passthrough())}).passthrough()});
 
@@ -184,7 +184,7 @@ type Opt=z.infer<typeof option>;
 function AboutYou({profileId,onNext,onLeave,initial}:{profileId:string,onLeave:()=>void,initial?:About|undefined,onNext:(a:About)=>void}){
  const {call}=useFe();const {t,locale}=useI18n();const toast=useToast();
  const [options,setOptions]=useState<Opt[]|null>(null);const [loadFailed,setLoadFailed]=useState(false);
- const [places,setPlaces]=useState<Cat[]>([]);const [cityId,setCityId]=useState<string|null>(initial?.cityId??null);
+ const [cityId,setCityId]=useState<string|null>(initial?.cityId??null);const cityApi=useCityApi(cityId);
  const [picked,setPicked]=useState<Record<Kind,string[]>>(initial?.pick??{gender:[],orient:[],role:[],status:[],format:[],seek:[]});
  const [vis,setVis]=useState<'only'|'granted'|'all'>(initial?.vis??'all');
  // Owner 28.10.2026: off by default; «Показываться» asks for a photo first and turns on once one is added (it is reviewed).
@@ -196,7 +196,7 @@ function AboutYou({profileId,onNext,onLeave,initial}:{profileId:string,onLeave:(
   setPhotos(have);if(have.length)setDiscover('visible');else setAskPhoto(true);
  };
  const [partner,setPartner]=useState<''|'yes'|'no'>(initial?.partner??'');
- const load=()=>{setLoadFailed(false);setOptions(null);call('catalog.get',{},catalog,{asAccount:true}).then(r=>{setOptions(r.options);setPlaces(r.places);}).catch(()=>setLoadFailed(true));};
+ const load=()=>{setLoadFailed(false);setOptions(null);call('catalog.get',{},catalog,{asAccount:true}).then(r=>{setOptions(r.options);}).catch(()=>setLoadFailed(true));};
  useEffect(load,[call]);
  const label=(o:Opt)=>locale==='en'?o.en:o.ru;
  // «мы пара» is a couple profile, made through the pair invitation, not a personal status (V21 optList).
@@ -227,7 +227,7 @@ function AboutYou({profileId,onNext,onLeave,initial}:{profileId:string,onLeave:(
    <Steps at={2}/>
    <H level={2} className="t">{t('fe.reg.about.title')}</H>
    <section className="fin"><div className="fin-t"><b>{t('fe.onb.city.title')}</b></div>
-    <CityField label={t('fe.mx.ed.city')} placeholder={t('fe.onb.city.pick')} places={places} value={cityId} onChange={setCityId}/>
+    <CityField api={cityApi} label={t('fe.mx.ed.city')} placeholder={t('fe.onb.city.pick')} value={cityId} onChange={id=>setCityId(id)}/>
    </section>
    <section className="fin"><div className="fin-t"><b>{t('fe.reg.discover.title')}</b></div>
     <Stack gap={2}>{radio([['visible',t('fe.onb.discover.on')],['off',t('fe.onb.discover.off')]],discover,v=>void pickDiscover(v),t('fe.reg.discover.title'))}

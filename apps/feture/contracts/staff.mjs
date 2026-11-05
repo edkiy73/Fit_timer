@@ -87,6 +87,9 @@ export const staffCommands = {
     }).refine(v => v.decision === 'reject' ? !!v.reason : v.explicit !== undefined, { message: 'approve needs a label, reject needs a reason' }),
   },
   // Dating on/off for everyone (owner/lead); switching on tells those who asked «Сообщить о запуске».
+  // The smallest city the city picker offers (owner 06.11.2026); the seeded cities and the ones people already chose stay.
+  'staff.placeLimit': { profile: false, write: false, input: z.strictObject({}) },
+  'staff.placeLimitSet': { profile: false, write: true, input: z.strictObject({ opId, minPop: z.int().min(0).max(5000000) }) },
   'staff.datingSwitch': { profile: false, write: true, input: z.strictObject({ opId, on: z.boolean() }) },
   'staff.journal': {
     profile: false, write: false,

@@ -16,6 +16,7 @@ import {useStaffPage} from './staff-paged';
 import {priceText} from './communities';
 import {evRange,evTz,inTz} from './event-time';
 import {StaffMaintenance} from './maintenance';
+import {StaffCities} from './staff-cities';
 import {textError,textRule} from './kit/validate';
 import {fill} from './comm-kit';
 import {RESTRICT_PRESETS,RESTRICT_SCOPES,type RestrictScope} from '../../contracts/_restrict.mjs';
@@ -87,8 +88,8 @@ const QUEUE_IDS=Object.keys(QUEUES) as QueueId[];
 /** Who may open what (the server's requireStaff lists); the screen only asks for what the roles allow. Queues not
  * listed are open to every staff role that has a queue. */
 const QUEUE_ROLES:Partial<Record<QueueId,string[]>>={appeal:['owner','lead']};
-const SECTION_ROLES={queues:['owner','lead','moderator','verifier'],support:['owner','lead','moderator','support'],measures:['owner','lead','moderator'],premium:['owner','lead'],maintenance:['owner','lead'],journal:['owner','lead','auditor'],access:['owner','lead'],team:['owner'],topics:['owner','lead'],documents:['owner','lead'],transparency:['owner','lead','auditor'],words:['owner','lead']} as const;
-const SECTIONS=['queues','measures','journal','support','team','topics','documents','words','transparency','premium','maintenance','access'] as const;
+const SECTION_ROLES={queues:['owner','lead','moderator','verifier'],support:['owner','lead','moderator','support'],measures:['owner','lead','moderator'],premium:['owner','lead'],maintenance:['owner','lead'],cities:['owner','lead'],journal:['owner','lead','auditor'],access:['owner','lead'],team:['owner'],topics:['owner','lead'],documents:['owner','lead'],transparency:['owner','lead','auditor'],words:['owner','lead']} as const;
+const SECTIONS=['queues','measures','journal','support','team','topics','documents','words','transparency','premium','maintenance','cities','access'] as const;
 type Section=typeof SECTIONS[number];
 const can=(roles:readonly string[],need:readonly string[]|undefined)=>!need||roles.some(r=>need.includes(r));
 const LIMIT=50;
@@ -149,7 +150,7 @@ export function StaffScreen(){
       {area.items.length>1&&<Seg<Section> small={false} value={cur} onChange={setSection}
        options={area.items.map(id=>{const n=waiting(id);return {id,label:label(id),...(n>0?{dot:t('fe.staff.entryN',{n:String(n)})}:{})};})}/>}
      </>}
-     {cur==='queues'?<Queues/>:cur==='support'?<StaffSupport/>:cur==='measures'?<People/>:cur==='premium'?<Premium/>:cur==='maintenance'?<StaffMaintenance/>:cur==='journal'?<Journal/>:cur==='access'?<FactorReset/>:cur==='team'?<Team/>:cur==='topics'?<Topics/>:cur==='documents'?<Documents/>:cur==='transparency'?<Transparency/>:cur==='words'?<Words/>:null}
+     {cur==='queues'?<Queues/>:cur==='support'?<StaffSupport/>:cur==='measures'?<People/>:cur==='premium'?<Premium/>:cur==='maintenance'?<StaffMaintenance/>:cur==='cities'?<StaffCities/>:cur==='journal'?<Journal/>:cur==='access'?<FactorReset/>:cur==='team'?<Team/>:cur==='topics'?<Topics/>:cur==='documents'?<Documents/>:cur==='transparency'?<Transparency/>:cur==='words'?<Words/>:null}
     </>}
   </View>
  </>;
@@ -161,11 +162,11 @@ const AREAS:{id:string,items:Section[]}[]=[
  {id:'journal',items:['journal']},
  {id:'content',items:['topics','documents']},
  {id:'team',items:['team','access']},
- {id:'service',items:['premium','maintenance']},
+ {id:'service',items:['premium','maintenance','cities']},
 ];
 /** The system «Назад» closes the sheet it sits in instead of leaving the staff area. */
 function BackCloses({onClose}:{onClose:()=>void}){useBackClose(onClose);return null;}
-const SECTION_LABEL:Record<Section,string>={queues:'fe.staff.section.queues',measures:'fe.staff.section.measures',support:'fe.w8.staff.support',premium:'fe.staff.section.premium',maintenance:'fe.w8.staff.maint',journal:'fe.staff.section.journal',access:'fe.staff.section.access',team:'fe.staff.section.team',topics:'fe.staff.section.topics',documents:'fe.staff.section.documents',transparency:'fe.staff.section.transparency',words:'fe.staff.section.words'};
+const SECTION_LABEL:Record<Section,string>={queues:'fe.staff.section.queues',measures:'fe.staff.section.measures',support:'fe.w8.staff.support',premium:'fe.staff.section.premium',maintenance:'fe.w8.staff.maint',cities:'fe.staff.section.cities',journal:'fe.staff.section.journal',access:'fe.staff.section.access',team:'fe.staff.section.team',topics:'fe.staff.section.topics',documents:'fe.staff.section.documents',transparency:'fe.staff.section.transparency',words:'fe.staff.section.words'};
 
 type Order='old'|'new';
 type PageOf={items:unknown[],locked?:boolean|undefined,next?:string|null|undefined,tail?:string|null|undefined,total?:number|undefined};
@@ -1457,7 +1458,7 @@ function Premium(){
 const JOURNAL_ACTIONS=['words.add','words.remove','person.watch','person.unwatch','topic.create','topic.save','document.save','document.publish','age.view','age.approve','age.reject','photo.view','photo.approve','photo.reject','community.approve','community.reject','event.approve','event.reject','event.hide',
  'media.view','media.approve','media.reject','notice.removed','notice.kept','notice.not_actionable','place.approve','place.reject','premium.grant','premium.revoke','report.keep','report.remove',
  'revision.approve','revision.reject','sanction.suspend','sanction.lift','sanction.expired','restrict.on','restrict.off','restrict.expired','staff.grant','staff.revoke','staff.factorOn','staff.factorLocked',
- 'staff.factorReset','staff.recoveryUsed','support.reply','support.close','appeal.grant','appeal.deny','dating.on','dating.off','maintenance.on','maintenance.off',
+ 'staff.factorReset','staff.recoveryUsed','support.reply','support.close','appeal.grant','appeal.deny','dating.on','dating.off','maintenance.on','maintenance.off','place.limit',
  'dispute.restore','dispute.remove','dispute.claimantReviewed','dispute.claimantRestricted'] as const;
 type JournalRow=z.infer<typeof journalItem>;
 

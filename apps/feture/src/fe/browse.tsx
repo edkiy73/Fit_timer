@@ -1,4 +1,5 @@
-import {evParts,evWhere,usePlaces} from './event-time';
+import {evParts,evWhere} from './event-time';
+import {usePlaces} from './places';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
@@ -70,7 +71,7 @@ function CommunityCard({c,tname}:{c:Comm,tname:(id:string)=>string}){
 
 /** `eventCard(id,{row:1})` — an event as a row. */
 export function EventRow({e}:{e:Ev}){
- const {t,locale}=useI18n();const navigate=useNavigate();const pt=evParts(e,locale);const places=usePlaces();
+ const {t,locale}=useI18n();const navigate=useNavigate();const pt=evParts(e,locale);const places=usePlaces([e.place_id]);
  return <button type="button" className="evc row" onClick={()=>navigate('/n/events/'+e.id)}>
   <div className="cv"><div className="plate" style={plate(e.id)}/><div className="date"><b>{pt.day}</b><small>{pt.month}</small></div></div>
   <div className="bd"><small>{evWhere(e,places,locale,t('fe.ev.online'),t('fe.ev.offline'))} · {pt.time} · {pt.zone}</small><b>{e.title}</b>

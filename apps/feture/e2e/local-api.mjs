@@ -69,6 +69,8 @@ await pg.exec(`
   insert into public.feture_document_versions (id, document_key, locale, content_hash, requires_accept) values
     ${DOCS.map(d => `('${d.id}', '${d.key}', 'ru', '${d.hash}', ${d.required})`).join(', ')};`);
 for (const f of MIGRATIONS) await pg.exec(mig(f));
+// The city catalog (GeoNames, ~34 000 cities) is data, not part of the test schema: FE_CITIES=1 loads it (about 15 s).
+if (process.env.FE_CITIES) for (const f of ['20261106000100_fe_cities_data.sql', '20261106000200_fe_place_ru_fallback.sql', '20261106000300_fe_cities_15k.sql']) await pg.exec('begin;' + mig(f) + 'commit;');
 await pg.exec('set role feture_api');
 const db = fromPglite(pg);
 

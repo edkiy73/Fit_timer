@@ -256,8 +256,7 @@ const named={ru:z.string().nullable(),en:z.string().nullable()};
 /** One schema for `catalog.get` on these screens: the read cache keys on the schema, so one object means one request. */
 export const catalogRes=z.object({ok:z.literal(true),options:z.array(z.object({kind:z.string(),code:z.string(),...named})),
  topics:z.array(z.object({id:z.string(),categoryId:z.string(),...named}).passthrough()),
- categories:z.array(z.object({id:z.string(),...named}).passthrough()),
- places:z.array(z.object({id:z.string(),...named}).passthrough())}).passthrough();
+ categories:z.array(z.object({id:z.string(),...named}).passthrough())}).passthrough();
 export type Catalog=z.infer<typeof catalogRes>;
 /** The catalog once read: option and topic names show on the first render (a name that turns from its code into a
  * word a moment later moves the lines under it). */
