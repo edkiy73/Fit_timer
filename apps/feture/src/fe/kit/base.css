@@ -252,6 +252,7 @@
 .v21 .btn.on{background:var(--accent-soft);color:var(--accent);box-shadow:none}
 .v21 .btn[disabled],
 .v21 .btn.off{opacity:.4;pointer-events:none}
+.v21 .btn.dim{opacity:.4}/* looks off, still takes a tap (it says why) */
 .v21 .btn.busy{pointer-events:none}
 .v21 .btn.busy::after{content:"";width:16px;height:16px;border-radius:50%;border:2.5px solid currentColor;border-right-color:transparent;animation:spin .7s linear infinite}
 .v21 .btns{display:grid;gap:8px}
