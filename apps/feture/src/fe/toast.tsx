@@ -18,6 +18,13 @@ const noop:ToastFn=()=>{};
 /** `toast(msg, {type, action, ms})`; a no-op outside the provider (screens shown before the shell). */
 export function useToast():ToastFn{return useContext(Ctx)??noop;}
 
+/** A failed action is a toast, never an inline banner (owner 05.11.2026): `fail(text)` shows it every time, also when the
+ * same text comes again; an empty text (clearing the old message) shows nothing. An action («Подтвердить возраст») may ride along. */
+export function useFail(){
+ const toast=useToast();
+ return useCallback((text:string,action?:ToastOptions['action'])=>{if(text)toast(text,{type:'err',...(action?{action}:{})});},[toast]);
+}
+
 export function ToastProvider({children,nodock=false}:{children:ReactNode,nodock?:boolean}){
  const [item,setItem]=useState<Item|null>(null);const seq=useRef(0);const [overModal,setOverModal]=useState(false);
  // A screen with a pinned action bar (save / publish): the toast sits just above it, never hidden under it.

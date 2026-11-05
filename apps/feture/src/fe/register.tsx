@@ -9,7 +9,7 @@ import {Alert,Ask,Btn,Card,Check,Chip,Chips,ChoiceChips,Divider,Empty,Field,H,In
 import {useTopics} from './post-parts';
 import {useChecks} from './kit/validate';
 import {useFe} from './session';
-import {useToast} from './toast';
+import {useToast,useFail} from './toast';
 import {AuthBar,AuthFrame,AuthLogo} from './start';
 import {TermsSheet,loadDocuments} from './terms-sheet';
 import {pendingPairLink} from './pair-link';
@@ -66,7 +66,7 @@ function Account({form,setForm,onBack,onCreated,onUnder18}:{form:Form,setForm:Re
  const checks=useChecks(name.trim()?{name:'profileName' as const}:{},{name});
  const set=(p:Partial<Form>)=>setForm(f=>({...f,...p}));
  const [nickState,setNickState]=useState<'idle'|'ok'|string>('idle');
- const [errors,setErrors]=useState<Record<string,string>>({});const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [errors,setErrors]=useState<Record<string,string>>({});const [busy,setBusy]=useState(false);const setFailure=useFail();
  const [sheet,setSheet]=useState(false);const [confirm,setConfirm]=useState(false);
  const opId=useRef(newOpId());const wrap=useRef<HTMLDivElement>(null);
  // One verdict under the field: the hint, «available» or an error; checked 0.45 s after the last key.
@@ -149,7 +149,7 @@ function Account({form,setForm,onBack,onCreated,onUnder18}:{form:Form,setForm:Re
     {t('fe.reg.terms')}{errors.terms&&<span className="ferr">{errors.terms}</span>}
    </Check></div>
    <Check on={news} onChange={v=>set({news:v})}>{t('fe.reg.news')} <Text as="span" size="xs" tone="mute">· {t('fe.reg.optional')}</Text></Check>
-   {failure&&<Alert kind="err">{failure}</Alert>}
+   
   </div></div>
   <div className="ctabar"><div className="wrap"><Btn onClick={()=>submit()} disabled={busy} busy={busy}>{t('fe.reg.continue')}</Btn></div></div>
   {sheet&&<TermsSheet onClose={()=>setSheet(false)}/>}
@@ -270,7 +270,7 @@ function FirstSteps({profileId,about,onBack,onLeave}:{profileId:string,about:Abo
  const {topics:all,name:tname,ready}=useTopics();
  const [tp,setTp]=useState<string[]>([]);const [comms,setComms]=useState<Comm[]|null>(null);
  const [joins,setJoins]=useState<Record<string,Join>>({});const [preview,setPreview]=useState<Comm|null>(null);
- const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const opId=useRef(newOpId());
+ const [busy,setBusy]=useState(false);const setFailure=useFail();const opId=useRef(newOpId());
  const pop=useMemo(()=>{const ids=new Set(all.map(x=>x.id));const p=POPULAR_TOPICS.filter(x=>ids.has(x));return p.length>=6?p:all.slice(0,12).map(x=>x.id);},[all]);
  useEffect(()=>{const ctl=new AbortController();setComms(null);
   call('community.catalog',tp.length?{topics:tp}:{},commList,{profileId,signal:ctl.signal}).then(r=>setComms(r.items.filter(c=>!c.joined).slice(0,4))).catch(()=>{if(!ctl.signal.aborted)setComms([]);});
@@ -310,7 +310,7 @@ function FirstSteps({profileId,about,onBack,onLeave}:{profileId:string,about:Abo
        ?<Btn kind="soft" size="sm" fit onClick={()=>setJoins(({[c.id]:_,...rest})=>rest)}>{c.privacy==='open'?t('fe.onb2.unjoin'):t('fe.onb2.unrequest')}</Btn>
        :<Btn size="sm" fit onClick={()=>setPreview(c)}>{c.privacy==='open'?t('fe.onb2.join'):t('fe.onb2.request')}</Btn>}/>)}</Card>}
    </section>
-   {failure&&<Alert kind="err">{failure}</Alert>}
+   
   </div></div>
   <div className="ctabar"><div className="wrap"><Btn onClick={done} busy={busy} disabled={busy}>{t('fe.onb2.finish')}</Btn></div></div>
   {preview&&<CommPreview c={preview} profileId={profileId} chosen={joins[preview.id]} onClose={()=>setPreview(null)}

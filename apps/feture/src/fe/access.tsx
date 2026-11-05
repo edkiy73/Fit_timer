@@ -2,7 +2,7 @@ import {useCallback,useEffect,useState} from 'react';
 import {useNavigate,useSearchParams} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Lock,LockOpen,Send,X} from 'lucide-react';
-import {Av,Bar,Btn,Card,Chip,Empty,Group,LoadMore,Note,Pill,Row,Seg,Skel,Spacer,Stack,View,useScrollTo,ProfileAv} from './kit';
+import {Bar,Btn,Card,Chip,Empty,Group,LoadMore,Note,Pill,Row,Seg,Skel,Spacer,Stack,View,useScrollTo,ProfileAv} from './kit';
 import {useFe,useSeen} from './session';
 import {NameBadges} from './faces';
 import {GrantCard,grantsRes,incomingRes,nameOf,outRes,RequestCards,useAccessWords,useCancelRequest,useGrantActions,type GrantItem,type IncomingList,type OutItem} from './private';

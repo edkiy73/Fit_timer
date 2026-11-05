@@ -2,19 +2,19 @@ import {Fragment,useCallback,useEffect,useLayoutEffect,useRef,useState,type CSSP
 import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Archive,ArchiveRestore,Ban,Bell,BellOff,Calendar,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Film,Flag,Image as ImageIcon,Inbox,Info,Lock,LockOpen,MessageCircle,Search,SendHorizontal,Sparkles,Undo2,User,UserCheck,Users,X,type LucideIcon} from 'lucide-react';
+import {Archive,ArchiveRestore,Ban,Bell,BellOff,Calendar,Camera,Check,ChevronDown,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Film,Flag,Image as ImageIcon,Inbox,Info,Lock,LockOpen,MessageCircle,Search,SendHorizontal,Sparkles,Undo2,User,UserCheck,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActingAv,Actions,AddBtn,Alert,Av,Bar,Btn,Card,ChatList,ChatPane,ChatPick,ChatRequest,ChatRow,Check as CheckBox,Chip,Chips,CoupleTag,Empty,Field,FilePick,Group,IconBtn,Layer,NewMatch,NewMatches,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Spacer,Text,TextArea,ToggleRow,type Voice,Typing,useBack,VideoBadge,VideoPlayer,View,VoiceBubble,VoiceRecorder,ProfileAv,useKept} from './kit';
+import {ActingAv,Actions,AddBtn,Alert,Av,Bar,Btn,Card,ChatList,ChatPane,ChatPick,ChatRequest,ChatRow,Check as CheckBox,Chip,Chips,CoupleTag,Empty,FilePick,Group,IconBtn,Layer,NewMatch,NewMatches,Note,PersonBar,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Spacer,Text,TextArea,ToggleRow,type Voice,Typing,useBack,VideoBadge,VideoPlayer,View,VoiceBubble,VoiceRecorder,ProfileAv,useKept} from './kit';
 import {VIDEO_TYPES} from './kit/media';
 import {Uploader,type SendPhoto,type SendVideo,type Uploaded} from './kit/Uploader';
 import {useSendPhoto,useSendVideo,useSendVoice} from './media-upload';
-import {AgeCheckLink,useAgeResume} from './age-check';
+import {useAgeFix,useAgeResume} from './age-check';
 import {useWide} from './wide';
 import {useFe,useLive,useTypingSignal,useSeen} from './session';
 import {readDraft,useDraftKey,writeDraft} from './drafts';
 import {ReportSheet} from './report';
 import {faceFields} from './faces';
-import {useToast} from './toast';
+import {useToast,useFail} from './toast';
 import {PhotoBadge} from './photo-check';
 import {limitCounter,overMax,softMax,textError} from './kit/validate';
 import {BellButton,SegN} from './inbox';
@@ -251,7 +251,7 @@ const MODES:Mode[]=['normal','once','t15','t120','t1440'];
 const TTL:Record<string,number>={t15:15*60e3,t120:2*3600e3,t1440:24*3600e3};
 /** A photo or clip on its way: uploaded by the kit Uploader (prepared on the device), so a retry after review only sends
  * the message. `preview` is the photo / the clip's poster; `durationMs` marks a clip. */
-type Outgoing={preview:string,mode:Mode,assetId:string,opId:string,pending?:boolean,video?:{durationMs:number}|undefined};
+type Outgoing={preview:string,mode:Mode,assetId:string,opId:string,pending?:boolean,failed?:boolean,video?:{durationMs:number}|undefined};
 /** A text on its way (the prototype's optimistic bubble with «Отправляется» / «Не отправлено · Повторить»). */
 type Pend={key:string,body:string,replyTo?:string,opId:string,at:string,status:'sending'|'failed'};
 type SheetKind='attach'|'menu'|'end'|'report'|'block'|'msg'|'readers'|'copy';
@@ -278,7 +278,7 @@ function ChatView({id,to}:{id:string,to:string}){
  // the screen or signing out and never shows to another account.
  const dk=useDraftKey();const draftSlot=dk.key(id||'new:'+to);
  const saved=useRef(dk.ready?readDraft(draftSlot):null);
- const [error,setError]=useState<unknown>(null);const [text,setText]=useState(()=>saved.current?.text??'');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [error,setError]=useState<unknown>(null);const [text,setText]=useState(()=>saved.current?.text??'');const [busy,setBusy]=useState(false);const setFailure=useFail();
  const [pend,setPend]=useState<Pend[]>([]);const [tries,setTries]=useState(0);const [replyTo,setReplyTo]=useState<string|null>(()=>saved.current?.replyTo??null);
  const draftReady=useRef(false);
  useEffect(()=>{if(!dk.ready)return;if(!draftReady.current){draftReady.current=true;return;}writeDraft(draftSlot,text,replyTo);},[draftSlot,dk.ready,text,replyTo]);
@@ -295,7 +295,9 @@ function ChatView({id,to}:{id:string,to:string}){
  // A voice message on its way (an optimistic bubble), and the ones this account has just played.
  const [voiceOut,setVoiceOut]=useState<{v:Voice,status:'sending'|'failed'}|null>(null);const [heard,setHeard]=useState<Record<string,true>>({});
  const videoPick=useRef<HTMLInputElement>(null);
- const [sheet,setSheet]=useState<SheetKind|null>(null);const [sheetErr,setSheetErr]=useState('');const [sheetBusy,setSheetBusy]=useState(false);
+ const [sheet,setSheet]=useState<SheetKind|null>(null);const ageFix=useAgeFix();
+ // A sheet's failure is a toast over it (owner 05.11.2026); the age-required one carries the way to the check.
+ const setSheetErr=(m:string)=>setFailure(m,m===t('fe.chx.ageRequired')?ageFix('attach:'+id):undefined);const [sheetBusy,setSheetBusy]=useState(false);
  const [msgFor,setMsgFor]=useState<Msg|null>(null);
  const [out,setOut]=useState<Outgoing|null>(null);const outRef=useRef<Outgoing|null>(null);outRef.current=out;
  const [rpSel,setRpSel]=useState<string[]>([]);
@@ -527,6 +529,11 @@ function ChatView({id,to}:{id:string,to:string}){
  const readable=async<T,>(f:()=>Promise<T>)=>{try{setSheetErr('');return await f();}catch(e){if(e instanceof Error&&e.message==='upload')throw e;const m=photoError(e);setSheetErr(m);throw new Error(m);}};
  const sendPhotoUp:SendPhoto=(blob,on)=>readable(()=>sendChatPhoto(blob,on));
  const sendVideoUp:SendVideo=(v,on)=>readable(()=>sendChatVideo(v,on));
+ // A photo that did not go: a toast says why, and the photo stays with «Отправить ещё раз» / «Не отправлять» under the chat.
+ const photoFailed=(o:Outgoing,e:unknown)=>{
+  const m=photoError(e);setSheetErr(m);
+  if(outRef.current?.preview===o.preview){const f={...o,failed:true};outRef.current=f;setOut(f);}
+ };
  const dropOut=(o:Outgoing|null)=>{
   if(!o)return;URL.revokeObjectURL(o.preview);setOut(null);
   // The uploaded file is not needed any more; best effort.
@@ -550,7 +557,7 @@ function ChatView({id,to}:{id:string,to:string}){
   if(g.file)URL.revokeObjectURL(g.file);
   setOut(o);outRef.current=o;setFailure('');stick.current=true;
   try{if(await deliver(o)==='sent')await pull(false);}
-  catch(e){setFailure(photoError(e));}
+  catch(e){photoFailed(o,e);}
  };
  /* ---- voice messages: record → upload (purpose voice) → chat.sendMedia; an optimistic bubble meanwhile ---- */
  const deliverVoice=async(v:Voice)=>{
@@ -561,9 +568,9 @@ function ChatView({id,to}:{id:string,to:string}){
  };
  const voiceError=(why:'denied'|'unsupported'|'short'|'failed')=>toast(t(why==='denied'?'fe.av.voiceDenied':why==='unsupported'?'fe.av.voiceUnsupported':why==='short'?'fe.av.voiceShort':'fe.av.voiceFailed'),{type:why==='short'?'warn':'err'});
  const retryPending=async(silent:boolean)=>{
-  const o=outRef.current;if(!o||busy)return;if(!silent){setBusy(true);setFailure('');}
+  const o=outRef.current;if(!o||busy)return;if(!silent){setBusy(true);setFailure('');if(o.failed){const r={...o,failed:false};outRef.current=r;setOut(r);}}
   try{if(await deliver(o)==='sent')await pull(false);}
-  catch(e){if(!silent&&outRef.current?.preview===o.preview)setFailure(photoError(e));}finally{if(!silent)setBusy(false);}
+  catch(e){if(!silent&&outRef.current?.preview===o.preview)photoFailed(o,e);}finally{if(!silent)setBusy(false);}
  };
  // «отправится, когда модератор посмотрит»: while the chat is open, try again now and then.
  const pendingNow=!!out?.pending;
@@ -637,7 +644,6 @@ function ChatView({id,to}:{id:string,to:string}){
  const canWrite=draft?true:!req||canRenew;
  // A request that may not be sent keeps the input, greyed out; a tap says why (the profile's privacy settings).
  const blocked=!!draft&&!draft.canRequest;
- const sheetAlert=sheetErr?<Alert kind="err" noIcon>{sheetErr}{sheetErr===t('fe.chx.ageRequired')&&<><br/><AgeCheckLink intent={'attach:'+id}/></>}</Alert>:null;
  const all=items??[];
  // Read receipts: the other side's avatar under the last own message they have read.
  const lastRead=[...all].reverse().find(m=>m.mine&&m.seq<=otherRead)?.id;
@@ -697,10 +703,8 @@ function ChatView({id,to}:{id:string,to:string}){
     </Chips></>}
     {paused&&state==='active'?<Alert kind="info" icon={Clock}><b>{t('fe.chx.pausedTitle')}</b>{t('fe.chx.pausedText')}</Alert>
      :ended&&<Alert kind="info" icon={Ban}><b>{t('fe.chx.endedTitle')}</b>{t(couple?'fe.chx.endedTextUs':'fe.chx.endedText')}</Alert>}
-    {out?.pending&&<Alert kind="info" icon={Clock} action={<Actions><Btn kind="soft" size="sm" busy={busy} disabled={busy} onClick={()=>void retryPending(false)}>{t('fe.chx.retry')}</Btn>
-     <Btn kind="text" size="sm" onClick={()=>dropOut(out)}>{t('fe.chx.drop')}</Btn></Actions>}><b>{out.video?t('fe.av.videoPending'):t('fe.chx.pending')}</b></Alert>}
-    {failure&&<Alert kind="err" noIcon action={out&&!out.pending?<Actions><Btn kind="soft" size="sm" busy={busy} disabled={busy} onClick={()=>void retryPending(false)}>{t('fe.chx.retry')}</Btn>
-     <Btn kind="text" size="sm" onClick={()=>{dropOut(out);setFailure('');}}>{t('fe.chx.drop')}</Btn></Actions>:undefined}>{failure}{failure===t('fe.chx.ageRequired')&&<><br/><AgeCheckLink intent={'attach:'+id}/></>}</Alert>}
+    {(out?.pending||out?.failed)&&<Alert kind="info" icon={out.failed?Ban:Clock} action={<Actions><Btn kind="soft" size="sm" busy={busy} disabled={busy} onClick={()=>void retryPending(false)}>{t('fe.chx.retry')}</Btn>
+     <Btn kind="text" size="sm" onClick={()=>dropOut(out)}>{t('fe.chx.drop')}</Btn></Actions>}><b>{out.failed?t('fe.chx.notSent'):out.video?t('fe.av.videoPending'):t('fe.chx.pending')}</b></Alert>}
    </>}
   </div></div>
   <button type="button" className={'chat-down'+(ended?' low':'')+(!near?' on':'')} aria-label={t('fe.chx.toLatest')} onClick={toBottom}><ChevronDown/>{fresh>0&&<em>{fresh>99?'99+':fresh}</em>}</button>
@@ -708,7 +712,7 @@ function ChatView({id,to}:{id:string,to:string}){
    {blocked&&<button type="button" className="ib-block" aria-label={t('fe.rq.no.title')} onClick={()=>toast(ruleText(draft?.rule),{type:'err'})}/>}
    {limitCounter('chatMessage',text)}
    {replyTo&&quoteOf(replyTo)&&<div className="reply-target chat-reply">{quote(replyTo,true)}<IconBtn icon={X} size="sm" label={t('fe.chx.cancelReply')} onClick={()=>{setReplyTo(null);input.current?.focus({preventScroll:true});}}/></div>}
-   <AddBtn label={t('fe.chx.attach')} disabled={blocked||!meta||!!out?.pending||!!reqBusy} onClick={()=>{setSheetErr('');setSheet('attach');}}/>
+   <AddBtn label={t('fe.chx.attach')} disabled={blocked||!meta||!!out?.pending||!!out?.failed||!!reqBusy} onClick={()=>{setSheetErr('');setSheet('attach');}}/>
    {couple&&acting?.kind==='couple'&&<ActingAv p={acting} size="xs"/>}
    <TextArea ref={input} bare grow={GROW} rows={1} maxLength={softMax('chatMessage')} value={text} onChange={e=>{setText(e.target.value);if(e.target.value.trim())typed();}}
     disabled={blocked} placeholder={blocked?t('fe.rq.no.title'):couple?t('fe.chx.messagePhCouple'):t('fe.chx.messagePh')} aria-label={couple?t('fe.chx.messagePhCouple'):t('fe.chx.message')} title={t('fe.chx.enterHint')} enterKeyHint="enter"
@@ -757,7 +761,6 @@ function ChatView({id,to}:{id:string,to:string}){
     <SelectRow<Mode> solo label={t('fe.chx.howView')} value={mode} onChange={v=>setMode(v)} options={MODES.map(m=>[m,t('fe.chx.mode.'+m)] as const)}/>
    </Card></Group>}
    <Note>{t('fe.chx.shotNote')}</Note>
-   {sheetAlert}
   </Uploader>}
 
   {sheet==='menu'&&meta&&<Sheet title={otherName} lead={<OtherAv o={meta.other} size="sm"/>} onClose={closeSheet}>
@@ -775,7 +778,6 @@ function ChatView({id,to}:{id:string,to:string}){
     <Row noChev icon={Flag} danger title={t('fe.chx.report')} onClick={openReport}/>
     <Row noChev icon={Ban} danger title={t('fe.chx.block')} onClick={()=>{setSheetErr('');setSheet('block');}}/>
    </Card>
-   {sheetAlert}
   </Sheet>}
 
   {sheet==='end'&&meta&&<Sheet title={t('fe.chx.endTitle')} lead={<span className="ico l"><X/></span>} onClose={closeSheet}
@@ -787,7 +789,6 @@ function ChatView({id,to}:{id:string,to:string}){
    </Card>
    {grants.byMe&&<Card list><ToggleRow title={t(couple?'fe.chx.ecRevokeUs':'fe.chx.ecRevoke')} sub={t('fe.chx.ecRevokeSub')} on={ecRevoke} onClick={()=>setEcRevoke(v=>!v)}/></Card>}
    <Spacer/><Note>{t(couple?'fe.chx.endNoteUs':'fe.chx.endNote')}</Note>
-   {sheetAlert}
   </Sheet>}
 
   {sheet==='report'&&meta&&<ReportSheet block profileId={meta.side.id} onClose={closeSheet} onDone={reportDone}
@@ -802,7 +803,6 @@ function ChatView({id,to}:{id:string,to:string}){
   {sheet==='block'&&meta&&<Sheet title={fill(t('fe.chx.blockTitle'))} lead={<span className="ico l"><Ban/></span>} onClose={closeSheet}
    foot={<><Btn kind="danger" onClick={()=>void block()} busy={sheetBusy} disabled={sheetBusy}>{t(couple?'fe.ca.block':'fe.chx.block')}</Btn><Btn kind="soft" onClick={closeSheet}>{t('fe.chx.cancel')}</Btn></>}>
    <p className="lead">{t(couple?'fe.ca.blockText':'fe.chx.blockText')}</p>
-   {sheetAlert}
   </Sheet>}
  </>;
 }

@@ -6,9 +6,9 @@ import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {Ban,Bell,Calendar,Camera,CircleHelp,Crown,Download,EyeOff,Globe,Heart,HeartHandshake,Image,KeyRound,LogOut,Mail,MessageCircle,MessageCirclePlus,Moon,ShieldCheck,Smartphone,Sparkles,Trash2,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {getThemePreference,setThemePreference,type ThemePreference} from '../theme';
-import {Alert,Bar,BRAND,Btn,Card,ChannelHeads,ChannelToggle,ChoiceCards,Empty,Field,Group,H,Input,LockPreview,Note,Row,SectionLabel,SelectRow,Skel,Stack,Switch,TimeSpan,ToggleRow,View} from './kit';
+import {Bar,BRAND,Btn,Card,ChannelHeads,ChannelToggle,ChoiceCards,Empty,Field,Group,H,Input,LockPreview,Note,Row,SectionLabel,SelectRow,Skel,Stack,Switch,TimeSpan,ToggleRow,View} from './kit';
 import {useFe,useLive,useShown} from './session';
-import {useToast} from './toast';
+import {useToast,useFail} from './toast';
 import {usePremiumStatus} from './account-extra';
 import {Sheet} from './profile-extras';
 import {HiddenFeedSheet} from './settings-lists';
@@ -214,8 +214,8 @@ export function NotificationSettingsScreen(){
 /* ---------- K07 ---------- */
 export function DataScreen(){
  const {call,state}=useFe();const {t}=useI18n();const auth=useOptionalAuth();const navigate=useNavigate();const toast=useToast();
- const [exporting,setExporting]=useState(false);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [confirm,setConfirm]=useState('');const [ask,setAsk]=useState(false);
- const [shake,setShake]=useState(false);const op=useRef(newOpId());
+ const [exporting,setExporting]=useState(false);const [busy,setBusy]=useState(false);const setFailure=useFail();const [confirm,setConfirm]=useState('');const [ask,setAsk]=useState(false);
+ const [shake,setShake]=useState(false);const [bad,setBad]=useState(false);const op=useRef(newOpId());
  const profiles=state.status==='ready'?state.boot.profiles.filter(p=>p.state!=='deleted'):[];
  const handle=profiles.find(p=>p.kind==='person')?.handle??'';
  const couple=profiles.find(p=>p.kind==='couple'&&!p.ended);
@@ -224,11 +224,11 @@ export function DataScreen(){
   toast(t('fe.set.exportDone'),{type:'ok'});}
   catch(e){toast(feErrorMessage(e,t),{type:'err'});}finally{setExporting(false);}};
  const remove=async()=>{
-  if(confirm.trim().replace(/^@/,'').toLowerCase()!==handle.toLowerCase()){setFailure(t('fe.set.deleteMismatch'));setShake(true);setTimeout(()=>setShake(false),500);return;}
+  if(confirm.trim().replace(/^@/,'').toLowerCase()!==handle.toLowerCase()){setFailure(t('fe.set.deleteMismatch'));setBad(true);setShake(true);setTimeout(()=>setShake(false),500);return;}
   setBusy(true);setFailure('');
   try{await call('account.delete',{opId:op.current,confirmHandle:confirm.trim().replace(/^@/,'')},ok,{asAccount:true});await auth.logout();navigate('/n/feed',{replace:true});}
-  catch(e){setFailure(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}};
- const close=useCallback(()=>{if(!busy){setAsk(false);setConfirm('');setFailure('');}},[busy]);
+  catch(e){setBad(true);setFailure(feErrorMessage(e,t));op.current=newOpId();}finally{setBusy(false);}};
+ const close=useCallback(()=>{if(!busy){setAsk(false);setConfirm('');setBad(false);}},[busy]);
  return <>
   <Bar title={t('fe.set.myData')} back="/n/settings"/>
   <View className="nodock compact">
@@ -242,9 +242,9 @@ export function DataScreen(){
    <Btn kind="danger" onClick={()=>void remove()} busy={busy} disabled={busy||!confirm.trim()}>{t('fe.set.deleteFinal')}</Btn>
    <Btn kind="soft" onClick={close} disabled={busy}>{t('fe.set.deleteKeep')}</Btn></>}>
    <p className="lead">{t('fe.set.deleteConfirm')} <b>{handle}</b></p>
-   <div className={shake?'shake':undefined}><Field><Input value={confirm} placeholder={handle} aria-label={t('fe.set.deleteConfirm')} invalid={!!failure}
-    onChange={e=>{setConfirm(e.target.value);setFailure('');}} onKeyDown={e=>{if(e.key==='Enter')void remove();}} autoCapitalize="off" autoComplete="off" spellCheck={false} autoFocus/></Field></div>
-   {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
+   <div className={shake?'shake':undefined}><Field><Input value={confirm} placeholder={handle} aria-label={t('fe.set.deleteConfirm')} invalid={bad}
+    onChange={e=>{setConfirm(e.target.value);setBad(false);}} onKeyDown={e=>{if(e.key==='Enter')void remove();}} autoCapitalize="off" autoComplete="off" spellCheck={false} autoFocus/></Field></div>
+   
   </Sheet>}
  </>;
 }

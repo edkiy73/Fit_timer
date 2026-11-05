@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router';
-import { Capacitor } from '@capacitor/core';
-import { App } from '@capacitor/app';
-import { useI18n } from '@appbase/ui-react/i18n.js';
-import { ActionButton, AppDialog } from './components/primitives';
-import { tabsBack, tabsReady } from '../fe/tabs';
+import {useEffect,useRef,useState} from 'react';
+import {useLocation,useNavigate} from 'react-router';
+import {Capacitor} from '@capacitor/core';
+import {App} from '@capacitor/app';
+import {useI18n} from '@appbase/ui-react/i18n.js';
+import {ActionButton,AppDialog} from './components/primitives';
+import {tabsBack,tabsReady} from '../fe/tabs';
 
 export function NativeNavigation(){
   const { t } = useI18n();

@@ -7,6 +7,7 @@ import {Ask,FilePick} from './kit';
 import {Uploader} from './kit/Uploader';
 import {useSendPhoto} from './media-upload';
 import {useFe} from './session';
+import {useFail} from './toast';
 
 const ok=z.object({ok:z.literal(true)}).passthrough();
 
@@ -19,7 +20,7 @@ export function DiscoverPhotoAsk({existing,profileId,couple,onAdded,onCancel}:{/
  onAdded:()=>Promise<void>|void,onCancel:()=>void}){
  const {call}=useFe();const {t}=useI18n();
  const file=useRef<HTMLInputElement>(null);const [files,setFiles]=useState<File[]|null>(null);
- const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [busy,setBusy]=useState(false);const setFailure=useFail();
  const send=useSendPhoto('avatar',{},profileId);
  const done=async(ids:string[])=>{
   setFiles(null);if(!ids.length)return;
@@ -31,7 +32,7 @@ export function DiscoverPhotoAsk({existing,profileId,couple,onAdded,onCancel}:{/
  };
  return <>
   {!files&&<Ask icon={Camera} tone="l" title={t('fe.dph.title')} text={t(couple?'fe.dph.textUs':'fe.dph.text')} ok={t('fe.dph.upload')} cancel={t('fe.dph.later')}
-   busy={busy} error={failure||undefined} onOk={()=>file.current?.click()} onCancel={onCancel}/>}
+   busy={busy} onOk={()=>file.current?.click()} onCancel={onCancel}/>}
   <FilePick ref={file} accept="image/*" onFiles={f=>setFiles([...f].slice(0,1))}/>
   {files&&<Uploader files={files} aspects={['4:5']} max={1} send={send} onClose={()=>setFiles(null)} onDone={got=>void done(got.map(g=>g.id))}/>}
  </>;

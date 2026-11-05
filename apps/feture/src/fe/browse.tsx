@@ -10,7 +10,7 @@ import {useFe,useKeyChange,useSeen} from './session';
 import {PostCard,postSchema,type Post} from './feed';
 import {InterestSheet,Jars,useInterests} from './interests';
 import {faceFields,PersonRow} from './faces';
-import {useToast} from './toast';
+import {useToast,useFail} from './toast';
 import {FollowButton} from './follow';
 import {topicMatches} from './topic-search';
 
@@ -277,7 +277,7 @@ export function FollowsScreen(){
  const id=param??acting?.id??'';const mine=!!acting&&id===acting.id;
  const tab:'followers'|'following'=params.get('tab')==='following'?'following':'followers';
  const [lists,setLists]=useState<{followers:Follower[],following:Follower[]}|null>(null);const [error,setError]=useState<unknown>(null);
- const [who,setWho]=useState('');const [myFollows,setMyFollows]=useState<Set<string>>(new Set());const [busy,setBusy]=useState('');const [failure,setFailure]=useState('');
+ const [who,setWho]=useState('');const [myFollows,setMyFollows]=useState<Set<string>>(new Set());const [busy,setBusy]=useState('');const setFailure=useFail();
  const load=useCallback(()=>{
   if(!id)return;setError(null);
   Promise.all([call('profile.followers',{profileId:id},followersRes),call('profile.followers',{profileId:id,following:true},followersRes)])
@@ -305,7 +305,7 @@ export function FollowsScreen(){
    <Seg value={tab} onChange={v=>setParams({tab:v},{replace:true})} options={[
     {id:'followers',label:t('fe.br.followers')+(lists?' · '+countLabel(lists.followers.length):'')},
     {id:'following',label:t('fe.br.following')+(lists?' · '+countLabel(lists.following.length):'')}]}/>
-   {failure&&<Alert kind="err">{failure}</Alert>}
+   
    {error?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :list===null?<Skel kind="list"/>
     :!list.length?<Empty icon={Users} title={tab==='following'?t('fe.br.noFollowing'):t('fe.br.noFollowers')}/>

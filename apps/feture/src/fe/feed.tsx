@@ -1,11 +1,11 @@
-import {Fragment,useCallback,useEffect,useMemo,useRef,useState,type CSSProperties,type ReactNode} from 'react';
+import {Fragment,useCallback,useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import {useLocation,useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Archive,AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,FileText,Globe,Hash,Heart,Image as ImageIcon,KeyRound,Lock,MessageCircle,MessageSquareText,Newspaper,Pencil,Plus,Search,SendHorizontal,Share,SlidersHorizontal,Sparkles,Trash2,User,Users,X} from 'lucide-react';
+import {Archive,AtSign,BellOff,Bookmark,Check,Calendar,ChartColumn,ChevronLeft,Clock,Ellipsis,Eye,EyeOff,Globe,Hash,Heart,Image as ImageIcon,KeyRound,Lock,MessageCircle,Newspaper,Pencil,Plus,Search,SendHorizontal,Share,SlidersHorizontal,Sparkles,Trash2,User,Users,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActionLine,Actions,ActivityCard,ActivityItem,AddBtn,AddCard,Alert,ArticleCard,ArticleImage,articlePlate,Ask,Av,BAD_CHARS,Bar,Btn,Card,Chip,Chips,Counter,Empty,ExpandRow,FeedEvents,Field,FilePick,Group,H,hasLongWord,IconBtn,Input,LikesLine,LoadMore,mdImages,NewPill,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,type RichEditorHandle,useLeaveGuard,VideoBadge,View,ViewerPostBar,Who,ProfileAv,useKept,useReturning,keptList,keepList,useBack} from './kit';
+import {ActionLine,Actions,AddBtn,AddCard,Alert,ArticleCard,ArticleImage,articlePlate,Ask,BAD_CHARS,Bar,Btn,Card,Chip,Chips,Counter,Empty,ExpandRow,FeedEvents,Field,FilePick,Group,H,hasLongWord,IconBtn,Input,LikesLine,LoadMore,mdImages,NewPill,Note,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,type RichEditorHandle,useLeaveGuard,View,ViewerPostBar,Who,ProfileAv,useKept,useReturning,keptList,keepList,useBack} from './kit';
 import {shakeFirstErr} from './kit/validate';
 import {refreshReads,useFe,usePartnerApproves,useSeen} from './session';
 import {useNewerPosts} from './feed-newer';
@@ -16,7 +16,7 @@ import {useSendPhoto,useSendVideo} from './media-upload';
 import {VIDEO_TYPES} from './kit/media';
 import {BellButton} from './inbox';
 import {DisputeNotice,PostMenu,ReplyMenu,type Removal} from './post-menu';
-import {restoreInto,useToast} from './toast';
+import {restoreInto,useToast,useFail} from './toast';
 import {MarksSheet,MediaGrid,MentionText,Poll,RichText,Viewer,marksPage,mdPlain,mediaSrc,personName,plural,slideOf,useTopics,type CatTopic,type MarksPage,type PollData,type ViewerBar} from './post-parts';
 import {AlbumField,albumOfPost} from './gallery';
 import {Jars,useInterests,type Interest} from './interests';
@@ -769,7 +769,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  const [album,setAlbum]=useState<string|null>(()=>edit?edit.albumId??null:params.get('album'));
  useEffect(()=>{if(edit&&edit.albumId===undefined&&acting)albumOfPost(call,acting.id,edit.id).then(v=>{if(v)setAlbum(v);}).catch(()=>{});},[edit,acting,call]);
  const [postId,setPostId]=useState<string|undefined>(draft?edit?.id:undefined);
- const [busy,setBusy]=useState<''|'publish'|'draft'>('');const [failure,setFailure]=useState('');const [errs,setErrs]=useState<Record<string,string>>({});
+ const [busy,setBusy]=useState<''|'publish'|'draft'>('');const setFailure=useFail();const [errs,setErrs]=useState<Record<string,string>>({});
  const [uploading,setUploading]=useState(false);const file=useRef<HTMLInputElement>(null);const text=useRef<RichEditorHandle>(null);
  const [sheet,setSheet]=useState<'topics'|'people'|'mention'|'ints'|null>(null);const [preview,setPreview]=useState(false);const [viewer,setViewer]=useState<number|null>(null);
  const ops=useRef({draft:newOpId(),publish:newOpId(),edit:newOpId()});
@@ -901,7 +901,6 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  useEffect(()=>{if(wantInts&&myJars!==null&&catalog.length)attachInterests();});
  // A refusal (a limit, a server rule) is written under the form: bring it into view, never leave the tap silent.
  const failRef=useRef<HTMLDivElement>(null);
- useEffect(()=>{if(failure)requestAnimationFrame(()=>failRef.current?.scrollIntoView({block:'center',behavior:'smooth'}));},[failure]);
  // V21 `mentionSuggest`: typing «@» (or the «Упомянуть» button) offers people — those the author follows, and from
  // two letters on, nickname search — and a pick writes «@nick ».
  const [sug,setSug]=useState<{q:string}|null>(null);
@@ -941,7 +940,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
     <Card className="preview-post k-preview-post"><PostCard post={fake} onChange={()=>{}} onRemove={()=>{}} full preview/></Card>
     <Card list>{audRow()}</Card>
     {steps.length>0&&<Card className="next-steps"><b>{t('fe.fd.next.title')}</b><ul>{steps.map(s=><li key={s}>{s}</li>)}</ul></Card>}
-    {failure&&<Alert kind="err">{failure}</Alert>}
+    
    </View>
    <div className="ctabar"><div className="wrap"><Actions>
     <Btn kind="soft" onClick={()=>setPreview(false)}>{t('fe.fd.change')}</Btn>
@@ -1029,7 +1028,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
      {audRow()}
     </Card>
    </Group>
-   {failure&&<Alert kind="err" noIcon ref={failRef}>{failure}</Alert>}
+   
   </View>
   <div className="ctabar"><div className="wrap"><div className="row g8">
    {/* Acting as the couple the longer «…от пары» button takes the row: «Как увидят» is the kit's icon-only button. */}
@@ -1109,7 +1108,7 @@ function MentionSheet({onClose,onPick}:{onClose:()=>void,onPick:(handle:string,m
 /** F10 «Сохранённые правки» of a published post: continue, publish, open the post, or discard them (asks first). */
 export function SavedEditSheet({e,onClose,onDone}:{e:SavedEdit,onClose:()=>void,onDone:(notice:string)=>void}){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();
- const [ask,setAsk]=useState(false);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const ops=useRef({pub:newOpId(),del:newOpId()});
+ const [ask,setAsk]=useState(false);const [busy,setBusy]=useState(false);const setFailure=useFail();const ops=useRef({pub:newOpId(),del:newOpId()});
  const publish=async()=>{if(busy)return;setBusy(true);setFailure('');
   try{const r=await call('post.publishEdits',{opId:ops.current.pub,postId:e.postId},edited);
    onDone(r.pending!=null?t('fe.pm.ed.pending'):r.review?t('fe.pm.ed.review'):t('fe.w3.edits.published'));}
@@ -1117,7 +1116,7 @@ export function SavedEditSheet({e,onClose,onDone}:{e:SavedEdit,onClose:()=>void,
  const discard=async()=>{if(busy)return;setBusy(true);setFailure('');
   try{await call('post.discardEdits',{opId:ops.current.del,postId:e.postId},okOnly);onDone(t('fe.w3.edits.discarded'));}
   catch(err){setFailure(feErrorMessage(err,t));ops.current.del=newOpId();}finally{setBusy(false);}};
- if(ask)return <Ask icon={Trash2} tone="l" danger title={t('fe.w3.edits.delTitle')} text={t('fe.w3.edits.delText')} ok={t('fe.w3.edits.delOk')} busy={busy} error={failure||undefined}
+ if(ask)return <Ask icon={Trash2} tone="l" danger title={t('fe.w3.edits.delTitle')} text={t('fe.w3.edits.delText')} ok={t('fe.w3.edits.delOk')} busy={busy}
   onOk={discard} onCancel={()=>{setAsk(false);setFailure('');}}/>;
  return <Sheet title={t('fe.w3.edits.title')} sub={mdPlain(e.post.title||e.post.body||'').slice(0,80)} onClose={onClose}>
   <Card list>
@@ -1126,6 +1125,6 @@ export function SavedEditSheet({e,onClose,onDone}:{e:SavedEdit,onClose:()=>void,
    <Row noChev icon={Eye} title={t('fe.w3.edits.openPost')} onClick={()=>{onClose();navigate('/n/feed/post/'+e.postId);}}/>
    <Row noChev icon={Trash2} danger title={t('fe.w3.edits.discard')} onClick={()=>setAsk(true)}/>
   </Card>
-  {failure&&<Alert kind="err">{failure}</Alert>}
+  
  </Sheet>;
 }

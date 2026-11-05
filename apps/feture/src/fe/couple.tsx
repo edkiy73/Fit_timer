@@ -8,7 +8,7 @@ import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {ActingAv,Actions,ActorCard,ActorCards,Alert,ApprovalSheet as ApprovalSheetKit,Av,Btn,Card,Counter,EventTile,Field,Group,KeyValues,Note,PersonLine,ReviewPost,Row,Sheet,TextArea,Who} from './kit';
 import {NamedPlate} from './comm-kit';
 import {useFe,useLive} from './session';
-import {useToast} from './toast';
+import {useToast,useFail} from './toast';
 import {FIELD,textLength,useChecks} from './kit/validate';
 
 /** Couple approvals (docs/notifications.md «Согласования пары и задачи»): the couple's open changes
@@ -254,7 +254,7 @@ function ApprovalLoaded({a,reload,onClose,onDone}:{a:Approval,reload:()=>void,on
  const {call,setActing}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
  const members=useCoupleMembers(a.addressee?.id);
  const parts=useSheetParts(a);
- const [busy,setBusy]=useState('');const [failure,setFailure]=useState('');const [refusing,setRefusing]=useState(false);const [note,setNote]=useState('');
+ const [busy,setBusy]=useState('');const setFailure=useFail();const [refusing,setRefusing]=useState(false);const [note,setNote]=useState('');
  const op=useRef(newOpId());
  const coupleId=a.addressee?.id;
  const checks=useChecks({note:'returnNote'},{note});
@@ -300,7 +300,7 @@ function ApprovalLoaded({a,reload,onClose,onDone}:{a:Approval,reload:()=>void,on
    </Field>
    <Counter n={textLength(note)} max={FIELD.returnNote.max}/>
   </>}
-  {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
+  
  </ApprovalSheetKit>;
 }
 
