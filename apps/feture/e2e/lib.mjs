@@ -158,6 +158,7 @@ export async function staffFactor(email, { fresh = false } = {}) {
   try {
     const me = await api(email, 'staff.me');
     if (!me.roles?.length || !me.factor) return me;
+    if (me.factor.waived) return me; // the checks are waived on this server (migration fe_checks_waiver): no second factor to enter
     if (!me.factor.enrolled) {
       const s = await api(email, 'staff.totpStart');
       if (!s.secret) throw new Error('staff.totpStart for ' + email + ': ' + JSON.stringify(s));

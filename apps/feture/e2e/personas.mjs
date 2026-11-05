@@ -39,7 +39,7 @@ export const MOD_ROLES = { 'mod-lead': ['lead'], 'mod-moderator': ['moderator'],
   'mod-support': ['support'], 'mod-multi': ['moderator', 'support'] };
 export const modMail = kind => `qa-${kind}@feture.test`;
 // «moderator» and «support» inside a handle are reserved words, so the handles are short forms.
-const MOD_HANDLES = { 'mod-lead': 'qa_mod_lead', 'mod-moderator': 'qa_mod_mdr', 'mod-verifier': 'qa_mod_ver', 'mod-auditor': 'qa_mod_aud', 'mod-support': 'qa_mod_sup', 'mod-multi': 'qa_mod_multi' };
+const MOD_HANDLES = { 'mod-lead': 'qa_mod_lead', 'mod-moderator': 'qa_mod_mdr', 'mod-verifier': 'qa_mod_verifier', 'mod-auditor': 'qa_mod_auditor', 'mod-support': 'qa_mod_sup', 'mod-multi': 'qa_mod_multi' };
 export const modHandle = kind => MOD_HANDLES[kind];
 export const KINDS = ['new', 'temp', 'owner', ...BASIC, ...FULL, 'pair', 'staff', 'staff2', ...Object.keys(MOD_ROLES)];
 

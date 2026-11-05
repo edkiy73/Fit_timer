@@ -53,6 +53,10 @@ commands; a second call only adds what is missing.
 | `pair` | two `full` people (`pa`, `pb`) in an active couple (`partner`, `coupleId`) | couple screens |
 | `staff` | the shared qa moderator (`qa-staff@feture.test`); its second factor is enrolled on first use and codes are entered by `lib.mjs` (`staffFactor`, the secret in `<E2E_SESSIONS>.factor.json`, never in the repo) | staff screens and review steps only |
 | `staff2` | a second staff account (`qa-staff2@feture.test`, moderator, granted out of band) | the 2FA enrolment screen (the lead resets its factor first) |
+| `mod-lead`, `mod-moderator`, `mod-verifier`, `mod-auditor`, `mod-support` | QA moderators with exactly one staff role each (`qa-mod-<role>@feture.test`, handles `qa_mod_lead`, `qa_mod_mdr`, `qa_mod_verifier`, `qa_mod_auditor`, `qa_mod_sup`); roles granted on the server once (`feture.staff_role`, owner as `granted_by`) | staff screens as one role: what each role may open and what it may not |
+| `mod-multi` | a QA moderator with two roles (moderator + support, `qa_mod_multi`) | a person with several roles |
+
+The checks (second factor) are waived on production (`staff.me` → `factor.waived`), so these personas need no code; `lib.mjs` `staffFactor` returns at once when the server says so.
 
 A persona with the optional second factor on (`account/factor.mjs`, owner 29.10.2026) keeps its secret in the same
 factor file: the scenario saves it with `saveFactor(factorKey(email), {secret, codes})` before confirming, and from then
