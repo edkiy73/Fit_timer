@@ -75,7 +75,9 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   'premium.revoked': { type: 'premiumRevoked' },
   'premium.ending': { type: 'premiumEnding' },
   'premium.ended': { type: 'premiumEnded' },
+  'premium.grantedBulk': { type: 'premiumGrantedBulk' },
   'premium.pair': { type: 'premiumPair' },
+  'premium.referral': { type: 'premiumReferral' },
   'premium.giftSent': { type: 'premiumGiftSent', actor: 'to' },
   // Ready for the payment provider (docs/infra/payments.md): nothing enqueues the first two until it is connected.
   'premium.renewalFailed': { type: 'premiumRenewalFailed' },

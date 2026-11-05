@@ -311,6 +311,12 @@ const RAW = /** @type {Record<string, any>} */ ({
   'photoCheck.other': { icon: 'Shield', tone: 'l', text: T('Фото-проверка не прошла', 'Photo verification didn’t pass') },
   premiumGranted: { filter: 'other', icon: 'Crown', tone: 'g', text: T('Тебе открыт Premium до {date}', 'Premium is on for you until {date}'),
     normal: T('Тебе открыт Premium', 'Premium is on for you'), email: 'now', dest: 'premium' },
+  'premiumGranted.welcome': { text: T('Добро пожаловать: Premium до {date}', 'Welcome: Premium until {date}') },
+  'premiumGranted.invited': { text: T('Бонус за приглашение: Premium до {date}', 'Invitation bonus: Premium until {date}') },
+  'premiumGranted.promo': { text: T('Промокод сработал: Premium до {date}', 'Promo code worked: Premium until {date}') },
+  // A grant to many at once: the same words, but no email each (the bell and the push are enough).
+  premiumGrantedBulk: { filter: 'other', icon: 'Crown', tone: 'g', text: T('Тебе открыт Premium до {date}', 'Premium is on for you until {date}'),
+    normal: T('Тебе открыт Premium', 'Premium is on for you'), email: 'digest', dest: 'premium' },
   premiumRevoked: { filter: 'other', icon: 'Crown', tone: '', text: T('Premium отключён. Если это ошибка, напиши в поддержку', 'Premium was turned off. If this is a mistake, write to support'),
     normal: T('Premium отключён', 'Premium was turned off'), email: 'now', dest: 'premium' },
   // Soon over (a week / a day ahead) and over: for grants, gifts and a subscription that is not renewing.
@@ -322,9 +328,12 @@ const RAW = /** @type {Record<string, any>} */ ({
     normal: T('Premium закончился', 'Premium has ended'), email: 'now', dest: 'premium' },
   // A partner's Premium reaches the couple (acting as «Мы» it works), and stops reaching it.
   premiumPair: { filter: 'other', icon: 'Crown', tone: 'g', text: T('Партнёр открыл вашей паре Premium до {date}', 'Your partner opened Premium for your couple until {date}'),
-    normal: T('Партнёр открыл вашей паре Premium', 'Your partner opened Premium for your couple'), email: 'now', dest: 'premium' },
+    normal: T('Партнёр открыл вашей паре Premium', 'Your partner opened Premium for your couple'), email: 'digest', dest: 'premium' },
   'premiumPair.started': { text: T('Партнёр открыл вашей паре Premium до {date}', 'Your partner opened Premium for your couple until {date}') },
   'premiumPair.ended': { tone: '', text: T('У вашей пары закончился Premium', 'Your couple’s Premium has ended'), normal: T('У вашей пары закончился Premium', 'Your couple’s Premium has ended') },
+  // The person who invited somebody: the friend finished getting to know the app, so the days are theirs (nobody is named).
+  premiumReferral: { filter: 'other', icon: 'Crown', tone: 'g', text: T('Друг пришёл по твоему приглашению: тебе добавлен Premium', 'A friend joined by your invitation: Premium was added for you'),
+    normal: T('Друг пришёл по твоему приглашению', 'A friend joined by your invitation'), email: 'digest', dest: 'premium' },
   // To the giver, once the gift is paid and given.
   premiumGiftSent: { filter: 'other', icon: 'Crown', tone: 'g', text: T('{name}: подарок Premium вручён', '{name}: your Premium gift was delivered'),
     alone: T('Подарок вручён', 'Your gift was delivered'), normal: T('Подарок вручён', 'Your gift was delivered'), named: true, dest: 'premium' },
@@ -332,7 +341,7 @@ const RAW = /** @type {Record<string, any>} */ ({
   premiumRenewalFailed: { important: true, filter: 'other', icon: 'Crown', tone: 'l', text: T('Продление Premium не прошло. Проверь способ оплаты', 'Your Premium renewal failed. Check your payment method'),
     normal: T('Продление Premium не прошло', 'Your Premium renewal failed'), email: 'now', dest: 'premium' },
   premiumRenewal: { filter: 'other', icon: 'Crown', tone: 'g', text: T('Автопродление Premium включено', 'Premium auto-renewal is on'),
-    normal: T('Автопродление Premium изменено', 'Premium auto-renewal changed'), email: 'now', dest: 'premium' },
+    normal: T('Автопродление Premium изменено', 'Premium auto-renewal changed'), email: 'none', dest: 'premium' },
   'premiumRenewal.on': { text: T('Автопродление Premium включено', 'Premium auto-renewal is on') },
   'premiumRenewal.off': { tone: '', text: T('Автопродление Premium выключено. Premium закончится в срок', 'Premium auto-renewal is off. Premium will end on schedule') },
   premiumReceipt: { filter: 'other', icon: 'Crown', tone: 'g', text: T('Оплата Premium прошла. Чек придёт на почту', 'Premium payment received. The receipt is on its way by email'),
@@ -428,6 +437,7 @@ const SUB = /** @type {Record<string, (d: Record<string, any>) => unknown>} */ (
   disputeResolved: d => (d.outcome === 'removed' ? 'removed' : d.outcome === 'restored' ? 'restored' : d.outcome === 'gone' ? 'gone' : undefined),
   appealDecided: d => (d.state === 'granted' ? 'granted' : d.state === 'denied' ? 'denied' : undefined),
   staffRole: d => (d.grant === true ? 'grant' : d.grant === false ? 'revoke' : undefined),
+  premiumGranted: d => (['welcome', 'invited', 'promo'].includes(d.why) ? d.why : undefined),
   premiumEnding: d => (d.kind === 'day' ? 'day' : 'week'),
   premiumPair: d => (d.kind === 'ended' ? 'ended' : 'started'),
   premiumRenewal: d => (d.kind === 'off' ? 'off' : 'on'),

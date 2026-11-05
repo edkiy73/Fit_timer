@@ -6,6 +6,8 @@ import { emailState } from '../email.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { hmac } from '../hash.mjs';
 import { journal } from './staff.mjs';
+import { grantWelcome } from './premium.mjs';
+import { settleReferral } from './referral.mjs';
 import { setSuspended } from './moderation.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { photosFor } from './photos.mjs';
@@ -544,7 +546,11 @@ const run = {
        where profile_id = $1`,
       [acting.profileId, 'all', input.genders, input.orients, input.roles, input.formats, input.seeks, input.status]);
     await q.query(`update feture.profile_settings set discover_mode = $2, updated_at = now() where profile_id = $1`, [acting.profileId, input.discover]);
+    const [was] = await q.query('select onboarded_at from feture.account where id = $1', [account.id]);
     await q.query(`update feture.account set onboarded_at = coalesce(onboarded_at, now()), updated_at = now() where id = $1`, [account.id]);
+    // The first time only: the welcome Premium, when the staff area has that switched on («Сервис → Premium»).
+    if (!was?.onboarded_at) await grantWelcome(q, account.id);
+    await settleReferral(q, account.id); // an invitation waits for this and for the age check
     const [{ photo }] = await q.query(
       `select exists (select 1 from feture.profile p join feture.media_asset m on m.id = p.avatar_asset_id where p.id = $1 and m.state = 'approved') photo`,
       [acting.profileId]);

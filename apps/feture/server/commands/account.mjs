@@ -253,6 +253,10 @@ const run = {
                from feture.support_message m where m.ticket_id = t.id) messages from feture.support_ticket t where t.account_id = $1 order by t.created_at`),
           purchases: await many(`select kind, plan, days, provider, state, anonymous, amount_cents, currency, created_at, paid_at from feture.purchase where account_id = $1 order by created_at`),
           // Premium: every period the account had (the staff's internal reason is not part of it), its subscriptions and the gifts it got.
+          // Invitations: the code this account shares, how many came by it, and the code it came by itself (nobody else is named).
+          referral: await one(`select (select code from feture.referral_code where owner_account_id = $1 and kind = 'personal') my_code,
+              (select count(*)::int from feture.referral_use u join feture.referral_code c on c.id = u.code_id where c.owner_account_id = $1) invited,
+              (select jsonb_build_object('kind', c.kind, 'state', u.state, 'at', u.created_at) from feture.referral_use u join feture.referral_code c on c.id = u.code_id where u.invitee_account_id = $1) came_by`),
           premiumPeriods: await many(`select source, starts_at, ends_at, revoked_at, created_at from feture.entitlement where account_id = $1 order by starts_at`),
           subscriptions: await many(`select provider, plan, auto_renew, renews_at, state, created_at from feture.subscription where account_id = $1 order by created_at`),
           giftsReceived: await many(`select days, paid_at, case when anonymous then null else (select handle from feture.profile where id = (select person_profile_id from feture.account where id = pu.account_id)) end from_handle

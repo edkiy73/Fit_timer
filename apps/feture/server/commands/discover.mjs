@@ -291,15 +291,16 @@ async function withdrawLike(q, from, to) {
   return rows.length > 0;
 }
 
-/** One free undo a day (shared with «Вернуть»), unlimited with Premium (Q6; a couple has it through either partner, Q12).
+/** One free undo a day per profile (owner 06.11.2026: as oneself and as the couple, one each; shared with «Вернуть»), unlimited
+ * with Premium (Q6; a couple has it through either partner, Q12).
  * @param {Q} q @param {string} accountId @param {string} profileId */
 async function spendUndo(q, accountId, profileId) {
   await q.query(`select pg_advisory_xact_lock(hashtextextended('fe-undo:' || $1, 0))`, [accountId]);
   if (!(await isPremium(q, accountId, profileId))) {
-    const [{ n }] = await q.query(`select count(*)::int n from feture.rate_event where account_id = $1 and kind = 'discover.undo' and created_at > now() - interval '1 day'`, [accountId]);
+    const [{ n }] = await q.query(`select count(*)::int n from feture.rate_event where profile_id = $1 and kind = 'discover.undo' and created_at > now() - interval '1 day'`, [profileId]);
     if (n >= 1) fail(403, 'premium_required');
   }
-  await q.query(`insert into feture.rate_event (account_id, kind) values ($1, 'discover.undo')`, [accountId]);
+  await q.query(`insert into feture.rate_event (account_id, profile_id, kind) values ($1, $2, 'discover.undo')`, [accountId, profileId]);
 }
 
 /** A dismissed like comes back to the Likes list (undo, and «Вернуть» in the history). @param {Q} q @param {string} from the sender @param {string} to who dismissed it */

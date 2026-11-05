@@ -1415,7 +1415,7 @@ function WaiverSheet({member,onClose,onDone}:{member:Waived|null,onClose:()=>voi
 // ——— Premium: give, look, take back, prices ———
 
 const listRes=z.object({ok:z.literal(true),kind:z.enum(['person','couple']),accounts:z.array(z.object({handle:z.string().nullable(),name:z.string().nullable(),until:z.string().nullable(),
- items:z.array(z.object({id:z.string(),source:z.enum(['purchase','gift','staff']),startsAt:z.string(),endsAt:z.string(),revokedAt:z.string().nullable(),reason:z.string().nullable()}))}))});
+ items:z.array(z.object({id:z.string(),source:z.enum(['purchase','gift','staff','promo','referral']),startsAt:z.string(),endsAt:z.string(),revokedAt:z.string().nullable(),reason:z.string().nullable()}))}))});
 type PremList=z.infer<typeof listRes>;
 const pricesRes=z.object({ok:z.literal(true),currency:z.string(),prices:z.record(z.string(),z.number()),defaults:z.record(z.string(),z.number()).optional()});
 const PRICE_KEYS=['month','year','m1','m3','m12'] as const;
@@ -1449,6 +1449,49 @@ function Premium(){
   try{await call('staff.premiumPricesSet',{opId:newOpId(),prices:newPrices},pricesRes,{asAccount:true});setPriceSaved(true);}
   catch(e){err(e);}finally{setBusy(false);}};
  const label=(k:string)=>t('fe.staff.premium.price.'+k);
+  // Premium in bulk, and the welcome switch.
+ const [aud,setAud]=useState<'all'|'before'>('all');const [before,setBefore]=useState('');const [bDays,setBDays]=useState('30');const [bReason,setBReason]=useState('');
+ const [count,setCount]=useState<number|null>(null);const [bulkDone,setBulkDone]=useState<number|null>(null);
+ const bn=Number(bDays);const dayOk=aud==='all'||/^\d{4}-\d{2}-\d{2}$/.test(before.trim());
+ const canBulk=dayOk&&Number.isInteger(bn)&&bn>=1&&bn<=400&&bReason.trim().length>=3;
+ const bulkInput=()=>({audience:aud,...(aud==='before'?{before:before.trim()}:{})});
+ const countRes=z.object({ok:z.literal(true),count:z.number()});
+ const countBulk=async()=>{setBusy(true);setFailure('');setBulkDone(null);
+  try{const r=await call('staff.premiumGrantAllCount',bulkInput(),countRes,{asAccount:true,fresh:true});setCount(r.count);}
+  catch(e){setCount(null);err(e);}finally{setBusy(false);}};
+ const grantBulk=async()=>{setBusy(true);setFailure('');
+  try{const r=await call('staff.premiumGrantAll',{opId:newOpId(),...bulkInput(),days:bn,reason:bReason.trim()},countRes,{asAccount:true});setBulkDone(r.count);setCount(null);}
+  catch(e){err(e);}finally{setBusy(false);}};
+ const promoRes=z.object({ok:z.literal(true),welcomeDays:z.number().nullable()});
+ const [welcome,setWelcome]=useState<number|null|undefined>(undefined);const [wDays,setWDays]=useState('14');
+ useEffect(()=>{call('staff.premiumPromo',{},promoRes,{asAccount:true,fresh:true}).then(r=>{setWelcome(r.welcomeDays);if(r.welcomeDays)setWDays(String(r.welcomeDays));}).catch(()=>setWelcome(null));
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[call]);
+ const setWelcomeDays=async(v:number|null)=>{setBusy(true);setFailure('');
+  try{const r=await call('staff.premiumPromoSet',{opId:newOpId(),welcomeDays:v},promoRes,{asAccount:true});setWelcome(r.welcomeDays);}
+  catch(e){err(e);}finally{setBusy(false);}};
+ const wn=Number(wDays);const wOk=Number.isInteger(wn)&&wn>=1&&wn<=365;
+  // Invitations (personal links) and promo codes.
+ const refRes=z.object({ok:z.literal(true),enabled:z.boolean(),rewardDays:z.number(),inviterDays:z.number(),capCount:z.number(),capDays:z.number()});
+ const [ref,setRef]=useState<z.infer<typeof refRes>|null>(null);const [rf,setRf]=useState({rewardDays:'7',inviterDays:'7',capCount:'10',capDays:'30'});
+ const promosRes=z.object({ok:z.literal(true),personal:z.object({invited:z.number(),rewarded:z.number()}),items:z.array(z.object({id:z.string(),code:z.string(),label:z.string().nullable(),days:z.number(),maxUses:z.number().nullable(),expiresAt:z.string().nullable(),active:z.boolean(),used:z.number(),rewarded:z.number()}))});
+ const [promos,setPromos]=useState<z.infer<typeof promosRes>|null>(null);
+ const [pc,setPc]=useState({code:'',label:'',days:'30',maxUses:'',expires:''});
+ const loadPromos=()=>call('staff.promoList',{},promosRes,{asAccount:true,fresh:true}).then(setPromos).catch(()=>{});
+ useEffect(()=>{call('staff.referralSettings',{},refRes,{asAccount:true,fresh:true}).then(r=>{setRef(r);setRf({rewardDays:String(r.rewardDays),inviterDays:String(r.inviterDays),capCount:String(r.capCount),capDays:String(r.capDays)});}).catch(()=>{});void loadPromos();
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[call]);
+ const saveRef=async(patch:Record<string,unknown>)=>{setBusy(true);setFailure('');
+  try{setRef(await call('staff.referralSettingsSet',{opId:newOpId(),...patch},refRes,{asAccount:true}));}catch(e){err(e);}finally{setBusy(false);}};
+ const rfNum=(k:keyof typeof rf)=>Number(rf[k]);
+ const rfOk=rfNum('rewardDays')>=1&&rfNum('rewardDays')<=365&&rfNum('inviterDays')>=0&&rfNum('inviterDays')<=365&&rfNum('capCount')>=1&&rfNum('capDays')>=1&&rfNum('capDays')<=365;
+ const pcOk=/^[A-Za-z0-9_-]{3,24}$/.test(pc.code.trim())&&pc.label.trim().length>=3&&pc.days!==''&&Number(pc.days)<=365&&(!pc.expires||/^\d{4}-\d{2}-\d{2}$/.test(pc.expires.trim()));
+ const createPromo=async()=>{setBusy(true);setFailure('');
+  try{await call('staff.promoCreate',{opId:newOpId(),code:pc.code.trim(),label:pc.label.trim(),days:Number(pc.days),...(pc.maxUses?{maxUses:Number(pc.maxUses)}:{}),...(pc.expires?{expiresAt:pc.expires.trim()}:{})},z.object({ok:z.literal(true)}),{asAccount:true});
+   setPc({code:'',label:'',days:'30',maxUses:'',expires:''});await loadPromos();}
+  catch(e){setFailure((e instanceof FeError&&e.rule==='code_taken')?t('fe.staff.premium.promoTaken'):feErrorMessage(e,t));}finally{setBusy(false);}};
+ const togglePromo=async(id:string,active:boolean)=>{setBusy(true);setFailure('');
+  try{await call('staff.promoSet',{opId:newOpId(),codeId:id,active},z.object({ok:z.literal(true)}),{asAccount:true});await loadPromos();}catch(e){err(e);}finally{setBusy(false);}};
  return <>
   <Group title={t('fe.staff.premium.grantTitle')} foot={t('fe.staff.premium.grantNote')}>
    <Form>
@@ -1477,6 +1520,47 @@ function Premium(){
     <Confirm text={t('fe.staff.premium.confirmRevoke')} busy={busy} onNo={()=>setRevoking(null)} onYes={()=>{if(revokeReason.trim().length>=3)void revoke();}}/>
    </Form>}
   </Group>
+  <Group title={t('fe.staff.premium.welcomeTitle')} foot={t('fe.staff.premium.welcomeNote')}>
+   <Card list><ToggleRow title={t('fe.staff.premium.welcomeOn')} sub={welcome?t('fe.staff.premium.welcomeIs',{n:String(welcome)}):t('fe.staff.premium.welcomeOff')} on={!!welcome} disabled={busy||welcome===undefined||(!welcome&&!wOk)}
+     onClick={()=>void setWelcomeDays(welcome?null:wn)}/></Card>
+   <Form><LineField label={t('fe.staff.premium.days')} inputMode="numeric" value={wDays} max={3} onChange={v=>setWDays(v.replace(/\D/g,''))}/>
+    {welcome&&wOk&&wn!==welcome&&<Btn kind="soft" disabled={busy} onClick={()=>void setWelcomeDays(wn)}>{t('fe.staff.premium.pricesSave')}</Btn>}</Form>
+  </Group>
+  <Group title={t('fe.staff.premium.bulkTitle')} foot={t('fe.staff.premium.bulkNote')}>
+   <Form>
+    <Seg label={t('fe.staff.premium.bulkWho')} value={aud} onChange={k=>{setAud(k as 'all'|'before');setCount(null);setBulkDone(null);}} options={[{id:'all',label:t('fe.staff.premium.bulkAll')},{id:'before',label:t('fe.staff.premium.bulkBefore')}]}/>
+    {aud==='before'&&<LineField label={t('fe.staff.premium.bulkDate')} value={before} max={10} onChange={v=>{setBefore(v);setCount(null);}}/>}
+    <LineField label={t('fe.staff.premium.days')} inputMode="numeric" value={bDays} max={3} onChange={v=>setBDays(v.replace(/\D/g,''))}/>
+    <TextField label={t('fe.staff.premium.reason')} value={bReason} onChange={setBReason} max={300}/>
+    {count===null?<Btn kind="soft" disabled={busy||!canBulk} onClick={()=>void countBulk()}>{t('fe.staff.premium.bulkCount')}</Btn>
+     :<Confirm text={t('fe.staff.premium.bulkConfirm',{n:String(count),days:bDays})} busy={busy} onNo={()=>setCount(null)} onYes={()=>void grantBulk()}/>}
+    {bulkDone!==null&&<Alert kind="ok" icon={Check}>{t('fe.staff.premium.bulkDone',{n:String(bulkDone)})}</Alert>}
+   </Form>
+  </Group>
+  <Group title={t('fe.staff.premium.refTitle')} foot={t('fe.staff.premium.refNote')}>
+   <Card list><ToggleRow title={t('fe.staff.premium.refOn')} sub={promos?t('fe.staff.premium.refStats',{a:String(promos.personal.invited),b:String(promos.personal.rewarded)}):undefined} on={!!ref?.enabled} disabled={busy||!ref}
+     onClick={()=>void saveRef({enabled:!ref?.enabled})}/></Card>
+   {ref&&<Form>
+    <LineField label={t('fe.staff.premium.refReward')} inputMode="numeric" value={rf.rewardDays} max={3} onChange={v=>setRf(x=>({...x,rewardDays:v.replace(/\D/g,'')}))}/>
+    <LineField label={t('fe.staff.premium.refInviter')} inputMode="numeric" value={rf.inviterDays} max={3} onChange={v=>setRf(x=>({...x,inviterDays:v.replace(/\D/g,'')}))}/>
+    <LineField label={t('fe.staff.premium.refCap')} inputMode="numeric" value={rf.capCount} max={4} onChange={v=>setRf(x=>({...x,capCount:v.replace(/\D/g,'')}))}/>
+    <LineField label={t('fe.staff.premium.refCapDays')} inputMode="numeric" value={rf.capDays} max={3} onChange={v=>setRf(x=>({...x,capDays:v.replace(/\D/g,'')}))}/>
+    <Btn kind="soft" disabled={busy||!rfOk} onClick={()=>void saveRef({rewardDays:rfNum('rewardDays'),inviterDays:rfNum('inviterDays'),capCount:rfNum('capCount'),capDays:rfNum('capDays')})}>{t('fe.staff.premium.pricesSave')}</Btn>
+   </Form>}
+  </Group>
+  <Group title={t('fe.staff.premium.promoTitle')} foot={t('fe.staff.premium.promoNote')}>
+   {promos&&promos.items.length>0&&<Card list>{promos.items.map(c=><Row key={c.id} noChev title={c.code+(c.label?' · '+c.label:'')}
+    sub={t('fe.staff.premium.promoLine',{days:String(c.days),used:String(c.used),done:String(c.rewarded)})+(c.maxUses?' · '+t('fe.staff.premium.promoMax',{n:String(c.maxUses)}):'')+(c.expiresAt?' · '+t('fe.staff.premium.promoTo',{at:when(c.expiresAt)}):'')}
+    end={<Btn kind={c.active?'soft':'primary'} size="sm" auto disabled={busy} onClick={()=>void togglePromo(c.id,!c.active)}>{t(c.active?'fe.staff.premium.promoOff':'fe.staff.premium.promoOn')}</Btn>}/>)}</Card>}
+   <Form>
+    <LineField label={t('fe.staff.premium.promoCode')} value={pc.code} max={24} autoCapitalize="characters" onChange={v=>setPc(x=>({...x,code:v}))}/>
+    <LineField label={t('fe.staff.premium.promoLabel')} value={pc.label} max={60} onChange={v=>setPc(x=>({...x,label:v}))}/>
+    <LineField label={t('fe.staff.premium.promoDays')} inputMode="numeric" value={pc.days} max={3} onChange={v=>setPc(x=>({...x,days:v.replace(/\D/g,'')}))}/>
+    <LineField label={t('fe.staff.premium.promoMaxL')} inputMode="numeric" value={pc.maxUses} max={7} onChange={v=>setPc(x=>({...x,maxUses:v.replace(/\D/g,'')}))}/>
+    <LineField label={t('fe.staff.premium.promoDate')} value={pc.expires} max={10} onChange={v=>setPc(x=>({...x,expires:v}))}/>
+    <Btn icon={Check} disabled={busy||!pcOk} onClick={()=>void createPromo()}>{t('fe.staff.premium.promoCreate')}</Btn>
+   </Form>
+  </Group>
   <Group title={t('fe.staff.premium.pricesTitle',{cur})} foot={t('fe.staff.premium.pricesNote')}>
    {prices?<Form>
     {PRICE_KEYS.map(k=><LineField key={k} label={label(k)} inputMode="decimal" value={prices[k]??''} max={8} onChange={v=>{setPriceSaved(false);setPrices(p=>({...(p??{}),[k]:v.replace(/[^0-9.,]/g,'')}));}}/>)}
@@ -1490,7 +1574,7 @@ function Premium(){
 // ——— journal ———
 
 const JOURNAL_ACTIONS=['words.add','words.remove','person.watch','person.unwatch','topic.create','topic.save','document.save','document.publish','age.view','age.approve','age.reject','photo.view','photo.approve','photo.reject','community.approve','community.reject','event.approve','event.reject','event.hide',
- 'media.view','media.approve','media.reject','notice.removed','notice.kept','notice.not_actionable','place.approve','place.reject','premium.grant','premium.revoke','premium.prices','report.keep','report.remove',
+ 'media.view','media.approve','media.reject','notice.removed','notice.kept','notice.not_actionable','place.approve','place.reject','premium.grant','premium.revoke','premium.prices','premium.grantAll','premium.welcome','referral.settings','promo.create','promo.set','report.keep','report.remove',
  'revision.approve','revision.reject','sanction.suspend','sanction.lift','sanction.expired','restrict.on','restrict.off','restrict.expired','staff.grant','staff.revoke','staff.factorOn','staff.factorLocked',
  'staff.factorReset','staff.recoveryUsed','support.reply','support.close','appeal.grant','appeal.deny','dating.on','dating.off','maintenance.on','maintenance.off','place.limit',
  'dispute.restore','dispute.remove','dispute.claimantReviewed','dispute.claimantRestricted'] as const;

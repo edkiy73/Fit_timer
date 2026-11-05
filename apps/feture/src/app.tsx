@@ -13,7 +13,7 @@ import { page, screen } from './lazy-screens';
 import { ScreenError } from './fe/screen-error';
 // Every /n screen but the feed (the first one) is its own chunk: the first screen ships less script, and the rest is
 // fetched in the background once it shows (lazy-screens.ts → prefetchScreens), so a tap later never waits for it.
-const communities=()=>import('./fe/communities'),inbox=()=>import('./fe/inbox'),pair=()=>import('./fe/pair'),settings=()=>import('./fe/settings'),
+const invite=()=>import('./fe/invite'),communities=()=>import('./fe/communities'),inbox=()=>import('./fe/inbox'),pair=()=>import('./fe/pair'),settings=()=>import('./fe/settings'),
  settingsLists=()=>import('./fe/settings-lists'),accountExtra=()=>import('./fe/account-extra'),chats=()=>import('./fe/chats'),people=()=>import('./fe/people'),
  profileExtras=()=>import('./fe/profile-extras'),meEdit=()=>import('./fe/me-edit'),mine=()=>import('./fe/mine'),access=()=>import('./fe/access'),
  links=()=>import('./fe/links'),browse=()=>import('./fe/browse'),interests=()=>import('./fe/interests'),staff=()=>import('./fe/staff'),ageCheck=()=>import('./fe/age-check'),
@@ -24,6 +24,7 @@ const MeEditScreen=screen(meEdit,'MeEditScreen'),MinePartScreen=screen(mine,'Min
 const InboxScreen=screen(inbox,'InboxScreen'),InboxNoteScreen=screen(inbox,'InboxNoteScreen'),PairScreen=screen(pair,'PairScreen');
 const SettingsScreen=screen(settings,'SettingsScreen'),NotificationSettingsScreen=screen(settings,'NotificationSettingsScreen'),DataScreen=screen(settings,'DataScreen');
 const HiddenFeedScreen=screen(settingsLists,'HiddenFeedScreen'),BlockedScreen=screen(settingsLists,'BlockedScreen');
+const InviteScreen=screen(invite,'InviteScreen'),JoinScreen=screen(invite,'JoinScreen');
 const PremiumScreen=screen(accountExtra,'PremiumScreen'),SecurityScreen=screen(accountExtra,'SecurityScreen'),HelpScreen=screen(accountExtra,'HelpScreen');
 const CompatScreen=screen(profileExtras,'CompatScreen'),HistoryScreen=screen(profileExtras,'HistoryScreen'),MePreviewScreen=screen(people,'MePreviewScreen');
 const AccessScreen=screen(access,'AccessScreen'),LinksScreen=screen(links,'LinksScreen'),LinkEditScreen=screen(links,'LinkEditScreen');
@@ -129,6 +130,8 @@ export const routes: RouteObject[] = [
         {path:'settings/blocked', element:<BlockedScreen />},
         {path:'settings/security', element:<SecurityScreen />},
         {path:'premium', element:<PremiumScreen />},
+        {path:'me/invite', element:<InviteScreen />},
+        {path:'join/:code', element:<JoinScreen />},
         {path:'help', element:<HelpScreen />},
         {path:'settings/age', element:<AgeCheckScreen />},
         {path:'settings/photo-check', element:<PhotoCheckScreen />},

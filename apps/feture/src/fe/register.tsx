@@ -13,6 +13,7 @@ import {useToast,useFail} from './toast';
 import {AuthBar,AuthFrame,AuthLogo} from './start';
 import {TermsSheet,loadDocuments} from './terms-sheet';
 import {pendingPairLink} from './pair-link';
+import {dropRefCode,pendingRefCode} from './referral-link';
 import {DiscoverPhotoAsk} from './discover-photo';
 import {ChipPick} from './kit/ChipPick';
 import {CityField} from './kit/Place';
@@ -280,6 +281,9 @@ function FirstSteps({profileId,about,onBack,onLeave}:{profileId:string,about:Abo
    for(const [communityId,j] of Object.entries(joins)){
     try{await call('community.join',{opId:newOpId(),communityId,rulesAccepted:true,answer:j.answer},z.object({ok:z.literal(true)}).passthrough(),{profileId});}catch{failed++;}
    }
+   // An invitation link or a promo code remembered before sign-up: applied now (its reward waits for the age check). A refusal is not shown here.
+   const refCode=pendingRefCode();
+   if(refCode){try{await call('referral.apply',{opId:newOpId(),code:refCode},z.object({ok:z.literal(true)}).passthrough(),{asAccount:true});}catch{/* the code was wrong or too late: nothing to tell */}dropRefCode();}
    const names=tp.map(tname);
    // V21 AUTH-019: «Да, вместе» — the pair invitation; otherwise the feed (the photo for Discover was asked on step 1).
    const to=pendingPairLink()?'/n/me/pair?auto=1':about.partner==='yes'?'/n/me/pair':'/n/feed';
