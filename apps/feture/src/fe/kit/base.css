@@ -3159,14 +3159,12 @@
 .v21 .own-todo{margin-top:12px}
 /* V19 — one mode: the dock shows who acts; «Мы» tints the app and marks hearts */
 @media(min-width:768px){.v21 body:not(.frame) .qa-fab{left:auto;right:12px;bottom:12px}}/* the review button no longer covers the sidebar profile switch */
-/* V20 — the dock avatar is icon-sized (24 px); the ring keeps a 2 px gap; the badge sits on the slot corner */
+/* V20 — the dock avatar is icon-sized (24 px); the ring keeps a 2 px gap; the badge sits exactly like on the other tabs */
 .v21 .dock-av{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;outline:1.5px solid transparent;outline-offset:2px;transition:outline-color .2s}
 .v21 .dock-av .av{width:24px!important;height:24px!important;font-size:var(--fs-micro)}
 .v21 .dock button.on .dock-av{outline-color:var(--ink)}
 .v21 .dock-av.us,
 .v21 .dock button.on .dock-av.us{outline:2px solid var(--violet);outline-offset:2px}
-.v21 .dock button.me-tab em:not(.dot){left:calc(50% + 11px);top:0;box-shadow:0 0 0 2px var(--surf)}
-.v21 .dock button.me-tab em.dot{left:calc(50% + 12px);top:2px}
 .v21 .navb .dock-av{outline:0}
 .v21.as-couple::before{content:"";position:fixed;left:0;right:0;top:var(--safe-t);height:3px;background:#7c5cff;z-index:60;pointer-events:none}
 /* V20 — long words without spaces wrap in feed posts and their hashtags (was pushing the page sideways since V18) */
