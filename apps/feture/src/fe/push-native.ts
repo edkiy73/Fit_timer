@@ -129,6 +129,28 @@ export function onNativePushTap(open:(route:string)=>void):()=>void{
  return ()=>{gone=true;void handle?.remove();};
 }
 
+const TAP_KEY='feture.fe.push.tap';
+const TAP_TTL=60*60*1000;
+export const PUSH_TAP_EVENT='fe:pushtap';
+/** The tap is written down the moment it arrives, from the app's root (not from a screen that may not be shown yet): a
+ * required update, a sign-in or a loading session in between would otherwise lose it, and an install restarts the app. */
+export function rememberPushTaps():()=>void{
+ return onNativePushTap(route=>{
+  try{localStorage.setItem(TAP_KEY,JSON.stringify({route,at:Date.now()}));}catch{/* no storage */}
+  window.dispatchEvent(new Event(PUSH_TAP_EVENT));
+ });
+}
+/** The screen of the last tapped notification, once (an hour at most). */
+export function takePushTap():string|null{
+ try{
+  const raw=localStorage.getItem(TAP_KEY);if(!raw)return null;
+  localStorage.removeItem(TAP_KEY);
+  const v=JSON.parse(raw) as {route?:unknown,at?:unknown};
+  if(typeof v.route!=='string'||typeof v.at!=='number'||Date.now()-v.at>TAP_TTL)return null;
+  return pushRoute('/#'+v.route);
+ }catch{return null;}
+}
+
 /** A push that arrives while the app is open is a hint that something changed: `fn` resyncs (session.tsx). The stream
  * usually told the screens already; after a sleep it may not have. */
 export function onForegroundPush(fn:()=>void):()=>void{
