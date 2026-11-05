@@ -96,7 +96,10 @@ test('albums: create, rules, posts into albums, who sees which album and tile, o
 
     // The post editor puts a new post into an album (own albums, posts with photos only).
     const p4 = await photoPost(db, call, 'ua', a, 'Ещё мастерская', { albumId: al1.id });
-    assert.equal((await call('ua', a, { action: 'post.saveDraft', opId: op(), post: draft('Без фото', { albumId: al1.id }) })).status, 400);
+    // A draft is saved in any state (owner 05.11.2026): an album without photos is left out of it, publishing keeps the rule.
+    const noPhoto = await call('ua', a, { action: 'post.saveDraft', opId: op(), post: draft('Без фото', { albumId: al1.id }) });
+    assert.equal(noPhoto.status, 200, JSON.stringify(noPhoto));
+    assert.equal((await db.query('select album_id from feture.post where id = $1', [noPhoto.id]))[0].album_id, null);
     assert.equal((await call('ua', a, { action: 'post.saveDraft', opId: op(), post: draft('Чужой', { albumId: foreign, mediaIds: [await asset(db, a)] }) })).status, 400);
     // Into a followers album from the editor: the post becomes followers-only.
     const p5 = await photoPost(db, call, 'ua', a, 'Тоже для своих', { albumId: al2.id });

@@ -54,11 +54,11 @@ export const eventFields = z.strictObject(base).refine(shapeRules, { message: 'e
 export const eventsCommands = {
   'event.draftSave': {
     profile: true, write: true, rate: { kind: 'event.draft', max: 1000, window: '1 day' },
-    // A draft keeps whatever is filled in; only a title is needed to save it.
+    // A draft keeps whatever is filled in, in any state (owner 05.11.2026): not even a title is needed (it shows as «Без названия»).
     input: z.strictObject({
       opId, draftId: id.optional(), step: z.int().min(1).max(4).default(1),
-      form: z.record(z.string().max(40), z.unknown()).refine(f => typeof f.title === 'string' && f.title.trim().length > 0, { message: 'title_required' })
-        .refine(f => !checkText(f.title, DRAFT_TITLE).error, { message: 'bad_title', path: ['title'] })
+      form: z.record(z.string().max(40), z.unknown())
+        .refine(f => typeof f.title !== 'string' || !f.title.trim() || !checkText(f.title, DRAFT_TITLE).error, { message: 'bad_title', path: ['title'] })
         .refine(f => JSON.stringify(f).length <= 8000, { message: 'too_long' }),
     }),
   },

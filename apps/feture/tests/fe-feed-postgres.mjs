@@ -382,6 +382,31 @@ test('articles: cover + pictures in the text are own media refs only; no outside
   } finally { await pg.close(); }
 });
 
+test('a draft is saved in any state; publishing asks for the full rules (owner 05.11.2026)', async () => {
+  const { pg, call, person } = await setup();
+  try {
+    const a = await person('ua', 'Alex');
+    const save = (post, postId) => call('ua', a, { action: 'post.saveDraft', opId: op(), ...(postId ? { postId } : {}), post });
+    // An article with a short title and text, a title alone, a text post past the post length: all are kept as drafts.
+    const short = await save(draft('Коротко', { type: 'note', title: 'ab' }));
+    assert.equal(short.status, 200, JSON.stringify(short));
+    assert.equal((await save(draft('', { type: 'note', title: 'Только заголовок' }))).status, 200);
+    assert.equal((await save(draft('слово '.repeat(250)))).status, 200);
+    // Tags and an album without pictures are left out of the draft instead of refusing it.
+    const albumDraft = await save(draft('Текст', { albumId: '018f0000-0000-7000-8000-00000000a0a0' }));
+    assert.equal(albumDraft.status, 200, JSON.stringify(albumDraft));
+    // Nothing to keep is still refused, and so are the layout rules.
+    assert.equal((await save(draft(''))).status, 400);
+    assert.equal((await save(draft('a'.repeat(200)))).status, 400);
+    // Publishing is where the full rules apply: the short article does not go out, the finished one does.
+    const refused = await call('ua', a, { action: 'post.publish', opId: op(), postId: short.id });
+    assert.deepEqual([refused.status, refused.error], [400, 'invalid_input']);
+    const ok = await save(draft('Достаточно длинный текст статьи для публикации', { type: 'note', title: 'Вечер' }), short.id);
+    assert.equal(ok.status, 200, JSON.stringify(ok));
+    assert.equal((await call('ua', a, { action: 'post.publish', opId: op(), postId: short.id })).state, 'published');
+  } finally { await pg.close(); }
+});
+
 test('reply.edit: only the author, on the current rev, while published; others see the new text, the rev stays private', async () => {
   const { pg, call, person } = await setup();
   try {

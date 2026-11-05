@@ -39,7 +39,7 @@ export const hasLongWord = v => v.replace(/!?\[[^\]\n]{0,120}\]\([^)\s]{1,420}\)
   .split(/\s+/).some(w => [...w].length > LONG_WORD);
 
 /** What a post is made of; the same shape for drafts, publishing and edits. */
-export const postFields = z.strictObject({
+const postShape = z.strictObject({
   type: z.enum(['post', 'note']).default('post'),
   title: field('postTitle').optional(),
   body: field('postBody').default(''),
@@ -56,15 +56,27 @@ export const postFields = z.strictObject({
   albumId: id.optional(),
   tags: unique(z.array(id).max(10)).default([]),
   communityId: id.optional(),   // a discussion in a community (slice D)
-}).refine(v => v.type === 'note' ? (v.title?.length ?? 0) >= 3 && v.body.length >= 20 : v.body.length <= 1000, { message: 'type_rules', path: ['body'] })
-  .refine(v => v.body.length > 0 || v.mediaIds.length > 0 || !!v.poll || v.interests.length > 0, { message: 'empty_post', path: ['body'] })
-  .refine(v => !v.tags.length || v.mediaIds.length > 0, { message: 'tags_need_media', path: ['tags'] })
-  // Pictures in the text: only in an article, only the post's own media, each once; no outside image addresses.
+});
+/** Rules that protect the layout and the media, for a draft too: pictures in the text are only the post's own media (an
+ * article only), each once, no outside image addresses; no unbroken «word» that breaks every layout. */
+const safeText = (/** @type {typeof postShape} */ s) => s
   .refine(v => { const refs = mediaRefs(v.body); return refs.length === imageMarks(v.body) && (!refs.length || v.type === 'note')
     && new Set(refs).size === refs.length && refs.every(r => v.mediaIds.includes(r)); }, { message: 'bad_image', path: ['body'] })
-  .refine(v => !hasLongWord(v.body), { message: 'long_word', path: ['body'] })
+  .refine(v => !hasLongWord(v.body), { message: 'long_word', path: ['body'] });
+const hasContent = (/** @type {z.infer<typeof postShape>} */ v) => v.body.length > 0 || v.mediaIds.length > 0 || !!v.poll || v.interests.length > 0;
+
+/** Publishing and edits of a published post: the full rules. */
+export const postFields = safeText(postShape
+  .refine(v => v.type === 'note' ? (v.title?.length ?? 0) >= 3 && v.body.length >= 20 : v.body.length <= 1000, { message: 'type_rules', path: ['body'] })
+  .refine(hasContent, { message: 'empty_post', path: ['body'] })
+  .refine(v => !v.tags.length || v.mediaIds.length > 0, { message: 'tags_need_media', path: ['tags'] }))
   // An album is a gallery album: it holds posts with photos (V21 setAlbum shows the row only with media).
   .refine(v => !v.albumId || v.mediaIds.length > 0, { message: 'album_needs_media', path: ['albumId'] });
+
+/** A draft is saved in any state (owner 05.11.2026): no minimum title or text, a title alone is enough; only something to
+ * keep and the layout/media safety rules. The rest is checked when it is published (`postFields`). */
+export const draftFields = safeText(postShape
+  .refine(v => hasContent(v) || (v.title?.length ?? 0) > 0, { message: 'empty_post', path: ['body'] }));
 
 /** Kinds of posts for the feed and search filters (V21 TYPES): articles, text only, with photos, with a poll, with interests. */
 export const POST_TYPES = /** @type {const} */ (['note', 'text', 'photo', 'poll', 'interests']);
@@ -72,7 +84,7 @@ export const POST_TYPES = /** @type {const} */ (['note', 'text', 'photo', 'poll'
 export const ACTIVITY_KINDS = /** @type {const} */ (['posts', 'likes', 'events', 'communities', 'follows']);
 
 export const postsCommands = {
-  'post.saveDraft': { profile: true, write: true, input: z.strictObject({ opId, postId: id.optional(), post: postFields }) },
+  'post.saveDraft': { profile: true, write: true, input: z.strictObject({ opId, postId: id.optional(), post: draftFields }) },
   'post.publish': { profile: true, write: true, rate: { kind: 'post.publish', max: 250, window: '1 day' }, input: z.strictObject({ opId, postId: id }) },
   'post.edit': { profile: true, write: true, input: z.strictObject({ opId, postId: id, rev: z.int().positive(), post: postFields }) },
   'post.delete': { profile: true, write: true, input: z.strictObject({ opId, postId: id }) },
