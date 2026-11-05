@@ -282,7 +282,7 @@ const OPENNESS = /** @type {Record<string, unknown[]>} */ ({
 async function visibilityChecks(q, profileId, setting, value) {
   if (setting === 'discoverMode' && value === 'visible') {
     const [x] = await q.query(
-      `select p.kind, coalesce(bool_and(coalesce(a.age_verified_until > now(), false)), false) ok from feture.profile p
+      `select p.kind, coalesce(bool_and(feture.age_ok(a.id)), false) ok from feture.profile p
        join feture.profile_member m on m.profile_id = p.id and m.state = 'active' join feture.account a on a.id = m.account_id
        where p.id = $1 group by p.kind`, [profileId]);
     if (x?.kind === 'couple' && !x.ok) fail(422, 'rule_violation', { rule: 'age_not_verified' });

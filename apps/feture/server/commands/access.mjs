@@ -66,7 +66,7 @@ async function requestBlocker(q, viewer, ownerId) {
 async function ageState(q, acting, accountId) {
   const viewers = await memberAccounts(q, acting.profileId);
   const rows = await q.query(
-    `select id from feture.account where id = any($1) and coalesce(age_verified_until > now(), false) = false`, [viewers]);
+    `select id from feture.account where id = any($1) and not feture.age_ok(id)`, [viewers]);
   const bad = rows.map(r => /** @type {string} */ (r.id));
   const age = !viewers.includes(accountId) || bad.includes(accountId) ? 'me' : bad.length ? 'partner' : 'ok';
   return { viewers, age };

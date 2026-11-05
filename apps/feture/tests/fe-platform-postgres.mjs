@@ -51,6 +51,10 @@ async function setup() {
   await pg.exec(readFileSync(new URL('../supabase/migrations/20261104600000_fe_audit_stage7.sql', import.meta.url), 'utf8').split('\n').filter(l => l.startsWith('alter table feture.profile_member')).join('\n'));
   // A couple's archive (20261105100000): the profile switcher and the acting profile read these.
   await pg.exec(readFileSync(new URL('../supabase/migrations/20261105100000_fe_couple_archive.sql', import.meta.url), 'utf8').split('\n').filter(l => /^alter table feture\.profile(_member)? add/.test(l)).join('\n'));
+  // A freed (waived) account skips the human media review (20261105600000): the staff roles table it reads, the column and the function.
+  await pg.exec(readFileSync(new URL('../supabase/migrations/20261027160000_fe_staff.sql', import.meta.url), 'utf8').split('-- Every staff decision')[0]);
+  await pg.exec('grant select on feture.staff_role to feture_api');
+  await pg.exec(readFileSync(new URL('../supabase/migrations/20261105600000_fe_checks_waiver.sql', import.meta.url), 'utf8').split('-- Adult:')[0]);
   await pg.exec('set role feture_api');
   return { pg, db: fromPglite(pg) };
 }
@@ -403,6 +407,20 @@ test('media: intent limits, quarantine upload, commit, scan decisions, swap afte
     const safePost = await upload('post');
     assert.equal(await scanAsset(db, deps(scanner('pass'), classifier('safe')), safePost), 'approved');
     assert.equal(await scanAsset(db, deps(scanner('pass'), classifier('safe')), safePost), 'skipped');
+    // A freed (waived) account skips the HUMAN review only (owner 05.11.2026): never the scan; a scanner error or a missing
+    // scanner still goes to staff, and explicit media still never reaches a public place.
+    const unsure = await upload('post');
+    assert.equal(await scanAsset(db, deps(scanner('pass'), classifier('uncertain')), unsure), 'needs_review');
+    await db.query('update feture.account set checks_waived = true where id = $1', [a.id]);
+    const freed = await upload('post');
+    assert.equal(await scanAsset(db, deps(scanner('pass'), classifier('uncertain')), freed), 'approved');
+    const freedNoScanner = await upload('post');
+    assert.equal(await scanAsset(db, deps(null, null), freedNoScanner), 'needs_review');
+    const freedScanError = await upload('post');
+    assert.equal(await scanAsset(db, deps(scanner('error'), classifier('safe')), freedScanError), 'needs_review');
+    const freedMatch = await upload('post');
+    assert.equal(await scanAsset(db, deps(scanner('match'), classifier('safe')), freedMatch), 'blocked');
+    await db.query('update feture.account set checks_waived = false where id = $1', [a.id]);
     const safeRow = await row(safePost);
     assert.deepEqual([safeRow.width, safeRow.height, Buffer.from(safeRow.sha256).length], [800, 1000, 32]);
     assert.equal((await row(authorExplicit)).explicitness_source, 'author');

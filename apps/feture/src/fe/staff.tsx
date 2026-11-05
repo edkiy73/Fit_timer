@@ -1358,15 +1358,17 @@ function TopicSheet({topic,categories,onClose,onDone}:{topic:TopicRow|null,categ
 // ——— Сотрудники ———
 
 const ROLES_GIVEN=['lead','moderator','verifier','auditor','support'] as const;
-const teamRes=z.object({ok:z.literal(true),items:z.array(z.object({accountId:z.string(),profileId:z.string().nullable(),handle:z.string().nullable(),name:z.string().nullable(),roles:z.array(z.string())}))});
+const teamRes=z.object({ok:z.literal(true),items:z.array(z.object({accountId:z.string(),profileId:z.string().nullable(),handle:z.string().nullable(),name:z.string().nullable(),roles:z.array(z.string())})),
+ waived:z.array(z.object({accountId:z.string(),handle:z.string().nullable(),name:z.string().nullable()}))});
 type Member=z.infer<typeof teamRes>['items'][number];
+type Waived=z.infer<typeof teamRes>['waived'][number];
 
 /** «Сотрудники» (owner 05.11.2026): who has which role; the owner gives and takes roles by @nick (a fresh code, journalled). */
 function Team(){
  const {call}=useFe();const {t}=useI18n();const toast=useToast();
- const [items,setItems]=useState<Member[]|null>(null);const [error,setError]=useState<unknown>(null);
- const [open,setOpen]=useState<Member|'new'|null>(null);
- const load=useCallback(()=>{call('staff.team',{},teamRes,{asAccount:true}).then(r=>{setItems(r.items);setError(null);}).catch(setError);},[call]);
+ const [items,setItems]=useState<Member[]|null>(null);const [waived,setWaived]=useState<Waived[]>([]);const [error,setError]=useState<unknown>(null);
+ const [open,setOpen]=useState<Member|'new'|null>(null);const [free,setFree]=useState<Waived|'new'|null>(null);
+ const load=useCallback(()=>{call('staff.team',{},teamRes,{asAccount:true}).then(r=>{setItems(r.items);setWaived(r.waived);setError(null);}).catch(setError);},[call]);
  useEffect(load,[load]);
  const roleWord=(r:string)=>t('fe.staff.role.'+r);
  return <>
@@ -1374,7 +1376,12 @@ function Team(){
    <Card list>{items.map(m=><Row key={m.accountId} title={personName({handle:m.handle,name:m.name})??t('fe.staff.noName')} sub={m.roles.map(roleWord).join(', ')}
     onClick={m.roles.includes('owner')?undefined:()=>setOpen(m)} noChev={m.roles.includes('owner')}/>)}</Card>
    <Btn kind="soft" icon={UserPlus} onClick={()=>setOpen('new')}>{t('fe.staff.team.add')}</Btn>
+   <Group title={t('fe.staff.waiver.title')} foot={t('fe.staff.waiver.note')}>
+    {waived.length>0&&<Card list>{waived.map(w=><Row key={w.accountId} title={personName({handle:w.handle,name:w.name})??t('fe.staff.noName')} onClick={()=>setFree(w)}/>)}</Card>}
+    <Btn kind="soft" icon={ShieldCheck} onClick={()=>setFree('new')}>{t('fe.staff.waiver.add')}</Btn>
+   </Group>
   </>}
+  {free&&<WaiverSheet member={free==='new'?null:free} onClose={()=>setFree(null)} onDone={()=>{setFree(null);toast(t('fe.staff.waiver.saved'),{type:'ok'});load();}}/>}
   {open&&<TeamSheet member={open==='new'?null:open} onClose={()=>setOpen(null)} onDone={()=>{setOpen(null);toast(t('fe.staff.team.saved'),{type:'ok'});load();}}/>}
  </>;
 }
@@ -1399,6 +1406,24 @@ function TeamSheet({member,onClose,onDone}:{member:Member|null,onClose:()=>void,
     <CheckList label={t('fe.staff.team.roles')} value={roles.filter(r=>(ROLES_GIVEN as readonly string[]).includes(r)) as typeof ROLES_GIVEN[number][]} onChange={v=>setRoles(v)}
      options={ROLES_GIVEN.map(r=>[r,t('fe.staff.role.'+r).replace(/^./,c=>c.toUpperCase()),t('fe.staff.team.sub.'+r)] as const)}/>
    </Field>
+   <Failure text={failure}/>
+  </Form>
+ </Sheet>;
+}
+
+/** «Без проверок»: free an account from the manual checks, or bring them back (owner, a fresh code, journalled). */
+function WaiverSheet({member,onClose,onDone}:{member:Waived|null,onClose:()=>void,onDone:()=>void}){
+ const {call}=useFe();const {t}=useI18n();
+ const [handle,setHandle]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const nick=(member?.handle??handle.trim()).replace(/^@/,'');
+ const save=async()=>{setBusy(true);setFailure('');
+  try{await call('staff.checksWaiver',{opId:newOpId(),handle:nick,on:!member},z.object({ok:z.literal(true)}).passthrough(),{asAccount:true});onDone();}
+  catch(e){setFailure(e instanceof FeError&&e.code==='not_found'?t('fe.staff.measures.notFound'):e instanceof FeError&&e.rule==='owner_always_freed'?t('fe.staff.waiver.owner'):feErrorMessage(e,t));}finally{setBusy(false);}};
+ return <Sheet className="st-sheet" title={member?personName({handle:member.handle,name:member.name})??'':t('fe.staff.waiver.add')} onClose={onClose}
+  foot={<Btn icon={Check} disabled={busy||!nick} busy={busy} onClick={()=>void save()}>{t(member?'fe.staff.waiver.off':'fe.staff.waiver.on')}</Btn>}>
+  <BackCloses onClose={onClose}/>
+  <Form>
+   {!member&&<LineField label={t('fe.staff.premium.handle')} value={handle} max={41} autoCapitalize="none" onChange={setHandle}/>}
    <Failure text={failure}/>
   </Form>
  </Sheet>;
