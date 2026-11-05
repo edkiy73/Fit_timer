@@ -6,16 +6,15 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Search,Ban,Bell,CalendarDays,Check,ChevronDown,ChevronLeft,ChevronRight,EyeOff,Heart,Ellipsis,History,Info,KeyRound,LocateFixed,Lock,MapPin,MessageCircle,SlidersHorizontal,Sparkles,Undo2,Users,X} from 'lucide-react';
 import {CityField} from './kit/Place';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,IconBtn,LikeTile,Note,PairArt,PersonName,PhotoBars,Pill,Radar,Range,RangeDual,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Soon,Stack,Text,View,plate,useScrollTo,ProfileAv,useKept} from './kit';
+import {Alert,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,IconBtn,LikeTile,Note,PairArt,PersonName,PhotoBars,Pill,Radar,Range,RangeDual,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Soon,Stack,Text,View,plate,useScrollTo,ProfileAv,useKept} from './kit';
 import {useFe,useShown} from './session';
-import {useToast} from './toast';
+import {useFail,useToast} from './toast';
 import {DiscoverPhotoAsk} from './discover-photo';
 import {NameBadges,faceFields} from './faces';
 import {BellButton} from './inbox';
 import {when} from './feed';
 import {FollowButton} from './follow';
-import {catalogRes,cardOneRead,cardRead,galleryList,CompatSummary,FollowCounts,MatchOverlay,PersonBio,PersonMenu,PhotoViewer,ProfileBody,ProfilePage,mediaSrc,ownSettingsRes,personName,personProfileRes,pxError,readCard,readCatalog,usePrivate,useRelation,useTakeBackLike,viewedBy,type CardPre,
- type Catalog,type MenuStep,type PersonProfile} from './profile-extras';
+import {catalogRes,cardOneRead,cardRead,galleryList,CompatSummary,FollowCounts,MatchOverlay,PersonBio,PersonMenu,PhotoViewer,ProfileBody,ProfilePage,mediaSrc,ownSettingsRes,personName,personProfileRes,pxError,readCard,readCatalog,usePrivate,useRelation,useTakeBackLike,viewedBy,type CardPre,type Catalog,type MenuStep,type PersonProfile} from './profile-extras';
 import {AboutGroup} from './about-facts';
 import {topicMatches} from './topic-search';
 
@@ -122,19 +121,19 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
  const share=async()=>{if(geo==='busy')return;setGeo('busy');
   try{const c=await coarsePosition();const r=await call('location.set',{opId:newOpId(),lat:c.lat,lon:c.lon},locationRes);
    if(r.pending){setGeo('wait');return;}shared.current=true;setLoc(true);setGeo('');}
-  catch(e){if(e instanceof FeError)setError(e);setGeo('denied');}};
+  catch(e){if(e instanceof FeError)fail(feErrorMessage(e,t));setGeo('denied');}};
  const setWhereTo=(v:Where)=>{setWhere(v);setF(x=>v==='nearby'?{...x,placeMode:'nearby',cityId:null}:v==='any'?{...x,placeMode:'city',cityId:null}:{...x,placeMode:'city'});};
  const [cat,setCat]=useState<Catalog|null>(null);const [count,setCount]=useState<{count:number,capped:boolean}|null>(null);
- const [countError,setCountError]=useState<unknown>(null);const [busy,setBusy]=useState(false);const [error,setError]=useState<unknown>(null);
+ const fail=useFail();const [busy,setBusy]=useState(false);
  // `body` sits inside the sheet's scrolling `.sh-b`: a nested list starts at the top and takes the focus.
  const body=useRef<HTMLElement>(null);
  const lab=(x:{ru:string|null,en:string|null})=>(locale==='en'?x.en||x.ru:x.ru||x.en)||'';
  useEffect(()=>{call('catalog.get',{},catalogRes,{asAccount:true}).then(setCat).catch(()=>{});},[call]);
  useEffect(()=>{body.current?.closest<HTMLElement>('.sheet')?.focus({preventScroll:true});const b=body.current?.closest('.sh-b');if(b)b.scrollTop=0;},[sub]);
  useEffect(()=>{
-  setCount(null);setCountError(null);const ctl=new AbortController();
+  setCount(null);const ctl=new AbortController();
   if(f.placeMode==='nearby'&&loc!==true)return;
-  const timer=setTimeout(()=>call('discover.count',{filter:f},countRes,{signal:ctl.signal}).then(r=>setCount({count:r.count,capped:r.capped})).catch(e=>{if(!ctl.signal.aborted)setCountError(e);}),400);
+  const timer=setTimeout(()=>call('discover.count',{filter:f},countRes,{signal:ctl.signal}).then(r=>setCount({count:r.count,capped:r.capped})).catch(e=>{if(!ctl.signal.aborted)fail(feErrorMessage(e,t));}),400);
   return ()=>{clearTimeout(timer);ctl.abort();};
  },[f,call,loc]);
  const back=useCallback(()=>{setSub(null);setQ('');},[]);
@@ -150,8 +149,8 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
  const toggle=(k:DfRow,v:string)=>setF(x=>({...x,[k]:x[k].includes(v)?x[k].filter(y=>y!==v):[...x[k],v]}));
  const age=(i:0|1,v:number)=>setF(x=>i===0?{...x,ageMin:Math.min(v,x.ageMax-1)}:{...x,ageMax:Math.max(v,x.ageMin+1)});
  const on=dfOn(f);
- const apply=async()=>{setBusy(true);setError(null);
-  try{const r=await call('discover.setFilter',{opId:newOpId(),filter:f},filterRes);onApplied(r.filter);}catch(e){setError(e);}finally{setBusy(false);}};
+ const apply=async()=>{setBusy(true);
+  try{const r=await call('discover.setFilter',{opId:newOpId(),filter:f},filterRes);onApplied(r.filter);}catch(e){fail(feErrorMessage(e,t));}finally{setBusy(false);}};
  const place=f.cityId?cat?.places.find(p=>p.id===f.cityId):null;
  const summary=()=>{
   const parts:string[]=[];
@@ -222,8 +221,6 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
        {f[k].length>0&&clr(()=>setF(x=>({...x,[k]:[]})))}</div>;})}
     </Card></div>
     {count&&count.count===0&&<Alert kind="warn" icon={Info}><b>{t('fe.df.nobody')}</b>{t('fe.df.nobodyText')}</Alert>}
-    {countError!=null&&<Alert kind="err" noIcon>{feErrorMessage(countError,t)}</Alert>}
-    {error!=null&&<Alert kind="err" noIcon>{feErrorMessage(error,t)}</Alert>}
     {/* Last, so the sections stay the sheet body's own children (its rhythm and the notice gap apply). */}
     <i ref={body} hidden/>
    </>

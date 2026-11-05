@@ -3,7 +3,7 @@ import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {CircleAlert,Link2,Pencil,Trash2,User,Users,X} from 'lucide-react';
-import {useToast as useToastV21} from './toast';
+import {useToast as useToastV21,useFail} from './toast';
 import {newOpId} from '../feture/fe-api';
 import {AddBtn,AddCard,Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,Note,PersonLine,RadioList,RequestCard,Row,SearchInput,SectionLabel,Seg,SelectRow,Skel,Spacer,useLeaveGuard,useScrollTo,View,Who,ProfileAv,useKept} from './kit';
 import {useFe,useKeyChange,useShown} from './session';
@@ -180,7 +180,7 @@ export function LinkEditScreen(){
  const {id=''}=useParams();const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
  const [p,setP]=useState<PersonProfile|null>(null);const [mine,setMine]=useState<LinksMine|null>(null);const [error,setError]=useState<unknown>(null);
  const [kind,setKind]=useState<Kind>('play');const [mySide,setSide]=useState<string|null>(null);const [vis,setVis]=useState<Vis>('all');
- const [busy,setBusy]=useState(false);const [err,setErr]=useState('');const [sideErr,setSideErr]=useState(false);const [done,setDone]=useState('');
+ const [busy,setBusy]=useState(false);const setErr=useFail();const [sideErr,setSideErr]=useState(false);const [done,setDone]=useState('');
  const op=useRef(newOpId());const init=useRef(false);
  // What the form opened with: leaving with anything else asks «Выйти без сохранения?» (the kit Sheet's `dirty` Ask).
  const start=useRef<{kind:Kind,side:string|null,vis:Vis}|null>(null);
@@ -259,7 +259,6 @@ export function LinkEditScreen(){
        <Group foot={t('fe.px.lk.visFoot')}><Card list><SelectRow row label={t('fe.px.lk.vis')} value={vis} options={visItems(t)} onChange={setVis}/></Card></Group>
        <Alert kind="info" className="mt16">{conf?changed?fill(t('fe.ln.p22.infoChange'),{name}):t('fe.ln.p22.infoVis'):fill(t('fe.ln.p22.infoNew'),{name})}</Alert>
       </>}
-     {err&&!sideErr&&<Alert kind="err" noIcon className="mt12">{err}</Alert>}
     </>}
   </View>
   {p&&mine&&<div className="ctabar"><div className="wrap">{cta}</div></div>}

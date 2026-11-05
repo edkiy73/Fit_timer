@@ -3,11 +3,11 @@ import {copyLink} from './share';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {ArrowUpDown,BadgeCheck,Ban,CalendarDays,Check,ClipboardCheck,ChevronLeft,ChevronRight,Eye,FilePen,Flag,Gavel,IdCard,Image,ImageOff,Inbox,ListFilter,Lock,MapPin,Minus,RefreshCw,Scale,Search,ShieldAlert,ShieldCheck,User,UserPlus,Tags,Plus,FileText,EyeOff,ChartColumn,Copy,Filter,UserX,Users,X,Ellipsis,Film,Mic,Camera,Image as ImageIcon,LifeBuoy,Crown,Wrench,ScrollText,KeyRound,type LucideIcon} from 'lucide-react';
+import {ArrowUpDown,BadgeCheck,Ban,CalendarDays,Check,ClipboardCheck,Eye,FilePen,Flag,Gavel,IdCard,Image,ImageOff,Inbox,ListFilter,Lock,MapPin,Minus,RefreshCw,Scale,Search,ShieldAlert,ShieldCheck,User,UserPlus,Tags,Plus,EyeOff,Copy,Filter,UserX,Users,X,Film,Mic,Camera,Image as ImageIcon,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,Alert,Btn,Swipe,Card,CheckList,ToggleRow,RadioList,Chip,ChoiceChips,MultiChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewBar,ReviewCard,StatCard,ReviewMedia,ReviewObject,ReviewPair,ReviewTiles,ReviewPreview,type Slide,useBackClose,Row,SearchInput,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble,useKept} from './kit';
+import {Actions,Alert,Btn,Swipe,Card,CheckList,ToggleRow,RadioList,Chip,ChoiceChips,MultiChips,Chips,Divider,Empty,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewBar,ReviewCard,StatCard,ReviewObject,ReviewTiles,ReviewPreview,type Slide,useBackClose,Row,SearchInput,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,View,VoiceBubble,useKept} from './kit';
 import {askFactor,useFe,useLive} from './session';
-import {useToast} from './toast';
+import {useToast,useFail} from './toast';
 import {pullStaffCounts,useStaffCounts} from './staff-counts';
 import {Viewer} from './post-parts';
 import {FactorPromptHost,FactorReset,StaffEnrol,StaffUnlock,factorSchema,type Factor} from './staff-factor';
@@ -414,7 +414,7 @@ function QueueList({id,items,onDone}:{id:QueueId,items:unknown[],onDone:(key:str
 // ——— shared pieces ———
 
 function useDecide(onDone:()=>void,mapError?:(e:unknown)=>string|null){
- const {call}=useFe();const {t}=useI18n();const toast=useToast();const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const {call}=useFe();const {t}=useI18n();const toast=useToast();const [busy,setBusy]=useState(false);const setFailure=useFail();
  const run=async(action:string,input:Record<string,unknown>)=>{
   setBusy(true);setFailure('');
   try{await call(action,{opId:newOpId(),...input},ok,{asAccount:true});setBusy(false);onDone();}
@@ -423,25 +423,25 @@ function useDecide(onDone:()=>void,mapError?:(e:unknown)=>string|null){
    if(e instanceof FeError&&e.code==='conflict'&&(e.rule==='gone'||!!e.state)){toast(t('fe.staff.gone'),{type:'info'});onDone();return;}
    setFailure(mapError?.(e)??feErrorMessage(e,t));}
  };
- return {busy,failure,setFailure,run};
+ return {busy,setFailure,run};
 }
 
 const useWhen=()=>{const {locale}=useI18n();return (v:string|null|undefined)=>v?new Date(v).toLocaleString(locale==='en'?'en-GB':'ru-RU',{dateStyle:'medium',timeStyle:'short'}):'—';};
 
 /** One queue item as a card: what has to be decided, what happened, the thing itself, the form — and at the bottom, in the
- * same place for every kind of item, the decision bar. A card just lists its blocks; its Actions / Confirm / Failure are
- * gathered into the bar here (the failure above the buttons). */
+ * same place for every kind of item, the decision bar. A card just lists its blocks; its Actions / Confirm are gathered
+ * into the bar here (a failure is a toast, never a block of the card). */
 function StCard({title,meta,task,danger,children}:{title:ReactNode,meta?:ReactNode,task?:ReactNode,danger?:boolean|undefined,children:ReactNode}){
  const {t}=useI18n();const nav=useContext(ReviewNavCtx);
  // Fragments are opened up, so a card's Actions inside a condition still go to the bar.
  const flat=(n:ReactNode):ReactNode[]=>Children.toArray(n).flatMap(c=>isValidElement(c)&&c.type===Fragment?flat((c.props as {children?:ReactNode}).children):[c]);
  const kids=flat(children);
- const inBar=(c:ReactNode)=>isValidElement(c)&&(c.type===Actions||c.type===Confirm||c.type===Failure);
+ const inBar=(c:ReactNode)=>isValidElement(c)&&(c.type===Actions||c.type===Confirm);
  // The decision bar (owner 05.11.2026): the first button of the card's Actions is the main one, between ‹ and ›; the
- // others are one row of short buttons under it, all of one look (a danger shows in its «Точно?», not in the colour); a question («Точно?») and a failure sit above them.
+ // others are one row of short buttons under it, all of one look (a danger shows in its «Точно?», not in the colour); a question («Точно?») sits above them.
  const acts=kids.find(c=>isValidElement(c)&&c.type===Actions) as React.ReactElement<{children?:ReactNode}>|undefined;
  const buttons=acts?Children.toArray(acts.props.children).filter(isValidElement):[];
- const rest=kids.filter(c=>inBar(c)&&c!==acts).sort((a,b)=>Number(isValidElement(a)&&a.type!==Failure)-Number(isValidElement(b)&&b.type!==Failure));
+ const rest=kids.filter(c=>inBar(c)&&c!==acts);
  const showBar=rest.length>0||buttons.length>0||!!nav;
  return <ReviewCard title={title} meta={meta} danger={danger}>
   {task&&<Alert kind="info" icon={ClipboardCheck}><b>{t('fe.staff.task')}</b> {task}</Alert>}
@@ -557,7 +557,6 @@ function LineField({label,value,onChange,max,hint,...rest}:{label:string,value:s
  return <Field id={id} label={label} hint={hint}><Input id={id} value={value} maxLength={max} onChange={e=>onChange(e.target.value)} {...rest}/></Field>;
 }
 
-function Failure({text}:{text:string}){return text?<Alert kind="err">{text}</Alert>:null;}
 
 
 const RULES=['minors','threats','private_material','spam','illegal','community_rules'] as const;
@@ -618,7 +617,7 @@ function MediaCard({item,onDone}:{item:MediaItem,onDone:()=>void}){
   {ask==='reject'&&<Confirm text={t(many?'fe.staff.media.confirmRejectAll':'fe.staff.media.confirmReject',{n:files.length})} busy={busy} onNo={()=>setAsk(null)} onYes={()=>void decide(false)}/>}
   <Csam busy={busy} asking={ask==='csam'} onAsk={()=>setAsk('csam')} onNo={()=>setAsk(null)} onYes={()=>{setReason('csam_suspected' as typeof MEDIA_REASONS[number]);void (async()=>{setBusy(true);
    try{for(const f of files)await call('staff.mediaDecide',{opId:newOpId(),assetId:f.id,decision:'reject',reason:'csam_suspected'},ok,{asAccount:true}).catch(()=>undefined);onDone();}finally{setBusy(false);}})();}}/>
-  <Failure text={d.failure}/>
+  
  </StCard>;
 }
 
@@ -663,7 +662,7 @@ function CommunityCard({item,onDone}:{item:CommItem,onDone:()=>void}){
   {ask?<Confirm text={t('fe.staff.comm.confirmReject')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>decide('reject')}/>
    :<Actions><Btn icon={Check} disabled={d.busy} onClick={()=>decide('approve')}>{t('fe.staff.approve')}</Btn>
     <Btn kind="soft" icon={Ban} disabled={d.busy} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn><MeasuresBtn who={item.person}/></Actions>}
-  <Failure text={d.failure}/>
+  
  </StCard>;
 }
 
@@ -684,7 +683,7 @@ function EventCard({item,onDone}:{item:EventItem,onDone:()=>void}){
    :<Actions stack={hideable}><Btn icon={Check} disabled={d.busy} onClick={()=>decide('approve')}>{t('fe.staff.approve')}</Btn>
     <Btn kind="soft" icon={Ban} disabled={d.busy} onClick={()=>setAsk('reject')}>{t('fe.staff.reject')}</Btn>
     {hideable&&<Btn kind="danger" icon={Ban} disabled={d.busy} onClick={()=>setAsk('hide')}>{t('fe.staff.event.hide')}</Btn>}<MeasuresBtn who={item.organizer}/></Actions>}
-  <Failure text={d.failure}/>
+  
  </StCard>;
 }
 
@@ -714,7 +713,7 @@ function AgeDocCard({item,onDone}:{item:AgeItem,onDone:()=>void}){
   {ask?<Confirm text={t('fe.staff.age.confirmRejectDoc')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.ageCheckDecide',{checkId:item.id,approve:false,reason})}/>
    :<Actions><Btn icon={Check} disabled={d.busy||!doc} onClick={()=>d.run('staff.ageCheckDecide',{checkId:item.id,approve:true})}>{t('fe.staff.age.approveDoc')}</Btn>
     <Btn kind="soft" icon={Ban} disabled={d.busy||!reason} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></Actions>}
-  <Failure text={d.failure}/>
+  
  </StCard>;
 }
 function AgeSelfieCard({item,onDone}:{item:AgeItem,onDone:()=>void}){
@@ -732,7 +731,7 @@ function AgeSelfieCard({item,onDone}:{item:AgeItem,onDone:()=>void}){
   {ask?<Confirm text={t('fe.staff.age.confirmReject')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.ageCheckDecide',{checkId:item.id,approve:false,reason})}/>
    :<Actions><Btn icon={Check} disabled={d.busy||!selfie} onClick={()=>d.run('staff.ageCheckDecide',{checkId:item.id,approve:true})}>{t('fe.staff.age.approve')}</Btn>
     <Btn kind="soft" icon={Ban} disabled={d.busy||!reason} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></Actions>}
-  <Failure text={d.failure}/>
+  
  </StCard>;
 }
 
@@ -755,7 +754,7 @@ function PhotoCard({item,onDone}:{item:PhotoItem,onDone:()=>void}){
   {ask?<Confirm text={t('fe.pc.staff.confirmReject')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.photoCheckDecide',{checkId:item.id,approve:false,reason})}/>
    :<Actions><Btn icon={BadgeCheck} disabled={d.busy||!selfie} onClick={()=>d.run('staff.photoCheckDecide',{checkId:item.id,approve:true})}>{t('fe.pc.staff.approve')}</Btn>
     <Btn kind="soft" icon={Ban} disabled={d.busy||!reason} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></Actions>}
-  <Failure text={d.failure}/>
+  
  </StCard>;
 }
 
@@ -786,7 +785,7 @@ function DisputeCard({item,onDone}:{item:DisputeItem,onDone:()=>void}){
   {ask?<Confirm text={t('fe.staff.dispute.confirmRemove')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>decide(false)}/>
    :<Actions><Btn icon={Check} disabled={d.busy} busy={d.busy} onClick={()=>decide(true)}>{t('fe.staff.dispute.restore')}</Btn>
     <Btn kind="danger" icon={Ban} disabled={d.busy} onClick={()=>setAsk(true)}>{t('fe.staff.dispute.remove')}</Btn><MeasuresBtn who={item.person}/></Actions>}
-  <Failure text={d.failure}/>
+  
  </StCard>;
 }
 
@@ -794,7 +793,7 @@ function DisputeCard({item,onDone}:{item:DisputeItem,onDone:()=>void}){
  * (the profile opens; «Проверено» takes it off the list). */
 function FlaggedClaimants(){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();
- const [list,setList]=useState<z.infer<typeof flaggedRes>['flagged']>([]);const [failure,setFailure]=useState('');const [busy,setBusy]=useState('');
+ const [list,setList]=useState<z.infer<typeof flaggedRes>['flagged']>([]);const setFailure=useFail();const [busy,setBusy]=useState('');
  useEffect(()=>{const ctl=new AbortController();
   call('staff.disputeQueue',{limit:1},flaggedRes,{asAccount:true,signal:ctl.signal}).then(r=>setList(r.flagged)).catch(()=>{});
   return ()=>ctl.abort();},[call]);
@@ -806,7 +805,7 @@ function FlaggedClaimants(){
   <Card list>{list.map(f=><Row key={f.profileId} icon={ShieldAlert} title={f.handle?'@'+f.handle:t('fe.staff.dispute.noHandle')} sub={t('fe.staff.dispute.flaggedSub',{n:String(f.strikes)})}
    onClick={()=>navigate('/n/people/'+f.profileId)}
    end={<Btn kind="soft" size="sm" auto disabled={!!busy} busy={busy===f.profileId} onClick={()=>void reviewed(f.profileId)}>{t('fe.staff.dispute.reviewed')}</Btn>}/>)}</Card>
-  <Failure text={failure}/>
+  
  </Group>;
 }
 
@@ -822,7 +821,7 @@ function RevisionCard({item,onDone}:{item:RevisionItem,onDone:()=>void}){
   {ask?<Confirm text={t('fe.staff.revision.confirmReject')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.revisionDecide',{revisionId:item.id,decision:'reject',rule})}/>
    :<Actions><Btn icon={Check} disabled={d.busy} busy={d.busy} onClick={()=>d.run('staff.revisionDecide',{revisionId:item.id,decision:'approve'})}>{t('fe.staff.approve')}</Btn>
     <Btn kind="soft" icon={Ban} disabled={d.busy||!rule} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn><MeasuresBtn who={item.person}/></Actions>}
-  <Failure text={d.failure}/>
+  
  </StCard>;
 }
 
@@ -840,7 +839,7 @@ function LookTiles({tiles,load,shown:given,onShown,note,off,onToggle}:{tiles:Til
  /** An upload's files marked to be rejected; `onToggle` marks or unmarks the open one (owner 05.11.2026). */ off?:boolean[]|undefined,onToggle?:((i:number)=>void)|undefined}){
  const {t}=useI18n();
  const [got,setGot]=useState<Shown|null>(null);const shown=given??got;
- const [busy,setBusy]=useState(false);const [err,setErr]=useState('');const [open,setOpen]=useState<number|null>(null);const [big,setBig]=useState<number|null>(null);
+ const [busy,setBusy]=useState(false);const setErr=useFail();const [open,setOpen]=useState<number|null>(null);const [big,setBig]=useState<number|null>(null);
  const tap=async(i:number)=>{
   let s=shown;
   if(!s){if(!load)return;setBusy(true);setErr('');
@@ -860,7 +859,7 @@ function LookTiles({tiles,load,shown:given,onShown,note,off,onToggle}:{tiles:Til
   {big!==null&&typeof shown?.slides[big]==='string'&&<ReviewPreview key={big} src={shown.slides[big] as string} label={tiles[big]?.label??''}
    openLabel={t('fe.staff.media.full')} closeLabel={t('fe.staff.media.fold')} onOpen={()=>setOpen(big)} onClose={()=>setBig(null)}
    foot={onToggle&&tiles.length>1?<Btn kind="text" size="sm" auto icon={off?.[big]?Check:Ban} onClick={()=>onToggle(big)}>{off?.[big]?t('fe.staff.media.keepThis'):t('fe.staff.media.rejectThis')}</Btn>:undefined}/>}
-  {err&&<Alert kind="err">{err}</Alert>}
+  
   {open!==null&&slides.length>0&&<Viewer srcs={slides} index={at} onClose={()=>setOpen(null)}/>}
  </Stack>;
 }
@@ -919,7 +918,7 @@ function ReportCard({item,onDone}:{item:ReportItem,onDone:()=>void}){
    :<Actions><Btn icon={Check} disabled={d.busy} onClick={()=>d.run('staff.reportDecide',{...base,decision:'keep'})}>{t('fe.staff.report.keep')}</Btn>
     {!people&&<Btn kind="danger" icon={Ban} disabled={d.busy||!rule} onClick={()=>setAsk(true)}>{gone?t('fe.staff.report.record'):t('fe.staff.report.remove')}</Btn>}
     {target&&<Btn kind={people?'danger':'soft'} icon={Gavel} disabled={d.busy} onClick={()=>setMeasures(true)}>{t('fe.staff.m.open')}</Btn>}</Actions>}
-  <Failure text={d.failure}/>
+  
   {measures&&target&&<Measures profileId={target.id} name={target.name} onClose={()=>setMeasures(false)}
    // A person or a chat: the measure answers the report. A post and the like still wait for keep / remove.
    onApplied={()=>{setMeasures(false);if(people)void d.run('staff.reportDecide',{...base,decision:'keep',note:(note.trim()||t('fe.staff.m.reportNote')).slice(0,500)});else toast(t('fe.staff.m.done'),{type:'ok'});}}/>}
@@ -978,7 +977,7 @@ function Measures({profileId,name,onClose,onApplied}:{profileId:string,name:stri
    {blocked&&<Alert kind="warn">{t('fe.staff.m.leadOnly')}</Alert>}
    <TextField label={t('fe.staff.note')} value={note} onChange={setNote} max={500}/>
    {ask&&<Confirm text={effect} danger busy={d.busy} onNo={()=>setAsk(false)} onYes={apply}/>}
-   <Failure text={d.failure}/>
+   
   </Stack>
  </Sheet>;
 }
@@ -1001,7 +1000,7 @@ function AppealCard({item,onDone}:{item:AppealItem,onDone:()=>void}){
   {!mine&&(ask?<Confirm text={t('fe.staff.appeal.confirmDeny')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>decide(false)}/>
    :<Actions><Btn icon={Check} disabled={d.busy} onClick={()=>decide(true)}>{t('fe.staff.appeal.grant')}</Btn>
     <Btn kind="soft" icon={Ban} disabled={d.busy} onClick={()=>setAsk(true)}>{t('fe.staff.appeal.deny')}</Btn><MeasuresBtn who={item.person}/></Actions>)}
-  <Failure text={d.failure}/>
+  
  </StCard>;
 }
 
@@ -1026,7 +1025,7 @@ function NoticeCard({item,onDone}:{item:NoticeItem,onDone:()=>void}){
     <Btn icon={Check} disabled={d.busy} onClick={()=>decide('kept')}>{t('fe.staff.notice.kept')}</Btn>
     <Btn kind="soft" icon={Minus} disabled={d.busy} onClick={()=>decide('not_actionable')}>{t('fe.staff.notice.not_actionable')}</Btn>
     <Btn kind="danger" icon={Ban} disabled={d.busy||!rule||!item.object} onClick={()=>setAsk(true)}>{t('fe.staff.notice.removeAnswer')}</Btn></Actions>}
-  <Failure text={d.failure}/>
+  
  </StCard>;
 }
 
@@ -1041,7 +1040,7 @@ function PlaceCard({item,onDone}:{item:PlaceItem,onDone:()=>void}){
    :<Actions><Btn icon={Check} disabled={d.busy} onClick={()=>d.run('staff.placeDecide',{placeId:item.id,decision:'approve',
      ...(ru.trim()?{nameRu:ru.trim()}:{}),...(en.trim()?{nameEn:en.trim()}:{})})}>{t('fe.staff.approve')}</Btn>
     <Btn kind="soft" icon={Ban} disabled={d.busy} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></Actions>}
-  <Failure text={d.failure}/>
+  
  </StCard>;
 }
 
@@ -1052,7 +1051,7 @@ function PlaceCard({item,onDone}:{item:PlaceItem,onDone:()=>void}){
 /** «Люди» (owner 05.11.2026): find a person by @nick; their page opens over it. */
 function People(){
  const {call}=useFe();const {t}=useI18n();
- const [handle,setHandle]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [open,setOpen]=useState<string|null>(null);
+ const [handle,setHandle]=useState('');const [busy,setBusy]=useState(false);const setFailure=useFail();const [open,setOpen]=useState<string|null>(null);
  const h=handle.trim().replace(/^@/,'');
  // «Под наблюдением»: the people staff marked to look at again.
  const [watched,setWatched]=useState<z.infer<typeof watchRes>['items']|null>(null);
@@ -1067,7 +1066,7 @@ function People(){
    <SearchInput label={t('fe.staff.people.search')} value={handle} placeholder={t('fe.staff.people.search')} spellCheck={false} autoCapitalize="none" onChange={e=>{setHandle(e.target.value);setFailure('');}}/>
    <Btn icon={Search} disabled={busy||!h} busy={busy} onClick={()=>void find()}>{t('fe.staff.measures.find')}</Btn>
   </form>
-  <Failure text={failure}/>
+  
   {watched&&watched.length>0&&<Group title={t('fe.staff.people.watched')}><Card list>{watched.map(x=><Row key={x.id} title={personName(x)??''} sub={x.note??undefined} onClick={()=>setOpen(x.id)}/>)}</Card></Group>}
   {open&&<PersonSheet profileId={open} onClose={()=>{setOpen(null);loadWatched();}}/>}
  </>;
@@ -1090,7 +1089,7 @@ function PersonSheet({profileId,onClose}:{profileId:string,onClose:()=>void}){
  const {call}=useFe();const {t}=useI18n();const when=useWhen();const jw=useJournalWord();const toast=useToast();const navigate=useNavigate();
  const [p,setP]=useState<z.infer<typeof measuresRes>|null>(null);const [error,setError]=useState<unknown>(null);
  const [history,setHistory]=useState<JournalRow[]|null|undefined>(undefined);
- const [busy,setBusy]=useState(false);const [ask,setAsk]=useState<'restricted'|'suspended'|'watch'|null>(null);const [failure,setFailure]=useState('');
+ const [busy,setBusy]=useState(false);const [ask,setAsk]=useState<'restricted'|'suspended'|'watch'|null>(null);const setFailure=useFail();
  const [note,setNote]=useState('');
  const watch=async(on:boolean)=>{if(!p)return;setBusy(true);setFailure('');
   try{await call('staff.watch',{opId:newOpId(),profileId:p.profileId,on,note:note.trim()},ok,{asAccount:true});setAsk(null);setNote('');
@@ -1130,7 +1129,7 @@ function PersonSheet({profileId,onClose}:{profileId:string,onClose:()=>void}){
    {ask==='watch'&&<Stack gap={3}><TextField label={t('fe.staff.people.watchNote')} value={note} max={300} onChange={setNote}/>
     <Confirm text={t('fe.staff.people.watchQ')} busy={busy} onNo={()=>setAsk(null)} onYes={()=>void watch(true)}/></Stack>}
    {ask&&ask!=='watch'&&<Confirm text={t(ask==='restricted'?'fe.staff.measures.confirmRestricted':'fe.staff.measures.confirmSuspended',{name})} busy={busy} onNo={()=>setAsk(null)} onYes={()=>void lift(ask)}/>}
-   <Failure text={failure}/>
+   
    {history===undefined?<Skel kind="list" rows={2}/>:history&&<Group title={t('fe.staff.people.history')}>
     {history.length?<Card list>{history.map(x=><Row key={String(x.id)} noChev title={jw('action',x.action)} sub={staffName(x)+' · '+when(x.created_at)}/>)}</Card>
      :<Empty compact icon={Inbox} title={t('fe.staff.people.noHistory')}/>}</Group>}
@@ -1253,7 +1252,7 @@ function DocumentSheet({docKey,locale,data,onClose,onDone}:{docKey:string,locale
  const base=dr??cur;
  const [title,setTitle]=useState(base?.title??'');const [text,setText]=useState(base?docText(base.blocks as DocBlock[]):'');
  const [must,setMust]=useState(base?.requiresAccept??MUST_ACCEPT.has(docKey));
- const [rev,setRev]=useState(dr?.revision??0);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [ask,setAsk]=useState(false);
+ const [rev,setRev]=useState(dr?.revision??0);const [busy,setBusy]=useState(false);const setFailure=useFail();const [ask,setAsk]=useState(false);
  const dirty=!base||title!==base.title||text!==docText(base.blocks as DocBlock[])||must!==base.requiresAccept;
  const unpublished=rev>0&&rev!==cur?.sourceRevision;
  const save=async()=>{setBusy(true);setFailure('');
@@ -1275,7 +1274,7 @@ function DocumentSheet({docKey,locale,data,onClose,onDone}:{docKey:string,locale
    <Card list><ToggleRow title={t('fe.staff.docs.must')} sub={MUST_ACCEPT.has(docKey)?t('fe.staff.docs.mustAlways'):t('fe.staff.docs.mustSub')} on={must} disabled={MUST_ACCEPT.has(docKey)} onClick={()=>setMust(!must)}/></Card>
    {cur&&<Kv rows={[[t('fe.staff.docs.live'),t('fe.staff.docs.liveN',{n:cur.version})]]}/>}
    {ask&&<Confirm text={t('fe.staff.docs.publishQ')} busy={busy} onNo={()=>setAsk(false)} onYes={()=>void publish()}/>}
-   <Failure text={failure}/>
+   
   </Stack>
  </Sheet>;
 }
@@ -1311,7 +1310,7 @@ function Topics(){
 function CategorySheet({category,onClose,onDone}:{category:Category|null,onClose:()=>void,onDone:()=>void}){
  const {call}=useFe();const {t,locale}=useI18n();
  const [f,setF]=useState({id:category?.id??'',ru:category?.ru??'',en:category?.en??'',hidden:category?.hidden??false});
- const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [busy,setBusy]=useState(false);const setFailure=useFail();
  const idOk=/^[a-z][a-z0-9_-]{1,31}$/.test(f.id);
  const save=async()=>{setBusy(true);setFailure('');
   try{await call('staff.categorySave',{opId:newOpId(),id:f.id,create:!category,ru:f.ru.trim(),en:f.en.trim(),hidden:f.hidden},ok,{asAccount:true});onDone();}
@@ -1324,7 +1323,7 @@ function CategorySheet({category,onClose,onDone}:{category:Category|null,onClose
    <LineField label={t('fe.staff.topics.ru')} value={f.ru} max={40} onChange={v=>setF(x=>({...x,ru:v}))}/>
    <LineField label={t('fe.staff.topics.en')} value={f.en} max={40} onChange={v=>setF(x=>({...x,en:v}))}/>
    <Card list><ToggleRow title={t('fe.staff.topics.shown')} sub={t('fe.staff.cat.shownSub')} on={!f.hidden} onClick={()=>setF(x=>({...x,hidden:!x.hidden}))}/></Card>
-   <Failure text={failure}/>
+   
   </Form>
  </Sheet>;
 }
@@ -1332,7 +1331,7 @@ function CategorySheet({category,onClose,onDone}:{category:Category|null,onClose
 function TopicSheet({topic,categories,onClose,onDone}:{topic:TopicRow|null,categories:z.infer<typeof topicsRes>['categories'],onClose:()=>void,onDone:()=>void}){
  const {call}=useFe();const {t,locale}=useI18n();
  const [f,setF]=useState({id:topic?.id??'',categoryId:topic?.categoryId??categories[0]?.id??'',ru:topic?.ru??'',en:topic?.en??'',descRu:topic?.descRu??'',descEn:topic?.descEn??'',hidden:topic?.hidden??false});
- const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [busy,setBusy]=useState(false);const setFailure=useFail();
  const set=<K extends keyof typeof f>(k:K,v:(typeof f)[K])=>setF(x=>({...x,[k]:v}));
  const idOk=/^[a-z][a-z0-9_-]{1,31}$/.test(f.id);
  const save=async()=>{setBusy(true);setFailure('');
@@ -1350,7 +1349,7 @@ function TopicSheet({topic,categories,onClose,onDone}:{topic:TopicRow|null,categ
    <Field id="st-topic-cat" label={t('fe.staff.topics.category')}><Select id="st-topic-cat" label={t('fe.staff.topics.category')} value={f.categoryId}
     options={categories.map(c=>[c.id,locale==='en'?c.en:c.ru] as [string,string])} onChange={v=>set('categoryId',v)}/></Field>
    <Card list><ToggleRow title={t('fe.staff.topics.shown')} sub={t('fe.staff.topics.shownSub')} on={!f.hidden} onClick={()=>set('hidden',!f.hidden)}/></Card>
-   <Failure text={failure}/>
+   
   </Form>
  </Sheet>;
 }
@@ -1389,7 +1388,7 @@ function Team(){
 function TeamSheet({member,onClose,onDone}:{member:Member|null,onClose:()=>void,onDone:()=>void}){
  const {call}=useFe();const {t}=useI18n();
  const [handle,setHandle]=useState('');const [roles,setRoles]=useState<string[]>(member?.roles??[]);
- const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [busy,setBusy]=useState(false);const setFailure=useFail();
  const nick=(member?.handle??handle.trim()).replace(/^@/,'');
  const save=async()=>{setBusy(true);setFailure('');
   try{
@@ -1406,7 +1405,7 @@ function TeamSheet({member,onClose,onDone}:{member:Member|null,onClose:()=>void,
     <CheckList label={t('fe.staff.team.roles')} value={roles.filter(r=>(ROLES_GIVEN as readonly string[]).includes(r)) as typeof ROLES_GIVEN[number][]} onChange={v=>setRoles(v)}
      options={ROLES_GIVEN.map(r=>[r,t('fe.staff.role.'+r).replace(/^./,c=>c.toUpperCase()),t('fe.staff.team.sub.'+r)] as const)}/>
    </Field>
-   <Failure text={failure}/>
+   
   </Form>
  </Sheet>;
 }
@@ -1414,7 +1413,7 @@ function TeamSheet({member,onClose,onDone}:{member:Member|null,onClose:()=>void,
 /** «Без проверок»: free an account from the manual checks, or bring them back (owner, a fresh code, journalled). */
 function WaiverSheet({member,onClose,onDone}:{member:Waived|null,onClose:()=>void,onDone:()=>void}){
  const {call}=useFe();const {t}=useI18n();
- const [handle,setHandle]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [handle,setHandle]=useState('');const [busy,setBusy]=useState(false);const setFailure=useFail();
  const nick=(member?.handle??handle.trim()).replace(/^@/,'');
  const save=async()=>{setBusy(true);setFailure('');
   try{await call('staff.checksWaiver',{opId:newOpId(),handle:nick,on:!member},z.object({ok:z.literal(true)}).passthrough(),{asAccount:true});onDone();}
@@ -1424,7 +1423,7 @@ function WaiverSheet({member,onClose,onDone}:{member:Waived|null,onClose:()=>voi
   <BackCloses onClose={onClose}/>
   <Form>
    {!member&&<LineField label={t('fe.staff.premium.handle')} value={handle} max={41} autoCapitalize="none" onChange={setHandle}/>}
-   <Failure text={failure}/>
+   
   </Form>
  </Sheet>;
 }
@@ -1434,7 +1433,7 @@ function WaiverSheet({member,onClose,onDone}:{member:Waived|null,onClose:()=>voi
 function Premium(){
  const {call}=useFe();const {t}=useI18n();const when=useWhen();
  const [handle,setHandle]=useState('');const [days,setDays]=useState('30');const [reason,setReason]=useState('');
- const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [granted,setGranted]=useState<{id:string,until:string}|null>(null);
+ const [busy,setBusy]=useState(false);const setFailure=useFail();const [granted,setGranted]=useState<{id:string,until:string}|null>(null);
  const [entitlement,setEntitlement]=useState('');const [revokeReason,setRevokeReason]=useState('');const [ask,setAsk]=useState(false);const [revoked,setRevoked]=useState('');
  const err=(e:unknown)=>setFailure(forbidden(e)?t((e as FeError).rule==='self'?'fe.staff.premium.self':'fe.staff.premium.forbidden'):feErrorMessage(e,t));
  const n=Number(days);const h=handle.trim().replace(/^@/,'');
@@ -1467,7 +1466,7 @@ function Premium(){
     {revoked&&<Alert kind="ok" icon={Check}>{revoked}</Alert>}
    </Form>
   </Group>
-  <Failure text={failure}/>
+  
  </>;
 }
 

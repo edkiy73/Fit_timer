@@ -5,16 +5,16 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Archive,Bookmark,Calendar,Clock,LockOpen,MessageCircle,Newspaper,Pencil,Trash2,TriangleAlert,Users,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActingAv,AddBtn,Alert,Ask,Av,Bar,Btn,Card,DraftCard,Empty,Group,IconBtn,Note,Row,Skel,Stack,useRefreshable,View} from './kit';
+import {ActingAv,AddBtn,Alert,Ask,Bar,Btn,Card,DraftCard,Empty,Group,IconBtn,Note,Row,Skel,Stack,useRefreshable,View} from './kit';
 import {useFe,useLive} from './session';
 import {PostCard,SavedEditSheet,postSchema,savedEdit,when,type Post,type SavedEdit} from './feed';
 import {EventRow,type Ev} from './browse';
 import {CreateSheet} from './create-entry';
 import {mdPlain,mediaSrc,plural} from './post-parts';
 import {PostMenu} from './post-menu';
-import {useToast} from './toast';
+import {useToast,useFail} from './toast';
 import {PairEntry} from './pair';
-import {faceFields,NameBadges} from './faces';
+import {faceFields} from './faces';
 
 /** V21 X01 «Моё» (`meMineLayer()`): only lists — posts (drafts on the second line), events, followers, saved and what
  * others shared with me; each row opens its own screen (F10, E10, P10, G04, P07) with the counts from the server. */
@@ -126,7 +126,7 @@ const okRes=z.object({ok:z.literal(true)}).passthrough();
 function MyEvents(){
  const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
  const {data,setData,error,load}=useLoad(useCallback(()=>call('event.mine',{},evsWithDrafts),[call]));
- const [asking,setAsking]=useState<z.infer<typeof draftRow>|null>(null);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [asking,setAsking]=useState<z.infer<typeof draftRow>|null>(null);const [busy,setBusy]=useState(false);const setFailure=useFail();
  if(error)return <Failed error={error} retry={load}/>;
  if(!data)return <Skel kind="post"/>;
  const drafts=data.drafts??[];
@@ -147,7 +147,7 @@ function MyEvents(){
   {groups.filter(([,l])=>l.length).map(([k,l])=><Group key={k} title={t('fe.mine.ev.'+k)}><Card list>
    {l.map(e=><Row key={e.id} noChev onClick={()=>navigate('/n/events/'+e.id)} title={e.title}
     sub={evWhen(e,locale)+(e.state!=='published'?' · '+t('fe.mine.state.'+e.state):'')+(e.cancel_reason?' · '+e.cancel_reason:'')}/>)}</Card></Group>)}
-  {asking&&<Ask icon={Trash2} danger title={t('fe.ce.draftDelete')+'?'} text={t('fe.ce.draftDeleteAsk')} ok={t('fe.ce.draftDeleteOk')} busy={busy} error={failure||undefined}
+  {asking&&<Ask icon={Trash2} danger title={t('fe.ce.draftDelete')+'?'} text={t('fe.ce.draftDeleteAsk')} ok={t('fe.ce.draftDeleteOk')} busy={busy}
    onOk={()=>void remove()} onCancel={()=>setAsking(null)}/>}
  </>;
 }

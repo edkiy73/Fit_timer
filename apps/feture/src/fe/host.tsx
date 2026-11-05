@@ -1,13 +1,13 @@
-import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
+import {useCallback,useEffect,useRef,useState} from 'react';
 import {useLocation,useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,Bell,ChevronRight,CircleCheck,Clock,Copy,Crown,Ellipsis,FileText,Flag,Info,Link as LinkIcon,Lock,MessageCircle,Pencil,Pin,PinOff,Send,Settings,ShieldAlert,Trash2,TrendingDown,TrendingUp,User,UserMinus,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
+import {Ban,Bell,ChevronRight,CircleCheck,Clock,Copy,Crown,Ellipsis,FileText,Flag,Link as LinkIcon,Lock,MessageCircle,Pencil,Pin,PinOff,Send,Settings,ShieldAlert,Trash2,TrendingDown,TrendingUp,User,UserMinus,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Announcement,Answer,Ask,Av,Btn,Card,IconBtn,Empty,Group,LoadMore,Note,PersonLine,Pill,RequestCard,Row,SectionLabel,Seg,Sheet,Skel,Stack,StatTiles,SubBar,nickShown,useLeaveGuard,ProfileAv} from './kit';
+import {Alert,Announcement,Answer,Ask,Btn,Card,IconBtn,Empty,Group,LoadMore,Note,PersonLine,Pill,RequestCard,Row,SectionLabel,Seg,Sheet,Skel,Stack,StatTiles,SubBar,nickShown,useLeaveGuard,ProfileAv} from './kit';
 import {useFe,usePartnerApproves} from './session';
 import {WriteBtn,useWriteTo} from './write-to';
-import {useToast} from './toast';
+import {useToast,useFail} from './toast';
 import {when} from './feed';
 import {Field,SelectRow,shakeFirstErr} from './create-community';
 import {FIELD,serverFields,textError,textErrorMessage,type FieldName} from './kit/validate';
@@ -96,7 +96,7 @@ export function CommunityHostEntry({c}:{c:{id:string,me?:{role:string,state:stri
 export function JoinSheet({c,invite,onClose,onDone}:{c:{id:string,name:string,privacy:string,rules:string[],joinQuestion?:string|null},invite?:string|undefined,onClose:()=>void,onDone:(msg:string)=>void}){
  const {call,acting}=useFe();const {t}=useI18n();
  const [answer,setAnswer]=useState('');
- const [err,setErr]=useState<{answer?:string|undefined}>({});const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [err,setErr]=useState<{answer?:string|undefined}>({});const [busy,setBusy]=useState(false);const setFailure=useFail();
  const couple=acting?.kind==='couple';const closed=c.privacy!=='open';const q=closed?c.joinQuestion??null:null;const toPartner=usePartnerApproves();
  const send=async()=>{
   const e:{answer?:string|undefined}={};
@@ -115,7 +115,7 @@ export function JoinSheet({c,invite,onClose,onDone}:{c:{id:string,name:string,pr
    <Group title={t('fe.comm.tab.rules')}><Card className="flat"><ol className="rules">{c.rules.map((r,i)=><li key={i}>{r}</li>)}</ol></Card></Group>
    {q&&<Field name="answer" label={q} value={answer} onChange={v=>{setAnswer(v);if(err.answer)setErr({});}} err={err.answer} textarea rows={3} check="joinAnswer"
     ph={t('fe.host.join.answerPh')} hint={t('fe.host.join.answerHint')}/>}
-   {failure&&<Alert kind="err" icon={Info}>{failure}</Alert>}
+   
   </Stack>
  </Sheet>;
 }
@@ -359,7 +359,7 @@ export function EventApplyScreen(){
  const fetch=useCallback(()=>call('event.get',{eventId:id},evSchema).then(r=>r.event),[call,id]);
  const {data:e,error,load}=useLoad(fetch);
  const [answers,setAnswers]=useState<string[]>([]);const [note,setNote]=useState('');
- const [err,setErr]=useState<Record<string,string>>({});const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [err,setErr]=useState<Record<string,string>>({});const [busy,setBusy]=useState(false);const setFailure=useFail();
  const guard=useLeaveGuard(!busy&&(answers.some(a=>a.trim())||!!note.trim()));
  const couple=acting?.kind==='couple';const qs=e?.questions?.length?e.questions:[];const toPartner=usePartnerApproves();
  const open=!!e&&e.requiresApplication&&e.state==='published'&&!e.past;
@@ -395,7 +395,7 @@ export function EventApplyScreen(){
       <Field name="note" label={t('fe.host.app.note')} value={note} onChange={v=>{setNote(v);if(err.note){const n={...err};delete n.note;setErr(n);}}} err={err.note} opt ph={t('fe.host.app.notePh')} textarea rows={2} check="applyNote"/>
      </Card></Group>
      {reqs.length>0&&<Group title={t('fe.host.app.requirements')}><Card className="flat"><ol className="rules">{reqs.map((r,i)=><li key={i}>{r}</li>)}</ol></Card></Group>}
-     {failure&&<Alert kind="err" icon={X}>{failure}</Alert>}
+     
     </>}
   </div></div>
   {open&&<div className="ctabar"><div className="wrap"><Btn onClick={()=>void send()} busy={busy} disabled={busy}>{label}</Btn></div></div>}

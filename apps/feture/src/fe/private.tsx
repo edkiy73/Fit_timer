@@ -4,14 +4,14 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {KeyRound,Camera,ChevronRight,Clock,Eye,Lock,LockOpen,PenLine,Send,ShieldCheck,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {AddCard,Alert,Av,Btn,Card,CheckList,Chips,ChoiceChips,Counter,Empty,Field,FilePick,Group,MultiChips,Note,PersonLine,PhotoAdd,PhotoSlot,PhotoSlots,Pill,RequestCard,Row,SectionLabel,SelectRow,Sheet,Skel,Stack,TextArea,VaultHead,Veil,ProfileAv} from './kit';
+import {AddCard,Alert,Btn,Card,CheckList,Chips,ChoiceChips,Counter,Empty,Field,FilePick,Group,MultiChips,Note,PersonLine,PhotoAdd,PhotoSlot,PhotoSlots,Pill,RequestCard,Row,SectionLabel,SelectRow,Sheet,Skel,Stack,TextArea,VaultHead,Veil,ProfileAv} from './kit';
 import {Uploader} from './kit/Uploader';
 import {FIELD,textLength,useChecks} from './kit/validate';
 import {useSendPhoto} from './media-upload';
-import {AgeCheckLink,agePath,useAgeResume} from './age-check';
+import {agePath,useAgeFix,useAgeResume} from './age-check';
 import {useFe} from './session';
 import {when} from './feed';
-import {useToast} from './toast';
+import {useToast,useFail} from './toast';
 import {Ask} from './me-parts';
 import {faceFields,NameBadges,withAge} from './faces';
 import {PhotoViewer,mediaSrc,plural} from './profile-extras';
@@ -92,20 +92,19 @@ const partsOf=(available:readonly Scope[])=>(Object.keys(PART_SCOPES) as Part[])
  * when none are left, when the next comes back. */
 export function RequestSheet({profileId,available,onClose,onSent}:{profileId:string,available:Scope[],onClose:()=>void,onSent:()=>void}){
  const {call,acting}=useFe();const {t,locale}=useI18n();const toast=useToast();const w=useAccessWords();
- const [q,setQ]=useState<QuotaT|null>(null);const [busy,setBusy]=useState(false);const [error,setError]=useState<unknown>(null);
+ const [q,setQ]=useState<QuotaT|null>(null);const [busy,setBusy]=useState(false);const fail=useFail();const ageFix=useAgeFix();
  const parts=partsOf(available);
  const [sel,setSel]=useState<Part[]>(parts);
  const op=useRef(newOpId());const us=acting?.kind==='couple';
  const loadQuota=useCallback(()=>{call('access.quota',{},quotaRes,{fresh:true}).then(setQ).catch(()=>{});},[call]);
  useEffect(()=>{loadQuota();},[loadQuota]);
  const scopesSel=SCOPES.filter(s=>available.includes(s)&&sel.some(k=>PART_SCOPES[k].includes(s)));
- const send=async()=>{setBusy(true);setError(null);
+ const send=async()=>{setBusy(true);
   try{const r=await call('access.request',{opId:op.current,profileId,scopes:scopesSel},requestRes);toast(t('fe.ac.rq.sent'+(us?'Us':''),{left:r.quota.left,max:r.quota.max}),{type:'ok'});onSent();}
-  catch(e){setError(e);op.current=newOpId();if(e instanceof FeError&&e.code==='rate_limited')loadQuota();}finally{setBusy(false);}};
+  catch(e){fail(w.err(e),e instanceof FeError&&e.rule==='age_check_required'?ageFix('access:'+profileId):undefined);op.current=newOpId();if(e instanceof FeError&&e.code==='rate_limited')loadQuota();}finally{setBusy(false);}};
  if(q&&q.left<=0)return <Sheet title={t('fe.ac.lim.title')} onClose={onClose} foot={<Btn onClick={onClose}>{t('fe.ac.ok')}</Btn>}>
   <Note>{t('fe.ac.lim.text',{max:q.max,at:q.resetsAt?w.at(q.resetsAt):'—'})}</Note>
  </Sheet>;
- const age=error instanceof FeError&&error.rule==='age_check_required';
  const label=(k:Part)=>t('fe.ac.part.'+k);
  return <Sheet title={t('fe.ac.rq.title')} onClose={onClose} dirty={!busy&&sel.length!==parts.length} foot={<Btn icon={Send} disabled={!scopesSel.length||busy} busy={busy} onClick={()=>void send()}>{t('fe.ac.rq.send'+(us?'Us':''))}</Btn>}>
   <SectionLabel>{t('fe.ac.rq.what')}</SectionLabel>
@@ -116,7 +115,6 @@ export function RequestSheet({profileId,available,onClose,onSent}:{profileId:str
     {q?<Note>{plural(t,locale,'fe.ac.rq.leftToday',q.left)}</Note>:<Skel kind="line" rows={1}/>}
    </Stack>
   </Stack>
-  {!!error&&<Alert kind="err" noIcon>{w.err(error)}{age&&<><br/><AgeCheckLink intent={'access:'+profileId}/></>}</Alert>}
  </Sheet>;
 }
 
@@ -169,7 +167,7 @@ function GrantSheet({r,available,onClose,onDone,onDecline}:{r:Incoming,available
  const {call,acting}=useFe();const {t}=useI18n();const toast=useToast();const w=useAccessWords();
  const had=r.alreadyOpen??null;const all=available.length?available:r.scopes;const name=nameOf(r.profile);
  const [sel,setSel]=useState<Scope[]>(()=>all.filter(s=>r.scopes.includes(s)||had?.scopes.includes(s)));
- const [term,setTerm]=useState<'1d'|'7d'|'none'>('7d');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [term,setTerm]=useState<'1d'|'7d'|'none'>('7d');const [busy,setBusy]=useState(false);const setFailure=useFail();
  const op=useRef(newOpId());const couple=acting?.kind==='couple';
  const grant=async()=>{setBusy(true);setFailure('');
   try{const res=await call('access.grant',{opId:op.current,requestId:r.id,scopes:sel,term},grantRes);
@@ -184,7 +182,7 @@ function GrantSheet({r,available,onClose,onDone,onDecline}:{r:Incoming,available
   <SectionLabel>{t('fe.priv.term')}</SectionLabel>
   <ChoiceChips label={t('fe.priv.term')} value={term} onChange={setTerm} options={(['1d','7d','none'] as const).map(v=>[v,t('fe.mx.pr.term.'+v)] as const)}/>
   <AccessSummary name={name} sel={sel} all={all} until={t('fe.ac.term.'+term)} couple={couple}/>
-  {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
+  
  </Sheet>;
 }
 
@@ -194,18 +192,18 @@ function GrantSheet({r,available,onClose,onDone,onDecline}:{r:Incoming,available
  * narrowing (the sheet's «пусто → отзыв»). */
 function RevokeAsk({g,narrow,onCancel,onDone}:{g:GrantItem,narrow:boolean,onCancel:()=>void,onDone:()=>void}){
  const {call,acting}=useFe();const {t}=useI18n();const toast=useToast();const w=useAccessWords();
- const [busy,setBusy]=useState(false);const [error,setError]=useState('');const id=g.profile?.id;
- const run=async()=>{if(!id)return;setBusy(true);setError('');
+ const [busy,setBusy]=useState(false);const fail=useFail();const id=g.profile?.id;
+ const run=async()=>{if(!id)return;setBusy(true);
   try{if(narrow)await call('access.narrow',{opId:newOpId(),profileId:id,scopes:[]},ok);else await call('access.revoke',{opId:newOpId(),profileId:id},ok);
-   toast(t('fe.mx.pr.revoked'+(acting?.kind==='couple'?'Us':'')),{type:'ok'});onDone();}catch(e){setError(w.err(e));}finally{setBusy(false);}};
- return <Ask icon={Lock} danger title={t('fe.ac.rv.title',{name:nameOf(g.profile)})} text={t('fe.ac.rv.text')} ok={t('fe.ac.rv.ok'+(acting?.kind==='couple'?'Us':''))} busy={busy} error={error||undefined}
+   toast(t('fe.mx.pr.revoked'+(acting?.kind==='couple'?'Us':'')),{type:'ok'});onDone();}catch(e){fail(w.err(e));}finally{setBusy(false);}};
+ return <Ask icon={Lock} danger title={t('fe.ac.rv.title',{name:nameOf(g.profile)})} text={t('fe.ac.rv.text')} ok={t('fe.ac.rv.ok'+(acting?.kind==='couple'?'Us':''))} busy={busy}
   onCancel={onCancel} onOk={()=>void run()}/>;
 }
 
 /** «Изменить» — uncheck parts; nothing left is a revoke; «Отозвать доступ полностью» from here too. Only narrowing. */
 function NarrowSheet({g,onClose,onRevoke,onDone}:{g:GrantItem,onClose:()=>void,onRevoke:(viaNarrow:boolean)=>void,onDone:()=>void}){
  const {call,acting}=useFe();const {t}=useI18n();const toast=useToast();const w=useAccessWords();
- const [sel,setSel]=useState<Scope[]>(g.scopes);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [sel,setSel]=useState<Scope[]>(g.scopes);const [busy,setBusy]=useState(false);const setFailure=useFail();
  const save=async()=>{if(!sel.length){onRevoke(true);return;}if(!g.profile)return;setBusy(true);setFailure('');
   try{await call('access.narrow',{opId:newOpId(),profileId:g.profile.id,scopes:sel},ok);toast(t('fe.ac.nw.done'+(acting?.kind==='couple'?'Us':'')),{type:'ok'});onDone();}
   catch(e){setFailure(w.err(e));}finally{setBusy(false);}};
@@ -218,7 +216,7 @@ function NarrowSheet({g,onClose,onRevoke,onDone}:{g:GrantItem,onClose:()=>void,o
    <Note>{t('fe.ac.nw.only')}</Note>
    <AccessSummary name={nameOf(g.profile)} sel={sel} all={g.scopes} until={w.until(g.until)}/>
    <Btn kind="text" auto className="danger" onClick={()=>onRevoke(false)}>{t('fe.ac.nw.revoke')}</Btn>
-   {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
+   
   </Stack>
  </Sheet>;
 }
@@ -361,7 +359,7 @@ export function PrivateLayer({profileId,on,requestsFrom,onChanged,askHere=true,a
 
 /** «Описание» of the private part, edited in place: the server's own text rules, saved on «Сохранить». */
 function DescSheet({text,onClose,onSaved}:{text:string,onClose:()=>void,onSaved:()=>void}){
- const {call}=useFe();const {t}=useI18n();const [v,setV]=useState(text);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const {call}=useFe();const {t}=useI18n();const [v,setV]=useState(text);const [busy,setBusy]=useState(false);const setFailure=useFail();
  const checks=useChecks({privText:'privateText'},{privText:v});
  const save=async()=>{if(!checks.submit())return;setBusy(true);setFailure('');
   try{await call('private.setText',{opId:newOpId(),text:v.trim()},ok);onSaved();}
@@ -369,7 +367,7 @@ function DescSheet({text,onClose,onSaved}:{text:string,onClose:()=>void,onSaved:
  return <Sheet title={t('fe.mp.desc')} onClose={onClose} dirty={!busy&&v!==text} foot={<Btn busy={busy} disabled={busy||v.trim()===text.trim()} onClick={()=>void save()}>{t('fe.me.save')}</Btn>}>
   <Field name="privText" error={checks.error('privText')}><TextArea rows={6} {...checks.input('privText')} value={v} placeholder={t('fe.mx.ed.privPh')} aria-label={t('fe.mp.desc')} onChange={e=>setV(e.target.value)}/>
    <Counter n={textLength(v)} max={FIELD.privateText.max}/></Field>
-  {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
+  
  </Sheet>;
 }
 

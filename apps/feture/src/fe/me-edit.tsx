@@ -2,14 +2,14 @@ import {useCallback,useEffect,useId,useRef,useState,type ReactNode} from 'react'
 import {useLocation,useNavigate,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {AtSign,Cake,Camera,ChevronDown,ChevronRight,Clock,Lock,Plus,Sparkles,Star,Trash2,X} from 'lucide-react';
+import {AtSign,Cake,Camera,Lock,Sparkles,Star,Trash2,X} from 'lucide-react';
 import {FeError,dayMonth,feErrorMessage,newOpId} from '../feture/fe-api';
-import {AddCard,Alert,Bar,Btn,Card,Counter,Empty,Field,FilePick,Group,Input,Note,PhotoAdd,PhotoSlot,PhotoSlots,RadioList,Row,Sheet,Skel,TextArea,VaultHead,useLeaveGuard} from './kit';
+import {AddCard,Bar,Btn,Card,Counter,Empty,Field,FilePick,Group,Input,Note,PhotoAdd,PhotoSlot,PhotoSlots,RadioList,Row,Sheet,Skel,TextArea,VaultHead,useLeaveGuard} from './kit';
 import {useFe,usePartnerApproves} from './session';
 import {Uploader} from './kit/Uploader';
 import {CityField,PickField,type Place} from './kit/Place';
 import {useSendPhoto} from './media-upload';
-import {useToast} from './toast';
+import {useToast,useFail} from './toast';
 import {useDragOrder} from './reorder';
 import {Ask,AudTag,COUPLE_ROWS,DETAIL_ROWS,MAX_PHOTOS,catalogRes,ok,photoSrc,profileRes,settingsRes,type Profile} from './me';
 import {NICK,nickAnswer} from './register';
@@ -42,7 +42,7 @@ export function MeEditScreen(){
  const resend=(useLocation().state as {resend?:Record<string,unknown>}|null)?.resend??null;const only:Only=o==='media'||o==='basics'||o==='details'||o==='priv'||o==='about'?o:null;
  const [p,setP]=useState<Profile|null>(null);const [base,setBase]=useState<Draft|null>(null);const [d,setD]=useState<Draft|null>(null);
  const [cat,setCat]=useState<z.infer<typeof catalogRes>|null>(null);const [jars,setJars]=useState({all:0,granted:0});const [grants,setGrants]=useState(0);
- const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);const setFailure=useFail();
  const [whoOpen,setWhoOpen]=useState<boolean|null>(null);const [ageSheet,setAgeSheet]=useState(false);const [phSheet,setPhSheet]=useState<{k:'photos'|'privMedia',i:number}|null>(null);
  const [askOff,setAskOff]=useState(false);const [nickErr,setNickErr]=useState('');const [askLast,setAskLast]=useState<number|null>(null);const [discoverOn,setDiscoverOn]=useState(false);const [added,setAdded]=useState<Place|null>(null);const [uploading,setUploading]=useState<'photos'|'privMedia'|null>(null);
  // «Обо мне» (person only) keeps its own draft next to the rest; «Сохранить» writes it with the profile.
@@ -207,7 +207,7 @@ export function MeEditScreen(){
         {d.privMedia.length?slots('privMedia',d.privMedia,PRIV_MAX):<AddCard icon={Camera} title={t('fe.mp.mediaAdd')} sub={t('fe.mp.mediaAddSub')} disabled={!!uploading} busy={uploading==='privMedia'} onClick={()=>pick('privMedia')}/>}</Group>
       </div>}
      </section>}
-     {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
+     
     </>}
   </div></div>
   {d&&<div className="ctabar"><div className="wrap"><Btn onClick={save} disabled={!dirty||busy} busy={busy}>{toPartner?t('fe.me.saveToPartner'):t('fe.me.save')}</Btn></div></div>}

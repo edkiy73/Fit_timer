@@ -7,6 +7,7 @@ import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Bar,Btn,Card,Empty,FilePick,Note,Pose,Row,Skel,View} from './kit';
 import {useFe,useLive,useShown} from './session';
 import {toJpeg} from './age-check';
+import {useFail} from './toast';
 
 /** V21 V01 «Фото-верификация» on /api/fe (server/commands/verification.mjs): the server picks a gesture
  * (`verification.photoStart`), the person sends a selfie making it (`media.uploadIntent` purpose `verification` →
@@ -37,7 +38,7 @@ function About(){
 export function PhotoCheckScreen(){
  const {call,peek,state}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
  const [s,setS]=useShown<Status|null>('set.photoCheck',()=>peek('verification.photoStatus',{},photoStatusRes,{asAccount:true}));const [error,setError]=useState<unknown>(null);
- const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [busy,setBusy]=useState(false);const setFailure=useFail();
  // No profile photo yet: known from the session at once (the server says the same on «start»), so the screen is drawn
  // in its final shape on the first frame.
  const [needPhoto,setNeedPhoto]=useState(()=>state.status==='ready'&&state.boot.profiles.some(p=>p.kind==='person'&&p.state!=='deleted'&&p.avatar==null));
@@ -119,7 +120,7 @@ export function PhotoCheckScreen(){
   <Card list><Row icon={Info} tone="v" title={t('fe.pc.how')} expanded={about} onClick={()=>setAbout(v=>!v)}/></Card>
   {about&&<About/>}
   {needPhoto&&<Alert kind="warn" role="alert" icon={ImagePlus} action={<Btn kind="soft" size="sm" auto icon={ImagePlus} onClick={()=>navigate('/n/me')}>{t('fe.pc.addPhoto')}</Btn>}>{t('fe.pc.needPhoto')}</Alert>}
-  {failure&&<Alert kind="err" icon={X}>{failure}</Alert>}
+  
  </View>
  {cta&&<div className="ctabar"><div className="wrap">{cta}</div></div>}</>;
 }

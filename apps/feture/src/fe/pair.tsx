@@ -2,14 +2,14 @@ import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import {useLocation,useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {AtSign,Check,Copy,EyeOff,Heart,Link as LinkIcon,Lock,Pause,ShieldCheck,Users,X} from 'lucide-react';
+import {AtSign,Check,Copy,EyeOff,Heart,Link as LinkIcon,Lock,Pause,ShieldCheck,Users} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {publicBase} from '../api-url';
 import {copyLink} from './share';
-import {canGoBack,useBack,ToggleRow,Actions,Alert,Av,Bar,Btn,Card,Empty,Field,Group,H,Input,Note,PersonLine,Pill,RadioList,RequestCard,Row,Sheet,Skel,Stack,View,Who,useLeaveGuard} from './kit';
+import {canGoBack,useBack,ToggleRow,Actions,Alert,Av,Bar,Btn,Card,Empty,Field,Group,H,Input,Note,PersonLine,Pill,RequestCard,Row,Sheet,Skel,Stack,View,Who,useLeaveGuard} from './kit';
 import {useFe,useLive} from './session';
 import {Ask} from './me';
-import {useToast} from './toast';
+import {useToast,useFail} from './toast';
 import {when} from './feed';
 import {ApprovalView,CoupleWork} from './couple';
 import {OLD_MODE,SWITCHABLE} from '../../contracts/_approve.mjs';
@@ -87,7 +87,7 @@ function PairMain({onOpen}:{onOpen:(id:string)=>void}){
  const couple=couples.find(p=>!p.ended)??couples[0];
  const person=state.status==='ready'?state.boot.profiles.find(p=>p.kind==='person'):undefined;
  const [inv,setInv]=useState<z.infer<typeof invitesRes>|null>(null);const [c,setC]=useState<Couple|null>(null);
- const [nick,setNick]=useState('');const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [confirmStop,setConfirmStop]=useState(()=>q.get('stop')==='1');
+ const [nick,setNick]=useState('');const [busy,setBusy]=useState(false);const setFailure=useFail();const [loadFailed,setLoadFailed]=useState(false);const [confirmStop,setConfirmStop]=useState(()=>q.get('stop')==='1');
  const [fresh,setFresh]=useState(false);const [askNew,setAskNew]=useState(false);
  const [link,setLink]=useState<{url:string,expiresAt:string}|null>(null);
  // The token is shown once (only its hash is kept): a live link is not copied again, «Новая ссылка» replaces it after asking.
@@ -98,9 +98,9 @@ function PairMain({onOpen}:{onOpen:(id:string)=>void}){
  const load=useCallback(()=>{
   setFailure('');
   // While a stopped couple is being replaced (fresh) its profile is gone after the invitation: don't read it.
-  if(couple&&!fresh)call('couple.get',{},coupleRes,{profileId:couple.id,fresh:true}).then(r=>setC(r.couple)).catch(e=>setFailure(feErrorMessage(e,t)));
+  if(couple&&!fresh)call('couple.get',{},coupleRes,{profileId:couple.id,fresh:true}).then(r=>setC(r.couple)).catch(e=>{setLoadFailed(true);setFailure(feErrorMessage(e,t));});
   else setC(null);
-  if(!couple||fresh)call('couple.invites',{},invitesRes,{asAccount:true,fresh:true}).then(setInv).catch(e=>setFailure(feErrorMessage(e,t)));
+  if(!couple||fresh)call('couple.invites',{},invitesRes,{asAccount:true,fresh:true}).then(setInv).catch(e=>{setLoadFailed(true);setFailure(feErrorMessage(e,t));});
  },[call,couple,fresh,t]);
  useEffect(()=>{load();},[load]);
  // The partner accepted, declined, stopped or restored (`changed:couple`, and `boot` brings the couple itself).
@@ -125,7 +125,7 @@ function PairMain({onOpen}:{onOpen:(id:string)=>void}){
   if(!couple||couple.state!=='active'||!c)return <><Bar title={t('fe.c6.made.title')} back="/n/me"/><View><Skel kind="list"/></View></>;
   return <CreatedView c={c} onSettings={()=>navigate('/n/me/pair',{replace:true})} onDone={toMe}/>;
  }
- if(couple&&!fresh&&!c&&!failure)return <><Bar title={t('fe.pair.title')} back="/n/me"/><View><Skel kind="list"/></View></>;
+ if(couple&&!fresh&&!c&&!loadFailed)return <><Bar title={t('fe.pair.title')} back="/n/me"/><View><Skel kind="list"/></View></>;
  // V21 Q07: a stopped couple — the restore screen (both within 30 days), or start a new couple, which ends the old one.
  if(couple&&c&&c.state==='paused'&&!fresh){
   const [me,other]=[c.members.find(m=>m.me),c.members.find(m=>!m.me)];
@@ -158,7 +158,7 @@ function PairMain({onOpen}:{onOpen:(id:string)=>void}){
         <Btn kind="text" onClick={()=>setConfirmStop(false)}>{t('fe.cancel')}</Btn></Actions></Stack></Card>}
      </Group>}
     </div>
-    {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
+    
    </div></View>
   </>;
  }
@@ -197,7 +197,7 @@ function PairMain({onOpen}:{onOpen:(id:string)=>void}){
      <Btn kind="soft" icon={LinkIcon} disabled={busy} onClick={()=>{if(inv.link)setAskLink(true);else void makeLink();}}>{inv.link?t('fe.c6.link.new'):t('fe.c6.link.copy')}</Btn></Stack>
     </Group>}
    </>}
-   {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
+   
   </div></View>
   {guard.node}
   {askLink&&<Ask icon={LinkIcon} title={t('fe.c6.link.newQ')} text={t('fe.c6.link.newText')} ok={t('fe.c6.link.newOk')} busy={busy}
@@ -216,7 +216,7 @@ function PairMain({onOpen}:{onOpen:(id:string)=>void}){
  * Discover and access do not. `extra`: what else the screen offers (start a new couple). */
 function RestoreView({coupleId,extra,onLeave}:{coupleId:string,extra?:ReactNode,onLeave:()=>void}){
  const {call,reload,state,setActing}=useFe();const {t,locale}=useI18n();const toast=useToast();const navigate=useNavigate();
- const [c,setC]=useState<Couple|null>(null);const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [c,setC]=useState<Couple|null>(null);const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);const setFailure=useFail();
  const [askDecline,setAskDecline]=useState(false);const [askPurge,setAskPurge]=useState(false);
  const load=useCallback(()=>{call('couple.get',{},coupleRes,{profileId:coupleId,fresh:true}).then(r=>{setC(r.couple);setError(null);}).catch(setError);},[call,coupleId]);
  useEffect(()=>{load();},[load]);
@@ -281,7 +281,7 @@ function RestoreView({coupleId,extra,onLeave}:{coupleId:string,extra?:ReactNode,
      {extra}
     </Actions>
    </>:<Note className="center">{t('fe.pq.restored')}</Note>}
-   {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
+   
   </div></View>
  </>;
 }
@@ -293,15 +293,15 @@ function pairErrorText(e:unknown,t:(k:string)=>string){if(e instanceof FeError&&
 function LinkLanding({token,me,auto,onClose,onAccepted}:{token:string,auto:boolean,me:{name:string,id?:string|undefined,src?:string|null|undefined},onClose:()=>void,onAccepted:()=>void}){
  const {call}=useFe();const {t}=useI18n();
  const [from,setFrom]=useState<z.infer<typeof peekRes>['from']|null>(null);const [dead,setDead]=useState('');
- const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [busy,setBusy]=useState(false);const setFailure=useFail();const [failed,setFailed]=useState(false);
  const op=useRef(newOpId());
  useEffect(()=>{call('couple.linkPeek',{token},peekRes,{asAccount:true}).then(r=>setFrom(r.from))
   .catch(e=>setDead(e instanceof FeError&&e.status===404?t('fe.c6.land.dead'):feErrorMessage(e,t)));},[call,token,t]);
  // Owner, 28.10.2026: signing up through the link is the consent — the couple forms right away, no second tap.
  const started=useRef(false);
- const accept=async()=>{setBusy(true);setFailure('');
+ const accept=async()=>{setBusy(true);setFailure('');setFailed(false);
   try{await call('couple.linkAccept',{opId:op.current,token},acceptRes,{asAccount:true});onAccepted();}
-  catch(e){setFailure(e instanceof FeError&&e.status===404?t('fe.c6.land.dead'):pairErrorText(e,t));op.current=newOpId();}
+  catch(e){setFailed(true);setFailure(e instanceof FeError&&e.status===404?t('fe.c6.land.dead'):pairErrorText(e,t));op.current=newOpId();}
   finally{setBusy(false);}};
  useEffect(()=>{if(auto&&from&&!started.current){started.current=true;void accept();}});
  return <>
@@ -320,10 +320,10 @@ function LinkLanding({token,me,auto,onClose,onAccepted}:{token:string,auto:boole
       <Row icon={Users} title={t('fe.c6.land.d2')} sub={t('fe.c6.land.d2s')}/>
       <Row icon={ShieldCheck} title={t('fe.c6.land.d3')} sub={t('fe.c6.land.d3s')}/>
      </Card>
-     {!auto||failure?<Actions stack><Btn disabled={busy} busy={busy} onClick={()=>void accept()}>{t('fe.c6.land.accept')}</Btn>
+     {!auto||failed?<Actions stack><Btn disabled={busy} busy={busy} onClick={()=>void accept()}>{t('fe.c6.land.accept')}</Btn>
       <Btn kind="soft" disabled={busy} onClick={onClose}>{t('fe.c6.land.decline')}</Btn></Actions>:null}
     </>}
-   {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
+   
   </div></View>
  </>;
 }
@@ -392,7 +392,7 @@ function CoupleSettings({c,coupleId,other,trustOpen,onChanged}:{c:Couple,coupleI
  * switch per point with a short line under it; the private part and visibility always wait (shown on, not switchable). */
 function TrustSheet({coupleId,scope,other,otherOn,onClose,onDone}:{coupleId:string,scope:string[],other:string,otherOn:boolean,onClose:()=>void,onDone:()=>void}){
  const {call}=useFe();const {t}=useI18n();const toast=useToast();
- const [v,setV]=useState<string[]>(scope.filter(x=>(SWITCHABLE as readonly string[]).includes(x)));const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');
+ const [v,setV]=useState<string[]>(scope.filter(x=>(SWITCHABLE as readonly string[]).includes(x)));const [busy,setBusy]=useState(false);const setFailure=useFail();
  const same=v.length===scope.length&&v.every(x=>scope.includes(x));
  const save=async()=>{if(same){onClose();return;}setBusy(true);setFailure('');
   try{await call('couple.setApproval',{opId:newOpId(),scope:v},ok,{profileId:coupleId});toast(t('fe.c6.trust.saved'),{type:'ok'});onDone();}
@@ -405,7 +405,7 @@ function TrustSheet({coupleId,scope,other,otherOn,onClose,onDone}:{coupleId:stri
     {SWITCHABLE.map(k=><ToggleRow key={k} title={t('fe.c6.pt.'+k)} sub={t('fe.c6.pt.'+k+'.sub')} on={v.includes(k)} onClick={()=>flip(k)} disabled={busy}/>)}
    </Card>
    <Note>{otherOn?t('fe.c6.trust.otherOn',{name:other}):t('fe.c6.trust.otherOff',{name:other})}</Note>
-   {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
+   
   </Stack>
  </Sheet>;
 }

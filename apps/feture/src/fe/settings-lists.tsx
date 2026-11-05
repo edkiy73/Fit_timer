@@ -5,7 +5,7 @@ import {Ban,Calendar,Eye,FileText,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {ProfileAv,Bar,Btn,Card,Empty,Note,Row,SectionLabel,Skel,Stack,View} from './kit';
 import {useFe,useShown} from './session';
-import {useToast} from './toast';
+import {useToast,useFail} from './toast';
 import {when} from './feed';
 import {Sheet} from './profile-extras';
 import {Ask} from './settings-ui';
@@ -94,7 +94,7 @@ export function BlockedScreen(){
  // The account's other profile (person ↔ couple): its blocks say who is «blocked for both of you».
  const other=state.status==='ready'?state.boot.profiles.find(p=>p.state!=='deleted'&&!p.ended&&p.id!==acting?.id&&(p.kind==='couple')!==(acting?.kind==='couple')):undefined;
  const [otherIds,setOtherIds]=useState<Set<string>>(new Set());
- const [ask,setAsk]=useState<Blocked|null>(null);const [busy,setBusy]=useState('');const [failure,setFailure]=useState('');
+ const [ask,setAsk]=useState<Blocked|null>(null);const [busy,setBusy]=useState('');const setFailure=useFail();
  const couple=acting?.kind==='couple';
  const load=useCallback(()=>{setError(null);call('blocks.list',{},blockedRes).then(r=>setItems(r.items)).catch(setError);
   if(other)call('blocks.list',{},blockedRes,{profileId:other.id}).then(r=>setOtherIds(new Set(r.items.map(x=>x.id)))).catch(()=>{});},[call,other?.id]);
@@ -135,6 +135,6 @@ export function BlockedScreen(){
   </View>
   {ask&&<Ask icon={Ban} title={t('fe.tl.b.askTitle').replace('{name}',askName)}
    text={couple?t('fe.tl.b.askTextCouple').replace('{name}',askName).replace('{pair}',nameOf(acting)):t('fe.tl.b.askText')}
-   ok={t('fe.tl.b.unblock')} busy={busy==='u:'+ask.id} error={failure} onOk={()=>void unblock(ask)} onCancel={closeAsk}/>}
+   ok={t('fe.tl.b.unblock')} busy={busy==='u:'+ask.id} onOk={()=>void unblock(ask)} onCancel={closeAsk}/>}
  </>;
 }

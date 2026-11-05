@@ -3,11 +3,11 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Cake} from 'lucide-react';
 import {FeError,dayMonth,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Btn,Card,Counter,Field,Group,Input,RadioList,Sheet,Text,TextArea} from './kit';
+import {Btn,Card,Counter,Field,Group,Input,RadioList,Sheet,Text,TextArea} from './kit';
 import {CityField,PickField,type Place} from './kit/Place';
 import {FIELD,textLength} from './kit/validate';
 import {useFe} from './session';
-import {useToast} from './toast';
+import {useToast,useFail} from './toast';
 import {NICK,nickAnswer} from './register';
 import {RichText} from './post-parts';
 import type {Profile} from './me';
@@ -41,7 +41,7 @@ function BasicsSheet({p,places,onClose,onSaved}:{p:Profile,places:Place[],onClos
  const [base,setBase]=useState(()=>draftOf(p));const [d,setD]=useState(base);
  useEffect(()=>{const b=draftOf(p);setBase(b);setD(b);},[p]);
  const [age,setAge]=useState(false);const [added,setAdded]=useState<Place|null>(null);
- const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [nickErr,setNickErr]=useState('');
+ const [busy,setBusy]=useState(false);const setFailure=useFail();const [nickErr,setNickErr]=useState('');
  const set=(x:Partial<Draft>)=>setD(v=>({...v,...x}));
  const dirty=JSON.stringify(d)!==JSON.stringify(base);
  const placeName=(cid:string|null)=>{if(!cid)return null;const x=places.find(y=>y.id===cid)??(added?.id===cid?added:null);
@@ -83,7 +83,7 @@ function BasicsSheet({p,places,onClose,onSaved}:{p:Profile,places:Place[],onClos
    {!cp&&p.age&&<PickField label={t('fe.mb.age')} icon={Cake} value={d.showAge?t('fe.mb.ageShow',{n:String(p.age)}):t('fe.mb.ageHide')} placeholder="" onClick={()=>setAge(true)}/>}
    <Field id={id+'b'} name="bio" label={t('fe.mx.ed.about')}>
     <TextArea id={id+'b'} rows={4} value={d.bio} maxLength={FIELD.bio.max} placeholder={t('fe.mx.ed.aboutPh')} onChange={e=>set({bio:e.target.value})}/><Counter n={textLength(d.bio)} max={FIELD.bio.max}/></Field>
-   {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
+   
   </Card>
   {age&&<Sheet title={t('fe.mb.age')} onClose={()=>setAge(false)}>
    <RadioList label={t('fe.mb.age')} value={d.showAge?'show':'hide'} onChange={v=>{set({showAge:v==='show'});setAge(false);}}
