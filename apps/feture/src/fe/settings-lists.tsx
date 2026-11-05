@@ -3,7 +3,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,Calendar,Eye,FileText,X} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Av,Bar,Btn,Card,Empty,Note,Row,SectionLabel,Skel,Stack,View} from './kit';
+import {ProfileAv,Bar,Btn,Card,Empty,Note,Row,SectionLabel,Skel,Stack,View} from './kit';
 import {useFe,useShown} from './session';
 import {useToast} from './toast';
 import {when} from './feed';
@@ -15,7 +15,7 @@ import {Ask} from './settings-ui';
 const ok=z.object({ok:z.literal(true)}).passthrough();
 const who=z.object({id:z.string(),handle:z.string().nullable().optional(),name:z.string().nullable().optional()});
 const hiddenItem=z.object({kind:z.enum(['post','author','activity','event']),target_id:z.string(),created_at:z.string(),
- target:z.object({id:z.string(),handle:z.string().nullable().optional(),name:z.string().nullable().optional(),excerpt:z.string().nullable().optional()}).nullable()});
+ target:z.object({id:z.string(),kind:z.string().optional(),handle:z.string().nullable().optional(),name:z.string().nullable().optional(),excerpt:z.string().nullable().optional()}).nullable()});
 type Hidden=z.infer<typeof hiddenItem>;
 const hiddenRes=z.object({ok:z.literal(true),items:z.array(hiddenItem)}).passthrough();
 const blockedItem=who.extend({created_at:z.string(),kind:z.string()});
@@ -53,7 +53,7 @@ function HiddenList({h}:{h:ReturnType<typeof useHidden>}){
   const title=x.kind==='post'?(x.target?.excerpt?.trim()||t('fe.tl.h.post')):x.kind==='event'?t('fe.tl.h.event'):(name||t('fe.tl.h.unavailable'));
   const sub=x.kind==='post'?(x.target?'':t('fe.tl.h.unavailable')):x.kind==='author'?t('fe.tl.h.authorSub'):x.kind==='activity'?t('fe.tl.h.activitySub'):'';
   const person=(x.kind==='author'||x.kind==='activity')&&x.target;
-  return <Row key={key(x)} {...(person?{av:<Av name={name} seed={x.target!.id} size="sm"/>}:{icon:x.kind==='event'?Calendar:FileText})} title={title} sub={sub||undefined}
+  return <Row key={key(x)} {...(person?{av:<ProfileAv p={{id:x.target!.id,kind:x.target!.kind,name}} size="sm"/>}:{icon:x.kind==='event'?Calendar:FileText})} title={title} sub={sub||undefined}
    end={<Btn kind="soft" size="sm" onClick={()=>void unhide(x)} busy={busy===key(x)} disabled={!!busy} aria-label={t('fe.tl.h.show')+': '+title}>{t('fe.tl.h.show')}</Btn>}/>;
  };
  if(error)return <Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>;
@@ -127,7 +127,7 @@ export function BlockedScreen(){
     :items===null?<Skel kind="list"/>
     :items.length===0?<Empty icon={Ban} title={t('fe.tl.b.empty')} text={t('fe.tl.b.emptyText')}/>
     :<Card list>{items.map(b=>{const name=nameOf(b)||'?';const forBoth=otherIds.has(b.id);
-     return <Row key={b.id} av={<Av name={name} seed={b.id}/>} title={name} sub={(forBoth?t('fe.tl.b.both'):t('fe.tl.b.blocked'))+' '+when(b.created_at,locale)}
+     return <Row key={b.id} av={<ProfileAv p={{id:b.id,kind:b.kind,name}} size=""/>} title={name} sub={(forBoth?t('fe.tl.b.both'):t('fe.tl.b.blocked'))+' '+when(b.created_at,locale)}
       extra={other&&!forBoth?<Btn kind="text" size="sm" auto onClick={()=>void both(b)} busy={busy==='b:'+b.id} disabled={!!busy}>{couple?t('fe.tl.b.forMe'):t('fe.tl.b.forCouple')}</Btn>:undefined}
       end={<Btn kind="soft" size="sm" fit onClick={()=>{setAsk(b);setFailure('');}} disabled={!!busy}>{t('fe.tl.b.unblock')}</Btn>}/>;})}</Card>}
    {items&&items.length>0&&<Note>{t('fe.tl.b.note')}</Note>}

@@ -899,7 +899,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
   const m=text.current?.mention();if(!m){setSug(null);return;}
   setSug({q:m.q});
   if(folks===null&&acting){setFolks([]);call('profile.followers',{profileId:acting.id,following:true},mentionRes)
-   .then(r=>setFolks(r.items.filter(p=>!!p.handle).map(p=>({id:p.id,handle:p.handle!,name:nameOf(p),avatar:null,mentionable:p.mentionable})))).catch(()=>{});}
+   .then(r=>setFolks(r.items.filter(p=>!!p.handle).map(p=>({id:p.id,handle:p.handle!,name:nameOf(p),avatar:thumbOf(p.avatar),kind:p.kind,halves:p.halves,mentionable:p.mentionable})))).catch(()=>{});}
  };
  useEffect(()=>{
   if(!sug||sug.q.length<2){setFound([]);return;}
