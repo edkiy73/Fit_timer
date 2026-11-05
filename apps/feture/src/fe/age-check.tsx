@@ -7,6 +7,7 @@ import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Actions,Alert,Bar,Btn,CaptureFrame,Card,Empty,FilePick,Group,RadioList,Row,Skel,Text,View,useBack} from './kit';
 import {useSendPhoto} from './media-upload';
 import {useFe,useLive,useShown} from './session';
+import {useFail} from './toast';
 
 /** V21 A07 «Проверка возраста» on /api/fe (server/commands/premium.mjs). Two methods:
  * - selfie: the server picks a gesture (`verification.ageStart`), the person sends a selfie making it, staff compare
@@ -75,7 +76,7 @@ export function useAgeResume(match:(intent:string)=>boolean,run:(intent:string)=
 export function AgeCheckScreen(){
  const {call,peek,state}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const [params]=useSearchParams();
  const [s,setS]=useShown<Status|null>('set.ageCheck',()=>peek('verification.ageStatus',{},statusRes,{asAccount:true}));const [error,setError]=useState<unknown>(null);
- const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [needPhoto,setNeedPhoto]=useState(false);
+ const [busy,setBusy]=useState(false);const setFailure=useFail();const [needPhoto,setNeedPhoto]=useState(false);
  const [shot,setShot]=useState<{blob:Blob,url:string,method:Method}|null>(null);
  const [choice,setChoice]=useState<Method|null>(null);const [denied,setDenied]=useState<Method|null>(null);const [choosing,setChoosing]=useState(false);
  const cam=useRef<HTMLInputElement>(null);const file=useRef<HTMLInputElement>(null);const docCam=useRef<HTMLInputElement>(null);
@@ -140,7 +141,6 @@ export function AgeCheckScreen(){
   <FilePick ref={docCam} accept="image/*" capture="environment" onFiles={f=>void pick(f[0],'document')}/>
   <FilePick ref={file} accept="image/jpeg,image/png,image/webp,image/heic,image/heif" onFiles={f=>void pick(f[0],'document')}/>
  </>;
- const alertErr=failure?<Alert kind="err" icon={X}>{failure}</Alert>:null;
  const back='/n/settings';
  if(error)return <><Bar title={t('fe.age.title')} back={back}/><View className="nodock"><Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load(true)}>{t('fe.retry')}</Btn></Empty></View></>;
  if(!s)return <><Bar title={t('fe.age.title')} back={back}/><View className="nodock"><Skel kind="list"/></View></>;
@@ -163,7 +163,7 @@ export function AgeCheckScreen(){
   <Empty icon={CameraOff} role="alert" title={t('fe.age.camDenied')} text={t('fe.age.camDeniedText')}>
    <Btn onClick={()=>void allowCamera(denied)} busy={busy} disabled={busy}>{t('fe.age.tryAgain')}</Btn>
    <Btn kind="soft" icon={FileUp} onClick={()=>file.current?.click()} disabled={busy}>{t('fe.age.docUpload')}</Btn>
-  </Empty>{pickers}{alertErr}
+  </Empty>{pickers}
  </View></>;
 
  const other=<Btn kind="text" onClick={()=>{setShot(null);setChoice(null);setChoosing(true);setFailure('');}} disabled={busy}>{t('fe.age.otherMethod')}</Btn>;
@@ -176,7 +176,7 @@ export function AgeCheckScreen(){
      <Btn kind="soft" icon={FileUp} onClick={()=>file.current?.click()} disabled={busy}>{t('fe.age.docOther')}</Btn></>
     :<><Btn icon={Camera} onClick={()=>docCam.current?.click()}>{t('fe.age.docShoot')}</Btn>
      <Btn kind="soft" icon={FileUp} onClick={()=>file.current?.click()}>{t('fe.age.docUpload')}</Btn></>}</Actions>
-   {pickers}{alertErr}
+   {pickers}
    <Card list>
     <Row icon={Info} title={t('fe.age.docReq1')}/>
     <Row icon={Info} title={t('fe.age.docReq2')}/>
@@ -195,7 +195,7 @@ export function AgeCheckScreen(){
    {mine?<Actions stack><Btn onClick={send} busy={busy} disabled={busy||!person}>{t('fe.age.send')}</Btn>
      <Btn kind="soft" icon={Camera} onClick={()=>cam.current?.click()} disabled={busy}>{t('fe.age.retake')}</Btn></Actions>
     :<Btn icon={Camera} onClick={()=>cam.current?.click()}>{t('fe.age.shoot')}</Btn>}
-   {pickers}{alertErr}
+   {pickers}
    <Alert icon={Lock}>{t('fe.age.camNote')}</Alert>
    {other}
   </View></>;
@@ -218,7 +218,7 @@ export function AgeCheckScreen(){
    :doc?<Actions stack><Btn icon={Camera} onClick={()=>void allowCamera('document')} busy={busy} disabled={busy}>{t('fe.age.docShoot')}</Btn>
      <Btn kind="soft" icon={FileUp} onClick={()=>file.current?.click()} disabled={busy}>{t('fe.age.docUpload')}</Btn></Actions>
    :<Btn icon={Camera} onClick={()=>void allowCamera('selfie')} busy={busy} disabled={busy}>{t('fe.age.allowCam')}</Btn>}
-  {pickers}{alertErr}
+  {pickers}
   <Group title={t('fe.age.how')}>
    <Card list>{doc?<>
     <Row icon={IdCard} tone="v" title={t('fe.age.docStep1')}/>
@@ -236,6 +236,12 @@ export function AgeCheckScreen(){
 
 /** The link the age gates show next to their message. `intent` names what to redo after the check (the screen
  * handles it with `useAgeResume`); the person comes back to the current page either way. */
+/** The toast action that opens the age check (the toast form of `AgeCheckLink`; the check comes back to `intent`). */
+export function useAgeFix(){
+ const {t}=useI18n();const navigate=useNavigate();const loc=useLocation();
+ return (intent?:string)=>({label:t('fe.age.go'),fn:()=>navigate(agePath(loc.pathname+loc.search,intent))});
+}
+
 export function AgeCheckLink({intent}:{intent?:string|undefined}={}){
  const {t}=useI18n();const navigate=useNavigate();const loc=useLocation();
  return <Btn kind="soft" size="sm" auto icon={ShieldCheck} className="mt8" onClick={()=>navigate(agePath(loc.pathname+loc.search,intent))}>{t('fe.age.go')}</Btn>;

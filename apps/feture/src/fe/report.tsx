@@ -3,9 +3,10 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Flag} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Btn,Card,Counter,Field,RadioList,Sheet,Stack,TextArea,ToggleRow} from './kit';
+import {Btn,Card,Counter,Field,RadioList,Sheet,Stack,TextArea,ToggleRow} from './kit';
 import {useFe} from './session';
 import {FIELD,serverFields,shakeFirstErr,softMax,textError,textErrorMessage,textLength} from './kit/validate';
+import {useFail} from './toast';
 
 /** The one «Пожаловаться» sheet of the app (posts, replies, profiles, communities, events, chats), owner 28.10.2026:
  * plain reason rows with a short line under each, «Подробности» required (at least DETAILS_MIN characters, the server
@@ -28,7 +29,7 @@ export function ReportSheet({targetType,targetId,block,before,check,extra,profil
  // Sent as the couple (the acting profile, or the chat's side): the button says so.
  const side=profileId&&state.status==='ready'?state.boot.profiles.find(p=>p.id===profileId):acting;const us=side?.kind==='couple';
  const [reason,setReason]=useState<ReportReason|null>(null);const [details,setDetails]=useState('');const [alsoBlock,setAlsoBlock]=useState(!!block);
- const [reasonErr,setReasonErr]=useState('');const [detailsErr,setDetailsErr]=useState('');const [failure,setFailure]=useState('');const [busy,setBusy]=useState(false);
+ const [reasonErr,setReasonErr]=useState('');const [detailsErr,setDetailsErr]=useState('');const setFailure=useFail();const [busy,setBusy]=useState(false);
  const op=useRef(newOpId());
  const send=async()=>{
   if(busy)return;
@@ -64,7 +65,7 @@ export function ReportSheet({targetType,targetId,block,before,check,extra,profil
     {textLength(details)>=FIELD.reportDetails.max*0.8&&<Counter n={textLength(details)} max={FIELD.reportDetails.max}/>}
    </Field>
    {block!==undefined&&<Card list><ToggleRow title={t('fe.pm.rp.alsoBlock')} sub={t('fe.pm.rp.alsoBlockSub')} on={alsoBlock} onClick={()=>setAlsoBlock(v=>!v)}/></Card>}
-   {failure&&<Alert kind="err">{failure}</Alert>}
+   
   </Stack>
  </Sheet>;
 }

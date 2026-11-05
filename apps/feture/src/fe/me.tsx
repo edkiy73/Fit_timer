@@ -4,11 +4,11 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Camera,ClipboardList,Clock,Eye,HeartOff,Newspaper,Settings,Star,Trash2} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {AddCard,Alert,Ask as KitAsk,Card,CheckList,Group,PhotoAdd,PhotoSlot,PhotoSlots,Row,SelectRow,Sheet,Skel,ToggleRow} from './kit';
+import {AddCard,Ask as KitAsk,Card,CheckList,Group,PhotoAdd,PhotoSlot,PhotoSlots,Row,SelectRow,Sheet,Skel,ToggleRow} from './kit';
 import {MESSAGE_POINTS,MESSAGES_DEFAULT} from '../../contracts/_messages.mjs';
-import {AgeCheckLink,useAgeResume} from './age-check';
+import {useAgeFix,useAgeResume} from './age-check';
 import {dropReadCache,useFe} from './session';
-import {useToast} from './toast';
+import {useToast,useFail} from './toast';
 import {DiscoverPhotoAsk} from './discover-photo';
 import {useDragOrder} from './reorder';
 import {Viewer} from './post-parts';
@@ -121,7 +121,7 @@ const MSG_OPTIONS=['followers','following','mutual','community','event'] as cons
 
 export function Visibility({p,settings,onChanged,part}:{p:Profile,settings:Settings,onChanged:()=>void,part?:'discover'|'who'|undefined}){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
- const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [ageIntent,setAgeIntent]=useState('');const [askOff,setAskOff]=useState(false);
+ const [busy,setBusy]=useState(false);const setFailure=useFail();const ageFix=useAgeFix();const [askOff,setAskOff]=useState(false);
  const cp=p.kind==='couple';
  // Quick settings (owner 05.11.2026): a box, a switch or a choice shows its new value at once and saves in the
  // background — in order, one request at a time per setting, without freezing the rest of the screen, reloading it or
@@ -160,8 +160,7 @@ export function Visibility({p,settings,onChanged,part}:{p:Profile,settings:Setti
   catch(e){
    const age=e instanceof FeError&&e.rule==='age_not_verified';
    // The age check this sends to comes back here and applies the same change (`vis:<setting>:<value>`).
-   setAgeIntent(age?`vis:${setting}:${String(value)}`:'');
-   setFailure(age?t('fe.age.couple'):feErrorMessage(e,t));}finally{setBusy(false);}
+   setFailure(age?t('fe.age.couple'):feErrorMessage(e,t),age?ageFix(`vis:${setting}:${String(value)}`):undefined);}finally{setBusy(false);}
  };
  useAgeResume(v=>/^vis:[a-zA-Z]+:[a-z]+$/.test(v),v=>{const [,k,raw]=v.split(':') as [string,string,string];void set(k,raw==='true'?true:raw==='false'?false:raw);});
  const hasPhoto=p.photos.some(x=>!x.pending);
@@ -200,7 +199,6 @@ export function Visibility({p,settings,onChanged,part}:{p:Profile,settings:Setti
    <SelectRow row label={t('fe.ln.from')} value={(shown('linksFrom')??'all') as 'all'|'follow'|'none'} onChange={v=>quick('linksFrom',v)}
     options={(['all','follow','none'] as const).map(v=>[v,t('fe.ln.from.'+v)] as const)}/>
   </Card></Group>}</>}
-  {failure&&<Alert kind="err" noIcon>{failure}{failure===t('fe.age.couple')&&<><br/><AgeCheckLink intent={ageIntent||undefined}/></>}</Alert>}
   {/* V21 k4off: switching Discover off is asked first — matches, chats and access stay. */}
   {askOff&&<KitAsk icon={HeartOff} danger title={t(cp?'fe.w7.k4off.titleUs':'fe.w7.k4off.title')} text={t(cp?'fe.w7.k4off.textUs':'fe.w7.k4off.text')} ok={t('fe.w7.k4off.ok')} busy={busy}
    onOk={()=>{setAskOff(false);void set('discoverMode','off');}} onCancel={()=>setAskOff(false)}/>}

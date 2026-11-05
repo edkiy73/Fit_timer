@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Check,Crown,Gift,History,RotateCcw,Undo2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Actions,Alert,Ask,Av,Bar,Btn,Card,Empty,Field,Group,Input,KeyValues,Note,PlanCards,PremiumFeats,PremiumHero,Row,SectionLabel,Sheet,Skel,Spacer,Stack,ToggleRow,View,Who} from './kit';
-import {useToast} from './toast';
+import {useToast,useFail} from './toast';
 import {useFe,useShown} from './session';
 
 /** V21 B01 Premium (wave 8): what Premium gives, plans, the purchase confirmation, auto-renewal, «Восстановить
@@ -49,7 +49,7 @@ function usePlans(){
 
 /** Starts a purchase or a gift when payments exist; follows the provider's page or reports the result. */
 function usePay(onDone:()=>void){
- const {call}=useFe();const {t}=useI18n();const toast=useToast();const [busy,setBusy]=useState(false);const [error,setError]=useState('');
+ const {call}=useFe();const {t}=useI18n();const toast=useToast();const [busy,setBusy]=useState(false);const setError=useFail();
  const pay=async(action:'premium.purchase'|'premium.gift',input:Record<string,unknown>,doneText:string)=>{
   setBusy(true);setError('');
   try{const r=await call(action,{opId:newOpId(),...input},buyRes,{asAccount:true});
@@ -58,12 +58,12 @@ function usePay(onDone:()=>void){
   catch(e){setError(e instanceof FeError&&e.code==='payments_unavailable'?t('fe.w8.buy.soonText'):e instanceof FeError?feErrorMessage(e,t):t('fe.w8.buy.failed'));}
   finally{setBusy(false);}
  };
- return {pay,busy,error};
+ return {pay,busy};
 }
 
 /** «Оформить» → the confirmation with the price. Without payments it says so instead of a working pay button. */
 function BuySheet({plan,payments,onClose,onDone}:{plan:Plan,payments:boolean,onClose:()=>void,onDone:()=>void}){
- const {t}=useI18n();const {pay,busy,error}=usePay(()=>{onClose();onDone();});
+ const {t}=useI18n();const {pay,busy}=usePay(()=>{onClose();onDone();});
  const price=t('fe.ax.prem.'+plan+'Price');
  return <Sheet title={t('fe.w8.buy.title')} onClose={onClose}
   foot={payments?<Btn busy={busy} onClick={()=>void pay('premium.purchase',{plan},t('fe.w8.buy.done'))}>{t('fe.w8.buy.pay',{price})}</Btn>:<Btn kind="soft" onClick={onClose}>{t('fe.close')}</Btn>}>
@@ -71,7 +71,6 @@ function BuySheet({plan,payments,onClose,onDone}:{plan:Plan,payments:boolean,onC
    <KeyValues rows={[[t('fe.w8.buy.plan'),t('fe.ax.prem.'+plan)],[t('fe.w8.buy.price'),price]]}/>
    {payments?<Note>{t('fe.w8.prem.charge',{price,period:t(plan==='year'?'fe.w8.prem.periodYear':'fe.w8.prem.periodMonth')})}</Note>
     :<Alert kind="info"><b>{t('fe.w8.buy.soon')}</b>{t('fe.w8.buy.soonText')}</Alert>}
-   {error&&<Alert kind="err">{error}</Alert>}
   </Stack>
  </Sheet>;
 }
@@ -106,7 +105,7 @@ export function GiftSheet({handle,onClose,onDone}:{handle?:string|null|undefined
  const {call}=useFe();const {t}=useI18n();const {status}=usePremiumStatus();
  const [nick,setNick]=useState(handle??'');const [to,setTo]=useState<Recipient|null>(null);const [findErr,setFindErr]=useState('');const [finding,setFinding]=useState(false);
  const [plan,setPlan]=useState<GiftPlan>('m1');const [anon,setAnon]=useState(false);const [step,setStep]=useState<'form'|'confirm'>('form');
- const {pay,busy,error}=usePay(()=>{onClose();onDone?.();});
+ const {pay,busy}=usePay(()=>{onClose();onDone?.();});
  const find=useCallback(async(v:string)=>{
   const h=v.trim().replace(/^@+/,'');if(h.length<3){setFindErr(t('fe.w8.gift.notFound'));return;}
   setFinding(true);setFindErr('');
@@ -126,7 +125,6 @@ export function GiftSheet({handle,onClose,onDone}:{handle?:string|null|undefined
    {person}
    <KeyValues rows={[[t('fe.w8.gift.term'),t('fe.w8.gift.'+plan)],[t('fe.w8.buy.price'),price],[t('fe.w8.gift.anon'),anon?t('fe.w8.yes'):t('fe.w8.no')]]}/>
    {!status?.payments&&<Alert kind="info"><b>{t('fe.w8.buy.soon')}</b>{t('fe.w8.buy.soonText')}</Alert>}
-   {error&&<Alert kind="err">{error}</Alert>}
   </Stack>
  </Sheet>;
  return <Sheet title={t('fe.w8.gift.title')} onClose={onClose} dirty={!!nick&&!handle}
