@@ -12,7 +12,7 @@ import { avatarSrc, mediaDto } from '../media/assets.mjs';
 import { blockProfile } from './social.mjs';
 import { markRequestReported } from './chats.mjs';
 import { canWrite, coverOf } from './communities.mjs';
-import { PREMIUM_SQL, withFaces } from './faces.mjs';
+import { PREMIUM_SQL, facesOf, withFaces } from './faces.mjs';
 import { hasPhotoCheck } from './verification.mjs';
 import { articlePlate } from '../../contracts/_plates.mjs';
 import { dropHiddenPostPhotos, settleAvatar } from './photos.mjs';
@@ -1143,11 +1143,14 @@ const run = {
     // e2e persona replies vanish for everyone else (a stub stays only above someone else's answer).
     // A reply of a suspended person or a paused couple (audit item 5, В6): gone without live answers, a stub «Комментарий
     // скрыт» above them — never the text or the author; back as it was once lifted.
+    // The photo check and Premium marks next to a name, the same as on the post itself.
+    const faces = await facesOf(q, cfg.media, viewer, rows.map(r => r.author?.id));
     for (const r of rows.filter(x => ((x.state === 'published' && !x.inactive) || x.has_replies) && !x.qa_out)) {
       let author = null;
       if (r.author) {
         const { avatarAssetId, ...rest } = r.author;
-        author = { ...rest, avatar: await avatarSrc(q, cfg.media, avatarAssetId, viewer.profileId) };
+        const f = faces.get(rest.id);
+        author = { ...rest, avatar: await avatarSrc(q, cfg.media, avatarAssetId, viewer.profileId), photoVerified: f?.photoVerified ?? false, premium: f?.premium ?? false };
       }
       items.push({
         id: r.id, parentId: r.parent_id, createdAt: r.created_at, editedAt: r.edited_at, likes: r.likes,

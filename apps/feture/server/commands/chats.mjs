@@ -471,7 +471,7 @@ const run = {
         id: r.id, state: r.state, side: { id: r.side, kind: r.side_kind }, newMatch: Number(r.last_seq) === 0,
         other: {
           id: r.other_id, kind: r.other_kind, handle: r.other_handle, name: r.other_name || r.other_handle,
-          ages: agesOf.get(r.other_id) ?? [], photoVerified: verified.get(r.other_id) ?? false, paused: r.other_state === 'paused',
+          ages: agesOf.get(r.other_id) ?? [], photoVerified: verified.get(r.other_id) ?? false, premium: faces.get(r.other_id)?.premium ?? false, paused: r.other_state === 'paused',
           avatar: asset ? await mediaDto(cfg.media, asset, { viewerProfileId: r.side, place: 'public', showExplicit: false, staff: false }).catch(() => null) : null,
           ...(faces.get(r.other_id)?.halves ? { halves: faces.get(r.other_id)?.halves } : {}),
         },

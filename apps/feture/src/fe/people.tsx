@@ -576,7 +576,7 @@ function Likes({onCount,toDiscover}:{onCount:(n:number)=>void,toDiscover:()=>voi
   :<Empty icon={Heart} title={t('fe.px.lk.outEmpty')} text={t(us?'fe.px.lk.outEmptyTextUs':'fe.px.lk.outEmptyText')}><Btn kind="soft" onClick={toDiscover}>{t('fe.px.lk.toDiscover')}</Btn></Empty>;
  else body=inc.length?<div className="likes">{inc.map(l=>{const c=l.profile;const src=photo(c);const age=c.ages.length?', '+c.ages.join(' · '):'';
   return <LikeTile key={c.id} src={src} seed={c.id} label={cname(c)} onOpen={()=>navigate('/n/people/'+c.id)}
-   name={<><b>{cname(c)}{age}</b>{c.kind==='couple'&&<Pill className="lk-pair">{t('fe.px.lk.couple')}</Pill>}</>}>
+   name={<><b>{cname(c)}{age}<NameBadges p={c}/></b>{c.kind==='couple'&&<Pill className="lk-pair">{t('fe.px.lk.couple')}</Pill>}</>}>
    <button type="button" className="lkx" aria-label={t('fe.px.lk.pass')} disabled={busy===c.id} onClick={()=>dismiss(c)}><X/></button>
    <button type="button" className="lkb" aria-label={t(us?'fe.px.lk.backUs':'fe.px.lk.back')} disabled={busy===c.id} onClick={()=>back(c)}><HeartF/></button>
   </LikeTile>;})}</div>
@@ -620,7 +620,7 @@ export function PersonScreen(){
  useScrollTo(toPriv?'priv':null,privShown);
  if(p&&!blocked&&ready)return <>
   <ProfilePage p={p} {...(pre?{pre}:{})} gal={gal} onMore={()=>setMenu('menu')} onRefresh={load}
-   menu={(rel,reload)=><PersonMenu profileId={id} name={name} handle={p.kind==='person'?p.handle:null} partner={!!p.partner} step={menu} setStep={setMenu} blocked={blocked} setBlocked={setBlock} rel={rel} onRel={reload}/>}/>
+   menu={(rel,reload)=><PersonMenu profileId={id} name={name} handle={p.handle} partner={!!p.partner} step={menu} setStep={setMenu} blocked={blocked} setBlocked={setBlock} rel={rel} onRel={reload}/>}/>
   
  </>;
  return <>

@@ -54,7 +54,7 @@ export function MeV3Screen(){
  const refresh=()=>{pull();load();};
  return <>
   <Bar title={name} lead={<ActingAv p={{...acting,name,avatar:avatarSrc??null}} size=""/>}
-   mark={cp?undefined:<NameBadges p={{photoVerified:verified,premium:!!premium?.premium}}/>}
+   mark={<NameBadges p={{photoVerified:cp?false:verified,premium:!!premium?.premium}}/>}
    sub={couple?(cp?(acting.ended?t('fe.me.coupleArchive'):t('fe.me.weCouple')):t('fe.me.iPersonal')):t('fe.me.personalProfile')}
    {...(couple?{onTitle:()=>setSwitching(true),titleLabel:t('fe.mx.whose')}:{})}>
    <StaffEntry/>

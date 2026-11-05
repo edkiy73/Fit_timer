@@ -41,11 +41,61 @@ export async function isPremium(q, accountId, profileId) {
   return !!r.p;
 }
 
-/** The account's Premium end, from its entitlements. @param {Q} q @param {string} accountId */
+/** The account's Premium end, from its entitlements. Entitlements queue one after another (a new one starts when the
+ * current period ends), so when one is revoked the ones behind it move forward and fill the gap: what was owed is still
+ * given, but starting now, never later than it would have. @param {Q} q @param {string} accountId */
 export async function recompute(q, accountId) {
+  const rows = await q.query(
+    `select id, starts_at, ends_at from feture.entitlement where account_id = $1 and revoked_at is null and ends_at > now() order by starts_at, id for update`, [accountId]);
+  let cursor = Date.now();
+  for (const r of rows) {
+    const start = new Date(r.starts_at).getTime(), end = new Date(r.ends_at).getTime();
+    if (start <= Date.now()) { cursor = Math.max(cursor, end); continue; } // running now: stays as it is
+    if (start > cursor) { // a gap before it: moves forward, keeping its length
+      const to = new Date(cursor), until = new Date(cursor + (end - start));
+      await q.query('update feture.entitlement set starts_at = $2, ends_at = $3 where id = $1', [r.id, to, until]);
+      cursor += end - start;
+    } else cursor = Math.max(cursor, end);
+  }
   await q.query(
     `update feture.account set premium_until = (select max(ends_at) from feture.entitlement where account_id = $1 and revoked_at is null), updated_at = now() where id = $1`,
     [accountId]);
+}
+
+/** Tells the partners of `accounts` (in their active couple) that Premium now works for the couple, when they are not
+ * getting it themselves (a gift or a grant to the couple's own nickname reaches both partners already).
+ * @param {Q} q @param {string[]} accounts who just got Premium @param {Date | string} until */
+async function tellPartners(q, accounts, until) {
+  const rows = await q.query(
+    `select m.profile_id, m.account_id from feture.profile_member m join feture.profile_member me on me.profile_id = m.profile_id
+     where me.account_id = any($1) and me.state = 'active' and m.state = 'active' and m.profile_kind = 'couple' and m.account_id <> all($1)`, [accounts]);
+  /** @type {Map<string, string[]>} */
+  const byCouple = new Map();
+  for (const r of rows) byCouple.set(r.profile_id, [...(byCouple.get(r.profile_id) ?? []), r.account_id]);
+  for (const [couple, partners] of byCouple) await enqueue(q, 'premium.pair', couple, { for: partners, kind: 'started', until: new Date(until).toISOString() });
+}
+
+/* ---------- Notices that wait for the payment provider ----------
+ * WHEN PAYMENTS ARE CONNECTED (docs/infra/payments.md, «Что подключить»), call these from the provider's webhook:
+ *   a renewal that failed or a card that was declined → notifyRenewalFailed(q, accountId)
+ *   a refund or a chargeback → revoke the purchase's entitlement (staff.premiumRevoke does it by hand), then notifyRefunded(q, accountId)
+ * The receipt notice is already sent by fulfilPurchase; the renewal on/off notice by premium.setRenewal.
+ * The legal receipt itself (54-ФЗ) comes from the provider's cash register, not from here. */
+
+/** @param {Q} q @param {string} accountId */
+async function accountProfile(q, accountId) {
+  const [a] = await q.query('select person_profile_id from feture.account where id = $1', [accountId]);
+  return a?.person_profile_id ?? null;
+}
+
+/** «Продление не прошло». @param {Q} q @param {string} accountId */
+export async function notifyRenewalFailed(q, accountId) {
+  await enqueue(q, 'premium.renewalFailed', await accountProfile(q, accountId), { for: accountId });
+}
+
+/** «Деньги возвращены». @param {Q} q @param {string} accountId */
+export async function notifyRefunded(q, accountId) {
+  await enqueue(q, 'premium.refunded', await accountProfile(q, accountId), { for: accountId });
 }
 
 /* ---------- Payments (wave 8): one provider-agnostic road «payment confirmed → entitlement» ----------
@@ -67,42 +117,63 @@ const providersOf = cfg => (cfg?.billing?.providers ?? []).filter(p => p && type
 
 /** Applies a confirmed payment once (a repeated confirmation changes nothing): grants the entitlement — for a gift to
  * the recipient, starting after their current Premium — and tells the recipient. Called by checkout results today and by
- * a provider webhook once one is connected. @param {Q} q @param {string} purchaseId @param {string} storeRef */
-export async function fulfilPurchase(q, purchaseId, storeRef) {
+ * a provider webhook once one is connected. `restored`: found again at the provider, not paid just now (no receipt notice).
+ * @param {Q} q @param {string} purchaseId @param {string} storeRef @param {{restored?: boolean}} [opts] */
+export async function fulfilPurchase(q, purchaseId, storeRef, { restored = false } = {}) {
   const [p] = await q.query(
     `update feture.purchase set state = 'paid', store_ref = $2, paid_at = now() where id = $1 and state = 'pending' returning *`, [purchaseId, storeRef]);
   if (!p) return null;
-  const to = p.kind === 'gift' ? p.recipient_account_id : p.account_id;
-  const [e] = await q.query(
-    `insert into feture.entitlement (account_id, source, starts_at, ends_at, store, store_ref, granted_by)
-     select $1, $2, s, s + make_interval(days => $3), $4, $5, $6
-     from (select greatest(now(), coalesce((select premium_until from feture.account where id = $1), now())) s) x
-     returning id, ends_at`,
-    [to, p.kind === 'gift' ? 'gift' : 'purchase', p.days, p.kind === 'gift' ? null : p.store, p.kind === 'gift' ? null : storeRef, p.kind === 'gift' ? p.account_id : null]);
+  const gift = p.kind === 'gift';
+  // A gift to a couple goes to every active partner (each gets the full term, queued after their own Premium).
+  let to = [gift ? p.recipient_account_id : p.account_id];
+  if (gift && p.recipient_profile_id) {
+    const members = await q.query(
+      `select m.account_id from feture.profile_member m join feture.profile c on c.id = m.profile_id
+       where m.profile_id = $1 and c.kind = 'couple' and m.state = 'active' order by m.joined_at nulls last, m.account_id`, [p.recipient_profile_id]);
+    if (members.length) to = members.map(m => m.account_id);
+  }
+  /** @type {{id: string, ends_at: Date} | undefined} */
+  let first;
+  for (const account of to) {
+    const [e] = await q.query(
+      `insert into feture.entitlement (account_id, source, starts_at, ends_at, store, store_ref, granted_by)
+       select $1, $2, s, s + make_interval(days => $3), $4, $5, $6
+       from (select greatest(now(), coalesce((select premium_until from feture.account where id = $1), now())) s) x
+       returning id, ends_at`,
+      [account, gift ? 'gift' : 'purchase', p.days, gift ? null : p.store, gift ? null : storeRef, gift ? p.account_id : null]);
+    first ??= e;
+    await recompute(q, account);
+    if (gift) {
+      const [r] = await q.query('select person_profile_id from feture.account where id = $1', [account]);
+      const [g] = p.anonymous ? [null] : await q.query('select person_profile_id from feture.account where id = $1', [p.account_id]);
+      await enqueue(q, 'premium.gifted', r.person_profile_id, { for: account, days: p.days, ...(g ? { from: g.person_profile_id } : {}) });
+    }
+  }
+  const e = /** @type {{id: string, ends_at: Date}} */ (first);
   await q.query('update feture.purchase set entitlement_id = $2 where id = $1', [p.id, e.id]);
-  await recompute(q, to);
+  // A partner's own Premium (a purchase, or a gift to one person) works for their couple: the other partner hears of it.
+  await tellPartners(q, to, e.ends_at);
+  // The payer: «оплата прошла»; the giver also «подарок вручён» to whom.
+  if (!restored) await enqueue(q, 'premium.receipt', await accountProfile(q, p.account_id), { for: p.account_id });
+  if (gift) await enqueue(q, 'premium.giftSent', await accountProfile(q, p.account_id), { for: p.account_id, to: p.recipient_profile_id ?? await accountProfile(q, p.recipient_account_id) });
   if (p.kind === 'subscription') {
     await q.query(
       `insert into feture.subscription (account_id, provider, store_ref, plan, renews_at) values ($1, $2, $3, $4, $5)
        on conflict (provider, store_ref) do update set renews_at = excluded.renews_at, state = 'active', updated_at = now()`,
       [p.account_id, p.provider, storeRef, p.plan, e.ends_at]);
-  } else {
-    const [r] = await q.query('select person_profile_id from feture.account where id = $1', [to]);
-    const [g] = p.anonymous ? [null] : await q.query('select person_profile_id from feture.account where id = $1', [p.account_id]);
-    await enqueue(q, 'premium.gifted', r.person_profile_id, { for: to, days: p.days, ...(g ? { from: g.person_profile_id } : {}) });
   }
   return { id: p.id, until: e.ends_at };
 }
 
 /** Starts a purchase with the first configured provider. @param {Q} q @param {import('../handler.mjs').Cfg} cfg
- * @param {{accountId: string, kind: 'subscription' | 'gift', plan: string, days: number, recipient?: string, anonymous?: boolean}} a */
+ * @param {{accountId: string, kind: 'subscription' | 'gift', plan: string, days: number, recipient?: string, recipientProfile?: string, anonymous?: boolean}} a */
 async function startPurchase(q, cfg, a) {
   const [provider] = providersOf(cfg);
   if (!provider) fail(503, 'payments_unavailable');
   const [p] = await q.query(
-    `insert into feture.purchase (account_id, kind, plan, days, recipient_account_id, anonymous, provider, store)
-     values ($1, $2, $3, $4, $5, $6, $7, $8) returning id, kind, plan, days`,
-    [a.accountId, a.kind, a.plan, a.days, a.recipient ?? null, !!a.anonymous, provider.id, provider.store]);
+    `insert into feture.purchase (account_id, kind, plan, days, recipient_account_id, recipient_profile_id, anonymous, provider, store)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning id, kind, plan, days`,
+    [a.accountId, a.kind, a.plan, a.days, a.recipient ?? null, a.recipientProfile ?? null, !!a.anonymous, provider.id, provider.store]);
   const out = await provider.checkout({ purchase: p });
   if (out?.paid?.storeRef) {
     const done = await fulfilPurchase(q, p.id, String(out.paid.storeRef).slice(0, 200));
@@ -112,16 +183,23 @@ async function startPurchase(q, cfg, a) {
   fail(503, 'payments_unavailable');
 }
 
-/** A person profile to gift Premium to, by exact nickname, as the giver may see it. @param {Q} q @param {any} account @param {string} handle */
+/** A profile to gift Premium to, by exact nickname, as the giver may see it: a person, or a couple (then both partners
+ * get it). @param {Q} q @param {any} account @param {string} handle
+ * @returns {Promise<{kind: 'person' | 'couple', id: string, handle: string, name: string | null, avatar_asset_id: string | null, accounts: string[], premium: boolean}>} */
 async function giftTarget(q, account, handle) {
-  const [r] = await q.query(
-    `select a.id account_id, p.id, p.handle, p.name, p.avatar_asset_id, coalesce(a.premium_until > now(), false) premium
-     from feture.profile p join feture.account a on a.person_profile_id = p.id
-     where lower(p.handle) = lower($1) and p.state = 'active' and a.state = 'active'
-       and ($2::uuid is null or a.id = $3 or not feture.blocked($2, p.id))`, [handle, account.person_profile_id ?? null, account.id]);
-  if (!r) fail(404, 'not_found');
-  if (r.account_id === account.id) fail(422, 'rule_violation', { rule: 'gift_self' });
-  return r;
+  const [p] = await q.query(
+    `select p.id, p.kind, p.handle, p.name, p.avatar_asset_id from feture.profile p
+     where lower(p.handle) = lower($1) and p.state = 'active' and p.kind in ('person', 'couple')
+       and ($2::uuid is null or not feture.blocked($2, p.id))`, [handle, account.person_profile_id ?? null]);
+  if (!p) fail(404, 'not_found');
+  const rows = p.kind === 'person'
+    ? await q.query(`select a.id, coalesce(a.premium_until > now(), false) premium from feture.account a where a.person_profile_id = $1 and a.state = 'active'`, [p.id])
+    : await q.query(
+      `select a.id, coalesce(a.premium_until > now(), false) premium from feture.profile_member m join feture.account a on a.id = m.account_id
+       where m.profile_id = $1 and m.state = 'active' and a.state = 'active'`, [p.id]);
+  if (!rows.length) fail(404, 'not_found');
+  if (rows.some(r => r.id === account.id)) fail(422, 'rule_violation', { rule: 'gift_self' });
+  return { kind: p.kind, id: p.id, handle: p.handle, name: p.name, avatar_asset_id: p.avatar_asset_id, accounts: rows.map(r => r.id), premium: rows.some(r => r.premium) };
 }
 
 /** The selfie of a decided check goes for good 30 days after the decision (S3 §8); a document goes at once.
@@ -157,6 +235,48 @@ export function verificationHandlers(db, deps = {}) {
 async function dropDocument(q, assetId, profileId) {
   await q.query(`update feture.media_asset set state = 'removed', removed_at = now() where id = $1 and state not in ('removed', 'blocked')`, [assetId]);
   await enqueue(q, DROP_DOCUMENT, profileId, { assetId });
+}
+
+/** Premium notices by the clock: «скоро закончится» a week and a day ahead, «закончился» once it is over, and to a
+ * couple's partners when the couple loses Premium. Each is sent once per Premium end (`premium_notice`). A subscription
+ * that renews says nothing before its end. @param {Db} db */
+export async function sweepPremium(db) {
+  if (!(await db.query(`select to_regclass('feture.premium_notice') is not null ok`))[0].ok) return 0;
+  return db.tx(async q => {
+    let n = 0;
+    /** @param {string} accountId @param {string} kind @param {Date} until @returns {Promise<boolean>} */
+    const first = async (accountId, kind, until) =>
+      (await q.query(`insert into feture.premium_notice (account_id, kind, until_at) values ($1, $2, $3) on conflict do nothing returning 1`, [accountId, kind, until])).length > 0;
+    const renewing = `not exists (select 1 from feture.subscription s where s.account_id = a.id and s.state = 'active' and s.auto_renew)`;
+    for (const [kind, from, to] of /** @type {const} */ ([['week', '1 day', '7 days'], ['day', '0 days', '1 day']])) {
+      const rows = await q.query(
+        `select a.id, a.person_profile_id, a.premium_until from feture.account a
+         where a.state = 'active' and a.premium_until > now() + $1::interval and a.premium_until <= now() + $2::interval and ${renewing} limit 200`, [from, to]);
+      for (const a of rows) if (await first(a.id, kind, a.premium_until)) {
+        await enqueue(q, 'premium.ending', a.person_profile_id, { for: a.id, kind, until: new Date(a.premium_until).toISOString() });
+        n++;
+      }
+    }
+    const over = await q.query(
+      `select a.id, a.person_profile_id, a.premium_until from feture.account a
+       where a.state = 'active' and a.premium_until <= now() and a.premium_until > now() - interval '3 days' and ${renewing} limit 200`);
+    for (const a of over) if (await first(a.id, 'ended', a.premium_until)) {
+      await enqueue(q, 'premium.ended', a.person_profile_id, { for: a.id });
+      n++;
+      // The couple lost it too: partners who did not just lose their own Premium are told (those who did, got their own notice).
+      const couples = await q.query(
+        `select m.profile_id from feture.profile_member m where m.account_id = $1 and m.state = 'active' and m.profile_kind = 'couple'
+           and not exists (select 1 from feture.profile_member x join feture.account xa on xa.id = x.account_id
+                           where x.profile_id = m.profile_id and x.state = 'active' and xa.premium_until > now())`, [a.id]);
+      for (const c of couples) {
+        const partners = (await q.query(
+          `select m.account_id from feture.profile_member m join feture.account pa on pa.id = m.account_id
+           where m.profile_id = $1 and m.state = 'active' and m.account_id <> $2 and (pa.premium_until is null or pa.premium_until <= now() - interval '3 days')`, [c.profile_id, a.id])).map(r => r.account_id);
+        if (partners.length) await enqueue(q, 'premium.pair', c.profile_id, { for: partners, kind: 'ended' });
+      }
+    }
+    return n;
+  });
 }
 
 /** Selfies that never made it into a submitted check go after six hours; started checks expire after 30 minutes.
@@ -214,7 +334,7 @@ const run = {
       `select plan, auto_renew, renews_at from feture.subscription where account_id = $1 and state = 'active' order by renews_at desc nulls last limit 1`, [account.id]);
     const gifts = await q.query(
       `select pu.days, pu.anonymous, pu.paid_at, p.handle from feture.purchase pu join feture.account r on r.id = pu.recipient_account_id
-       left join feture.profile p on p.id = r.person_profile_id where pu.account_id = $1 and pu.kind = 'gift' and pu.state = 'paid' order by pu.paid_at desc limit 20`, [account.id]);
+       left join feture.profile p on p.id = coalesce(pu.recipient_profile_id, r.person_profile_id) where pu.account_id = $1 and pu.kind = 'gift' and pu.state = 'paid' order by pu.paid_at desc limit 20`, [account.id]);
     return {
       premium, until: own ? a.premium_until : null, viaPartner: premium && !own, source: src?.source ?? null,
       subscription: sub ? { plan: sub.plan, autoRenew: sub.auto_renew, renewsAt: sub.renews_at } : null,
@@ -240,7 +360,7 @@ const run = {
         const [p] = await q.query(
           `insert into feture.purchase (account_id, kind, plan, days, provider, store) values ($1, 'subscription', $2, $3, $4, $5) returning id`,
           [account.id, r.plan, days, provider.id, provider.store]);
-        if (await fulfilPurchase(q, p.id, storeRef)) restored++;
+        if (await fulfilPurchase(q, p.id, storeRef, { restored: true })) restored++;
       }
     }
     const [a] = await q.query('select premium_until from feture.account where id = $1', [account.id]);
@@ -254,35 +374,51 @@ const run = {
     if (!provider || typeof provider.setRenewal !== 'function') fail(503, 'payments_unavailable');
     if (s.auto_renew !== input.autoRenew) await provider.setRenewal({ subscription: { storeRef: s.store_ref, plan: s.plan }, autoRenew: input.autoRenew });
     await q.query('update feture.subscription set auto_renew = $2, updated_at = now() where id = $1', [s.id, input.autoRenew]);
+    if (s.auto_renew !== input.autoRenew) await enqueue(q, 'premium.renewal', account.person_profile_id ?? null, { for: account.id, kind: input.autoRenew ? 'on' : 'off' });
     return { autoRenew: input.autoRenew, renewsAt: s.renews_at };
   },
 
   async 'premium.giftCheck'(q, { account, input, cfg }) {
     const r = await giftTarget(q, account, input.handle);
     // `queued`: they already have Premium, so the gift starts after their current period (nothing is lost).
-    return { recipient: { id: r.id, handle: r.handle, name: r.name, avatar: await avatarSrc(q, cfg.media, r.avatar_asset_id, account.person_profile_id ?? r.id) }, queued: r.premium };
+    return { recipient: { id: r.id, handle: r.handle, name: r.name, avatar: await avatarSrc(q, cfg.media, r.avatar_asset_id, account.person_profile_id ?? r.id) }, kind: r.kind, queued: r.premium };
   },
 
   async 'premium.gift'(q, { account, input, cfg }) {
     const r = await giftTarget(q, account, input.handle);
-    return startPurchase(q, cfg, { accountId: account.id, kind: 'gift', plan: input.plan, days: GIFT_PLANS[/** @type {keyof typeof GIFT_PLANS} */ (input.plan)], recipient: r.account_id, anonymous: input.anonymous });
+    return startPurchase(q, cfg, { accountId: account.id, kind: 'gift', plan: input.plan, days: GIFT_PLANS[/** @type {keyof typeof GIFT_PLANS} */ (input.plan)], recipient: r.accounts[0], recipientProfile: r.kind === 'couple' ? r.id : undefined, anonymous: input.anonymous });
   },
 
   async 'staff.premiumGrant'(q, { account, input }) {
-    // For trying the app on ourselves before payments exist; every grant is journaled.
+    // For trying the app on ourselves before payments exist; every grant is journaled. A nickname of a couple gives
+    // Premium to both active partners (each as a separate entitlement).
     const roles = await requireStaff(q, account, ['owner', 'lead']);
-    const [t] = await q.query(`select a.id from feture.account a join feture.profile p on p.id = a.person_profile_id where lower(p.handle) = lower($1) and a.state = 'active'`, [input.handle]);
+    const [t] = await q.query(
+      `select p.id, p.kind from feture.profile p where lower(p.handle) = lower($1) and p.state = 'active' and p.kind in ('person', 'couple')`, [input.handle]);
     if (!t) fail(404, 'not_found');
+    const targets = (t.kind === 'person'
+      ? await q.query(`select a.id from feture.account a where a.person_profile_id = $1 and a.state = 'active'`, [t.id])
+      : await q.query(
+        `select a.id from feture.profile_member m join feture.account a on a.id = m.account_id
+         where m.profile_id = $1 and m.state = 'active' and a.state = 'active' order by m.joined_at nulls last, a.id`, [t.id])).map(r => r.id);
+    if (!targets.length) fail(404, 'not_found');
     // A lead never to oneself or a partner; the owner may.
-    if (!ownerSelf(roles) && (await q.query(`select ${staffOwnAccount('$1::uuid', '$2::uuid')} own`, [t.id, account.id]))[0].own) fail(403, 'forbidden', { rule: 'self' });
-    const [e] = await q.query(
-      `insert into feture.entitlement (account_id, source, starts_at, ends_at, granted_by, reason)
-       select $1, 'staff', now(), greatest(now(), coalesce((select premium_until from feture.account where id = $1), now())) + make_interval(days => $2), $3, $4
-       returning id, ends_at`, [t.id, input.days, account.id, input.reason]);
-    await recompute(q, t.id);
-    await journal(q, account.id, 'premium.grant', 'account', t.id, { days: input.days, reason: input.reason, entitlementId: e.id });
-    await enqueue(q, 'premium.granted', null, { for: t.id, days: input.days, until: new Date(e.ends_at).toISOString() });
-    return { id: e.id, until: e.ends_at };
+    if (!ownerSelf(roles)) for (const id of targets) if ((await q.query(`select ${staffOwnAccount('$1::uuid', '$2::uuid')} own`, [id, account.id]))[0].own) fail(403, 'forbidden', { rule: 'self' });
+    /** @type {{id: string, ends_at: Date}[]} */
+    const given = [];
+    for (const id of targets) {
+      const [e] = await q.query(
+        `insert into feture.entitlement (account_id, source, starts_at, ends_at, granted_by, reason)
+         select $1, 'staff', s, s + make_interval(days => $2), $3, $4
+         from (select greatest(now(), coalesce((select premium_until from feture.account where id = $1), now())) s) x
+         returning id, ends_at`, [id, input.days, account.id, input.reason]);
+      await recompute(q, id);
+      await journal(q, account.id, 'premium.grant', 'account', id, { days: input.days, reason: input.reason, entitlementId: e.id });
+      await enqueue(q, 'premium.granted', null, { for: id, days: input.days, until: new Date(e.ends_at).toISOString() });
+      given.push(e);
+    }
+    await tellPartners(q, targets, given[0].ends_at);
+    return { id: given[0].id, until: given[0].ends_at, ids: given.map(g => g.id), accounts: given.length };
   },
 
   async 'staff.premiumRevoke'(q, { account, input }) {
@@ -290,9 +426,16 @@ const run = {
     const rows = await q.query(`update feture.entitlement set revoked_at = now() where id = $1 and revoked_at is null returning account_id`, [input.entitlementId]);
     if (!rows[0]) fail(404, 'not_found');
     await recompute(q, rows[0].account_id);
-    await journal(q, account.id, 'premium.revoke', 'account', rows[0].account_id, { reason: input.reason, entitlementId: input.entitlementId });
-    await enqueue(q, 'premium.revoked', null, { for: rows[0].account_id });
-    return { revoked: true };
+    // Other grants may keep Premium going: then it is not «disabled», and the person is not told so.
+    const [a] = await q.query('select premium_until from feture.account where id = $1', [rows[0].account_id]);
+    const still = !!a.premium_until && new Date(a.premium_until).getTime() > Date.now();
+    await journal(q, account.id, 'premium.revoke', 'account', rows[0].account_id, { reason: input.reason, entitlementId: input.entitlementId, still });
+    if (!still) {
+      await enqueue(q, 'premium.revoked', null, { for: rows[0].account_id });
+      // The person was told «disabled»: the later natural end of an older period must not say «ended» again.
+      if (a.premium_until) await q.query(`insert into feture.premium_notice (account_id, kind, until_at) values ($1, 'ended', $2) on conflict do nothing`, [rows[0].account_id, a.premium_until]);
+    }
+    return { revoked: true, premium: still };
   },
 
   async 'verification.ageStart'(q, { account, input }) {
