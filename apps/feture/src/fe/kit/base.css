@@ -2202,6 +2202,8 @@
 .v21 .pair-wrap .t,
 .v21 .pair-wrap .lead{margin:0}
 .v21 .pair-scene{position:relative;display:flex;align-items:center;justify-content:center;gap:0;padding:18px 0 6px}
+.v21 .ps-tap{all:unset;display:block;cursor:pointer;border-radius:50%}
+.v21 .ps-tap:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .v21 .ps-av .av{width:88px;height:88px;box-shadow:0 0 0 4px var(--bg),0 14px 30px -14px rgba(0,0,0,.45)}
 .v21 .ps-q{width:88px;height:88px;border-radius:50%;display:grid;place-items:center;border:2px dashed var(--line2);color:var(--faint);background:var(--surf)}
 .v21 .ps-q svg{width:28px;height:28px}

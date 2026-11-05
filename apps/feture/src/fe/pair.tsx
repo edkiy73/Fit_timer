@@ -54,9 +54,13 @@ function usePartnerLookup(nick:string,personId:string|undefined,ownHandle:string
  return {hit:hit&&hit!=='none'?hit:null,issue};
 }
 
-function Scene({me,other,state}:{me:{name:string,id?:string|undefined,src?:string|null|undefined},other?:{name:string,id?:string|undefined,src?:string|null|undefined}|null,state?:string}){
- return <div className={'pair-scene'+(state?' '+state:'')}><span className="ps-av me"><Av name={me.name} seed={me.id} src={me.src}/></span><span className="ps-link"><i/><i/><i/><b><Heart/></b></span>
-  <span className="ps-av ot">{other?<Av name={other.name} seed={other.id} src={other.src}/>:<span className="av ini"><b>?</b></span>}</span></div>;
+function Scene({me,other,state,open}:{me:{name:string,id?:string|undefined,src?:string|null|undefined},other?:{name:string,id?:string|undefined,src?:string|null|undefined}|null,state?:string,
+ /** A tap on a photo opens that person's profile (the pair's settings: nowhere else leads to the other half). */ open?:((id:string)=>void)|undefined}){
+ const {t}=useI18n();
+ const av=(x:{name:string,id?:string|undefined,src?:string|null|undefined})=>{const a=<Av name={x.name} seed={x.id} src={x.src}/>;
+  return open&&x.id?<button type="button" className="ps-tap" aria-label={t('fe.c6.openProfile')+': '+x.name} onClick={()=>open(x.id as string)}>{a}</button>:a;};
+ return <div className={'pair-scene'+(state?' '+state:'')}><span className="ps-av me">{av(me)}</span><span className="ps-link"><i/><i/><i/><b><Heart/></b></span>
+  <span className="ps-av ot">{other?av(other):<span className="av ini"><b>?</b></span>}</span></div>;
 }
 
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -140,7 +144,7 @@ function PairMain({onOpen}:{onOpen:(id:string)=>void}){
   return <>
    <Bar title={t('fe.pair.settings')} back="/n/me"/>
    <View><div className="pair-wrap">
-    <Scene me={{name:nameOf(me),id:me?.profileId,src:me?.avatar??null}} other={{name:nameOf(other),id:other?.profileId,src:other?.avatar??null}} state="on"/>
+    <Scene me={{name:nameOf(me),id:me?.profileId,src:me?.avatar??null}} other={{name:nameOf(other),id:other?.profileId,src:other?.avatar??null}} state="on" open={id=>navigate('/n/people/'+id)}/>
     <H level={2} className="t center">{c.name||`${nameOf(me)} ${t('fe.pair.and')} ${nameOf(other)}`}</H>
     <Note className="center">{t('fe.pair.since').replace('{date}',new Date(c.since).toLocaleDateString(locale==='en'?'en':'ru',{day:'numeric',month:'long',year:'numeric'}))}</Note>
     <div className="pair-sets">
