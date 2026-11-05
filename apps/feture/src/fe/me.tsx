@@ -25,7 +25,8 @@ export const settingsShape=z.object({discoverMode:z.enum(['visible','hidden','of
  messagesFrom:z.array(z.enum(MESSAGE_POINTS)).optional()}).passthrough();
 export const settingsRes=z.object({ok:z.literal(true),settings:settingsShape});
 export const option=z.object({kind:z.string(),code:z.string(),ru:z.string(),en:z.string()});
-export const place=z.object({id:z.string(),code:z.string().nullable().optional(),country:z.string().optional(),ru:z.string(),en:z.string(),lat:z.number().nullable().optional(),lon:z.number().nullable().optional()});
+/** A catalog city: a small one has no Russian name (the picker then shows the English one). */
+export const place=z.object({id:z.string(),code:z.string().nullable().optional(),country:z.string().optional(),ru:z.string().nullable(),en:z.string().nullable(),lat:z.number().nullable().optional(),lon:z.number().nullable().optional(),pop:z.number().nullable().optional()});
 export const catalogRes=z.object({ok:z.literal(true),options:z.array(option),places:z.array(place).optional()});
 export const ok=z.object({ok:z.literal(true)}).passthrough();
 export type Profile=z.infer<typeof profile>;

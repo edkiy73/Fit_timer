@@ -37,7 +37,7 @@ for await (const line of rl) {
 
 const q = s => s == null ? 'null' : "'" + String(s).replace(/'/g, "''") + "'";
 const rows = [...cities.values()].sort((a, b) => b.pop - a.pop).map(c => {
-  const en = c.en ?? c.name, ru = c.ru ?? null;
+  const en = c.en ?? c.name, ru = c.ru ?? en; // no Russian name: the English one stands in (the screens read name_ru)
   return `(${c.id}, '${c.country}', ${q(ru)}, ${q(en)}, ${c.lat.toFixed(3)}, ${c.lon.toFixed(3)}, ${c.pop})`;
 });
 const chunks = [];
