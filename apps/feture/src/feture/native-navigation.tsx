@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
+import { useI18n } from '@appbase/ui-react/i18n.js';
 import { ActionButton, AppDialog } from './components/primitives';
 
 export function NativeNavigation(){
+  const { t } = useI18n();
   const location=useLocation();
   const navigate=useNavigate();
   const [exitPrompt,setExitPrompt]=useState(false);
@@ -34,5 +36,5 @@ export function NativeNavigation(){
     void registration.then(listener=>{if(removed)void listener.remove();else handle=listener;});
     return ()=>{removed=true;if(handle)void handle.remove();};
   },[]);
-  return exitPrompt?<AppDialog title="Закрыть KINHAZE?" onClose={()=>setExitPrompt(false)}><p className="ft-muted">Всё сохранено в твоём аккаунте.</p><div className="ft-dialog-actions"><ActionButton onClick={()=>setExitPrompt(false)}>Остаться</ActionButton><button type="button" className="ft-textbtn" onClick={()=>void App.exitApp()}>Закрыть приложение</button></div></AppDialog>:null;
+  return exitPrompt?<AppDialog title={t('fe.exit.title')} closeLabel={t('fe.close')} onClose={()=>setExitPrompt(false)}><p className="ft-muted">{t('fe.exit.text')}</p><div className="ft-dialog-actions"><ActionButton onClick={()=>setExitPrompt(false)}>{t('fe.exit.stay')}</ActionButton><button type="button" className="ft-textbtn" onClick={()=>void App.exitApp()}>{t('fe.exit.close')}</button></div></AppDialog>:null;
 }

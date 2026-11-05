@@ -52,7 +52,7 @@ export function Welcome({onStart}:{onStart:()=>void}){
  return <div className="stage"><div className="root auth"><main className="main" data-screen="A01">
   <div ref={box} className="welcome wv"><div className="w-aura" aria-hidden="true"><i/><i/><i/></div><div className="w-mark" aria-hidden="true">{BRAND}</div>
    <header className="w-top"><Brand at="welcome"/>
-    {canSwitch&&<div className="langsw" role="group" aria-label="Language">{(['ru','en'] as const).map(l=><button key={l} type="button" className={locale===l?'on':''} aria-pressed={locale===l} onClick={()=>setPreference(l)}>{l.toUpperCase()}</button>)}</div>}
+    {canSwitch&&<div className="langsw" role="group" aria-label="Язык / Language">{(['ru','en'] as const).map(l=><button key={l} type="button" className={locale===l?'on':''} aria-pressed={locale===l} onClick={()=>setPreference(l)}>{l.toUpperCase()}</button>)}</div>}
    </header>
    <div className="w-grid">
     <div className="w-head">

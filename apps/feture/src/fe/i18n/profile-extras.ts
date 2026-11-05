@@ -504,7 +504,7 @@ export const en = {
   'fe.px.wr.requests_dayLow': "No requests left for today. Try again tomorrow",
   'fe.px.wr.request_wait': "The conversation was ended. You can write again no earlier than 30 days after it ended",
   'fe.px.wr.restricted': "Your profile is restricted by moderators, new conversations are unavailable for now. Details in Me",
-  'fe.px.wr.other': "You can't message right now",
+  'fe.px.wr.other': 'You can’t message right now',
   'fe.px.act.sent': 'Liked',
   'fe.px.act.unlikeHint': "Tap to withdraw your like",
   'fe.px.act.likeUs': "Like as us",

@@ -17,6 +17,6 @@ export async function checkWords(q, targetType, targetId, text, _owner = null) {
     `insert into feture.report (target_type, target_id, reason, details, auto)
      select $1, $2, 'other', $3, 'words'
      where not exists (select 1 from feture.report where target_type = $1 and target_id = $2 and state = 'open' and auto = 'words')`,
-    [targetType, targetId, ('Автофильтр: ' + hits.join(', ')).slice(0, 500)]);
+    [targetType, targetId, ('Автофильтр / Auto-filter: ' + hits.join(', ')).slice(0, 500)]);
   return hits;
 }
