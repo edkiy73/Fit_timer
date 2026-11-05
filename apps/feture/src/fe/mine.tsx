@@ -23,7 +23,7 @@ const ev=z.object({id:z.uuid(),title:z.string(),format:z.string(),tz:z.string().
 const evs=z.object({ok:z.literal(true),going:z.array(ev),interested:z.array(ev),organizing:z.array(ev),applications:z.array(ev),cancelled:z.array(ev).optional()}).passthrough();
 const saved=z.object({ok:z.literal(true),items:z.array(z.object({kind:z.string(),target_id:z.string(),created_at:z.string()}))});
 const followers=z.object({ok:z.literal(true),items:z.array(z.unknown())}).passthrough();
-const who=z.object({id:z.uuid(),kind:z.string().optional(),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).nullable();
+const who=z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).nullable();
 const withMe=z.object({ok:z.literal(true),items:z.array(z.object({scopes:z.array(z.string()),until:z.string().nullable(),profile:who}).passthrough())});
 const outReqs=z.object({ok:z.literal(true),items:z.array(z.object({id:z.uuid(),scopes:z.array(z.string()),state:z.string(),created_at:z.string(),profile:who}).passthrough())});
 const nameOf=(p:z.infer<typeof who>)=>p?(p.name||(p.handle?'@'+p.handle:'?')):'—';

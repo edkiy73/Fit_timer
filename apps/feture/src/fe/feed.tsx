@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Archive,AtSign,Bell,BellOff,Bookmark,Check,Calendar,ChartColumn,ChevronLeft,ChevronRight,Clock,Ellipsis,Eye,EyeOff,FileText,Globe,Hash,Heart,Image as ImageIcon,KeyRound,Lock,MessageCircle,MessageSquareText,Newspaper,Pencil,Plus,Search,SendHorizontal,Share,SlidersHorizontal,Sparkles,Trash2,User,Users,X} from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActionLine,Actions,ActivityCard,ActivityItem,AddBtn,AddCard,Alert,ArticleCard,ArticleImage,articlePlate,Ask,Av,BAD_CHARS,Bar,Btn,Card,Chip,Chips,Counter,Empty,ExpandRow,FeedEvents,Field,FilePick,Group,H,hasLongWord,IconBtn,Input,LikesLine,LoadMore,mdImages,NewPill,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,type RichEditorHandle,useLeaveGuard,VideoBadge,View,ViewerPostBar,Who} from './kit';
+import {ActionLine,Actions,ActivityCard,ActivityItem,AddBtn,AddCard,Alert,ArticleCard,ArticleImage,articlePlate,Ask,Av,BAD_CHARS,Bar,Btn,Card,Chip,Chips,Counter,Empty,ExpandRow,FeedEvents,Field,FilePick,Group,H,hasLongWord,IconBtn,Input,LikesLine,LoadMore,mdImages,NewPill,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,type RichEditorHandle,useLeaveGuard,VideoBadge,View,ViewerPostBar,Who,ProfileAv} from './kit';
 import {shakeFirstErr} from './kit/validate';
 import {refreshReads,useFe,usePartnerApproves} from './session';
 import {useNewerPosts} from './feed-newer';
@@ -20,7 +20,7 @@ import {restoreInto,useToast} from './toast';
 import {MarksSheet,MediaGrid,MentionText,Poll,RichText,Viewer,marksPage,mdPlain,mediaSrc,personName,plural,slideOf,useTopics,type CatTopic,type MarksPage,type PollData,type ViewerBar} from './post-parts';
 import {AlbumField,albumOfPost} from './gallery';
 import {Jars,useInterests,type Interest} from './interests';
-import {NameBadges} from './faces';
+import {NameBadges,faceFields} from './faces';
 import {EventCard,eventRow} from './communities';
 import {Composer,CreateSheet} from './create-entry';
 import {useCopyLink} from './share';
@@ -34,7 +34,7 @@ import {topicMatches} from './topic-search';
 /** Slice B (V21 F01, F05, F07, F09) with the prototype's markup: feed tabs, composer row, topic chips and filters,
  * posts (text, media, poll, interests, marks), replies in threads, the composer and its preview.
  * Visibility and counts are the server's; the client never filters or invents them. */
-const author=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string(),avatar:z.string().nullable().optional(),photoVerified:z.boolean().optional(),premium:z.boolean().optional(),
+const author=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string(),avatar:z.string().nullable().optional(),photoVerified:z.boolean().optional(),premium:z.boolean().optional(),halves:faceFields.halves,
  /** Whether the acting profile follows the author (someone else's posts): the ⋯ menu's «Подписаться / Отписаться». */ iFollow:z.boolean().optional()});
 const media=z.object({id:z.uuid(),kind:z.string(),w:z.number().nullable(),h:z.number().nullable(),pending:z.boolean(),blurred:z.boolean(),src:z.record(z.string(),z.string()).nullable(),durationMs:z.number().nullable().optional()});
 const tag=z.object({id:z.uuid(),handle:z.string().nullable().optional(),name:z.string().nullable().optional(),state:z.string().optional()}).passthrough();
@@ -422,7 +422,7 @@ export function PostCard({post,onChange,onRemove,onExpired,full=false,onReply,pr
  return <article className="post">
   <div className="post-h">
    <button type="button" className="who" disabled={preview} onClick={()=>navigate(mine||post.author.id===acting?.id?'/n/me':'/n/people/'+post.author.id)}>
-    <Av name={nameOf(post.author)} seed={post.author.id} size="sm" couple={coupleOf(post.author)} src={post.author.avatar}/>
+    <ProfileAv p={post.author} size="sm"/>
     <span className="tx"><b><span className="nmt">{nameOf(post.author)}</span><NameBadges p={post.author}/></b><small>{/* Parts joined by « · » only between them: a post in review has no time yet, so no dangling dot. */}
      {[preview?t('fe.fd.justNow'):when(post.publishedAt,locale),
       AudI&&<span className="aud"><AudI/>{t('fe.fd.aud.'+post.audience)}</span>,
@@ -487,7 +487,7 @@ function PostInterests({list,preview,author}:{list:z.infer<typeof interest>[],pr
  const {t}=useI18n();const navigate=useNavigate();const {topics}=useTopics();const {acting}=useFe();const [open,setOpen]=useState<string|null>(null);
  const own=author.id===acting?.id;
  const shown=open?list.find(j=>j.topicId===open):undefined;
- return <>{open&&<CompareSheet topicId={open} name={nameOf(author)} avatar={author?.avatar} personId={author?.id} theirs={shown?asInterest(shown):undefined} onClose={()=>setOpen(null)}/>} <Group title={t('fe.fd.myInterests')}>
+ return <>{open&&<CompareSheet topicId={open} name={nameOf(author)} avatar={author?.avatar} face={{kind:author?.kind,halves:author?.halves}} personId={author?.id} theirs={shown?asInterest(shown):undefined} onClose={()=>setOpen(null)}/>} <Group title={t('fe.fd.myInterests')}>
   <Jars list={list.map(j=>({...j,vis:'public'}) as unknown as Interest)} topics={topics as never} onOpen={id=>{if(preview)return;if(own)navigate('/n/topics/'+id);else setOpen(id);}}/>
  </Group></>;
 }
@@ -575,7 +575,7 @@ export function PostScreen(){
  useEffect(()=>{if(!likes){setLikers(null);return;}call('post.likers',{targetId:id},marksPage).then(setLikers).catch(()=>setLikers(null));},[call,id,likes]);
  const likesLine=()=>{if(!post||!likers||!post.likes)return null;const shown=likers.items.slice(0,3);const rest=Math.max(0,likers.total-shown.length);
   const names=shown.map(p=>p.id===acting?.id?t('fe.w3.likes.you'):personName(p)).join(', ');
-  return <LikesLine people={shown.map(p=>({id:p.id,name:personName(p),avatar:p.avatar??null}))} onClick={()=>setLikersOpen(true)}
+  return <LikesLine people={shown.map(p=>({id:p.id,name:personName(p),avatar:p.avatar??null,kind:p.kind,halves:p.halves}))} onClick={()=>setLikersOpen(true)}
    text={names?t('fe.w3.likes.line',{names})+(rest?t('fe.w3.likes.more',{n:rest}):''):t('fe.w3.likes.count',{n:likers.total})}/>;};
  // The heart and the count change at once; the server's numbers replace them when the replies reload.
  const likeReply=async(r:Reply)=>{const on=!liked.has(r.id);const d=on?1:-1;
@@ -648,7 +648,7 @@ function ReplyTree({list,sort,open,setOpen,liked,delta,onLike,onReply,onMore,lim
   const to=child&&parent&&parent.id!==root.id&&!parent.deleted&&!parent.hidden&&!parent.unavailable;const on=liked.has(c.id);
   return <article key={c.id} className={'cm'+(child?' child':'')+(hidden?' removed':'')} id={'reply-'+c.id}>
    <div className="cm-l">{hidden?<span className="av cm-ghost" aria-hidden="true">{c.deleted?<Trash2/>:<Lock/>}</span>
-    :<button type="button" className="plink" aria-label={t('fe.fd.profileOf',{name:nameOf(c.author)})} onClick={()=>go(c.author)}><Av name={nameOf(c.author)} seed={c.author?.id??c.id} size={child?'xs':'sm'} src={c.author?.avatar}/></button>}</div>
+    :<button type="button" className="plink" aria-label={t('fe.fd.profileOf',{name:nameOf(c.author)})} onClick={()=>go(c.author)}><ProfileAv p={c.author??{id:c.id,name:'?'}} size={child?'xs':'sm'}/></button>}</div>
    <div className="cm-b">{hidden?<Note>{c.deleted?t('fe.feed.replyDeleted'):c.unavailable?t('fe.fd.replyUnavailable'):t('fe.fd.replyBlocked')}</Note>:<>
     <div className="cm-h"><button type="button" className="plink pnm" onClick={()=>go(c.author)}><span className="nmt">{nameOf(c.author)}</span></button><time>{when(c.createdAt,locale)}{c.editedAt?' · '+t('fe.fd.edited'):''}</time></div>
     {to&&<small className="cm-to">{t('fe.fd.replyingTo')} <button type="button" className="plink" onClick={()=>go(parent!.author)}>{nameOf(parent!.author)}</button></small>}
@@ -665,7 +665,7 @@ function ReplyTree({list,sort,open,setOpen,liked,delta,onLike,onReply,onMore,lim
    return <div key={root.id} className={'th'+(all.length?' has-kids':'')}>{one(root,root,false)}
     {all.length>0&&<div className="cm-kids">{shown.map(c=>one(c,root,true))}
      {rest>0&&<button type="button" className="cm-more" onClick={()=>setOpen(o=>[...new Set([...o,root.id])])}>
-      <span className="cm-avs">{[...new Map(all.slice(2).filter(c=>c.author).map(c=>[c.author!.id,c.author!])).values()].slice(0,3).map(a=><Av key={a.id} name={nameOf(a)} seed={a.id} size="xs" src={a.avatar}/>)}</span>
+      <span className="cm-avs">{[...new Map(all.slice(2).filter(c=>c.author).map(c=>[c.author!.id,c.author!])).values()].slice(0,3).map(a=><ProfileAv key={a.id} p={a} size="xs"/>)}</span>
       {t('fe.fd.moreReplies',{n:plural(rest,['ответ','ответа','ответов'],['reply','replies'],locale)})}</button>}
      {isOpen&&all.length>3&&<button type="button" className="cm-more less" onClick={()=>setOpen(o=>o.filter(x=>x!==root.id))}>{t('fe.fd.collapse')}</button>}
     </div>}

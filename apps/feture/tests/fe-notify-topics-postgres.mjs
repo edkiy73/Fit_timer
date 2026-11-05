@@ -161,7 +161,7 @@ test('a link proposal and a proposed change reach the other side; a returned app
     // A partner's change refused: final — the asker gets a result row (pair.decided · rejected) and a signal, no task.
     const c = await person('uc', 'Noa');
     const pair = await coupleOf([b, c]);
-    await db.query('update feture.profile_member set approves_partner = true where profile_id = $1', [pair]);
+    await db.query('update feture.profile_member set approves_scope = array[\'private\',\'profile\',\'posts\',\'links\',\'communities\',\'events\',\'chats\'], approves_partner = true where profile_id = $1', [pair]);
     const p = await call('ub', pair, { action: 'profile.update', opId: op(), rev: 1, bio: 'Нас двое' });
     await deliver();
     const before = (await pushes(ub)).length;

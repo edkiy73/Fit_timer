@@ -91,7 +91,7 @@ export async function setup({ commands, migrations = MIGRATIONS, signals, realti
     const [{ id }] = await db.query(`insert into feture.profile (kind, name) values ('couple', 'Пара') returning id`);
     for (const p of personIds) {
       const [{ id: account }] = await db.query(`select id from feture.account where person_profile_id = $1`, [p]);
-      await db.query(`insert into feture.profile_member (profile_id, profile_kind, account_id, joined_at) values ($1, 'couple', $2, now())`, [id, account]);
+      await db.query(`insert into feture.profile_member (profile_id, profile_kind, account_id, joined_at, approves_scope, approves_partner) values ($1, 'couple', $2, now(), array['private'], true)`, [id, account]);
     }
     await db.query(`insert into feture.profile_settings (profile_id) values ($1)`, [id]);
     await db.query(`insert into feture.profile_details (profile_id) values ($1)`, [id]);

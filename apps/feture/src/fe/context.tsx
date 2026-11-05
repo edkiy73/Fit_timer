@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Bell,Calendar,Heart,Users} from 'lucide-react';
 import {destination,entryFor,noteLine} from '../../contracts/notifications.mjs';
-import {Av,Btn,ContextColumn,CtxBlock,CtxRow,Who} from './kit';
+import {Av,Btn,ContextColumn,CtxBlock,CtxRow,Who,ProfileAv} from './kit';
 import {useFe,useLive} from './session';
 import type {LiveEntity} from './live';
 import {EventCard,eventRow} from './communities';
@@ -51,7 +51,7 @@ const mineEv=z.object({ok:z.literal(true),going:z.array(mineEvRow),waiting:z.arr
 const likeCard=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:media.nullable(),
  ages:z.array(z.number()).optional(),photoVerified:z.boolean().optional(),premium:z.boolean().optional()}).passthrough();
 const incoming=z.object({ok:z.literal(true),items:z.array(z.object({profile:likeCard,at:z.string().nullable().optional()}).passthrough())}).passthrough();
-const actor=z.object({id:z.uuid(),kind:z.enum(['person','couple']).optional(),handle:z.string().nullable().optional(),name:z.string().nullable().optional(),...faceFields}).passthrough().nullable();
+const actor=z.object({id:z.uuid(),handle:z.string().nullable().optional(),name:z.string().nullable().optional(),...faceFields}).passthrough().nullable();
 const ref=z.object({type:z.string(),id:z.uuid().nullable()}).passthrough();
 const note=z.object({id:z.uuid(),type:z.string(),actor,data:z.record(z.string(),z.unknown()),object:ref.nullable(),sub:ref.nullable().optional(),addressee:z.uuid().nullable().optional(),
  couple:z.uuid().nullable().optional(),coupleName:z.string().nullable().optional(),at:z.string(),read:z.boolean()}).passthrough();
@@ -134,7 +134,7 @@ function Notifications(){
  const counts=c.data;
  const centerSub=[counts?.decide?t('fe.ctx.decide',{n:String(counts.decide)}):'',counts?.notifications?t('fe.ctx.centerNew',{n:String(counts.notifications)}):''].filter(Boolean).join(' · ');
  return <CtxBlock rows title={t('fe.ctx.notes')} loading={r.loading}>
-  {r.data?.items.slice(0,3).map(n=><CtxRow key={n.id} unread={!n.read} icon={n.actor?undefined:Bell} av={n.actor?<Av name={pname(n.actor)} seed={n.actor.id} size="sm" src={n.actor.avatar}/>:undefined}
+  {r.data?.items.slice(0,3).map(n=><CtxRow key={n.id} unread={!n.read} icon={n.actor?undefined:Bell} av={n.actor?<ProfileAv p={n.actor} size="sm"/>:undefined}
    title={line(n)} sub={when(n.at,locale)} onClick={()=>open(n)}/>)}
   <CtxRow icon={Bell} title={t('fe.ctx.center')} sub={centerSub||undefined} onClick={()=>navigate('/n/inbox')}/>
  </CtxBlock>;

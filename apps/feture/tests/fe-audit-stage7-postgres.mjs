@@ -28,20 +28,24 @@ async function world() {
   return { ...env, a, b, mia, pair };
 }
 
-test('item 20: Kira asks to approve only follows — Alex’s follow waits, his post does not; the private part always waits; pause and restore keep the list', async () => {
+test('item 20: Kira asks to approve follows and the private part — Alex’s follow waits, his post does not; the private part waits until she switches that point off; pause and restore keep the list', async () => {
   const { pg, call, mia, pair } = await world();
   try {
-    assert.deepEqual((await call('ub', pair, { action: 'couple.setApproval', opId: op(), scope: ['follows'] })).scope, ['follows']);
+    assert.deepEqual((await call('ub', pair, { action: 'couple.setApproval', opId: op(), scope: ['follows', 'private'] })).scope, ['follows', 'private']);
     assert.ok((await call('ua', pair, { action: 'follow.set', opId: op(), profileId: mia, on: true })).pending?.approvalId);
     const d = await call('ua', pair, { action: 'post.saveDraft', opId: op(), post: { type: 'post', body: 'Пост пары без согласия', audience: 'all', inFeed: true, topics: [], mediaIds: [], interests: [], tags: [] } });
     assert.equal((await call('ua', pair, { action: 'post.publish', opId: op(), postId: d.id })).pending, undefined);
     assert.ok((await call('ua', pair, { action: 'private.setOn', opId: op(), on: true })).pending?.approvalId);
-    assert.deepEqual((await call('ub', pair, { action: 'couple.get' })).couple.members.find((/** @type {any} */ m) => m.me).approvesScope, ['follows']);
+    // The point is hers to switch: without it the private part opens at once.
+    await call('ub', pair, { action: 'couple.setApproval', opId: op(), scope: ['follows'] });
+    assert.equal((await call('ua', pair, { action: 'private.setOn', opId: op(), on: true })).pending, undefined);
+    await call('ub', pair, { action: 'couple.setApproval', opId: op(), scope: ['follows', 'private'] });
+    assert.deepEqual((await call('ub', pair, { action: 'couple.get' })).couple.members.find((/** @type {any} */ m) => m.me).approvesScope, ['follows', 'private']);
     // Pause and restore: the list comes back as it was.
     await call('ua', pair, { action: 'couple.stop', opId: op(), confirm: true });
     await call('ua', pair, { action: 'couple.restore', opId: op() });
     await call('ub', pair, { action: 'couple.restore', opId: op() });
-    assert.deepEqual((await call('ub', pair, { action: 'couple.get' })).couple.members.find((/** @type {any} */ m) => m.me).approvesScope, ['follows']);
+    assert.deepEqual((await call('ub', pair, { action: 'couple.get' })).couple.members.find((/** @type {any} */ m) => m.me).approvesScope, ['follows', 'private']);
   } finally { await pg.close(); }
 });
 

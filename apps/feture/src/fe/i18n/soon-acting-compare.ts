@@ -34,10 +34,10 @@ export const ru = {
   'fe.cmpx.visGranted': 'Твой ответ видят только те, кому открыт доступ.',
   'fe.cmpx.visGrantedUs': 'Ответ пары видят только те, кому открыт доступ.',
   'fe.cmpx.theirHard': 'Для {name} это табу — не предлагай и не уговаривай',
-  'fe.cmpx.add': 'Добавить себе',
-  'fe.cmpx.addUs': 'Добавить паре',
-  'fe.cmpx.edit': 'Изменить мой',
-  'fe.cmpx.editUs': 'Изменить у пары',
+  'fe.cmpx.add': "Добавить интерес",
+  'fe.cmpx.addUs': "Добавить интерес пары",
+  'fe.cmpx.edit': "Изменить интерес",
+  'fe.cmpx.editUs': "Изменить интерес пары",
   'fe.cmpx.topic': 'Об этом интересе',
 };
 
@@ -75,9 +75,9 @@ export const en: typeof ru = {
   'fe.cmpx.visGranted': 'Only people with access see your answer.',
   'fe.cmpx.visGrantedUs': 'Only people with access see the couple’s answer.',
   'fe.cmpx.theirHard': 'For {name} this is a taboo — don’t suggest it or push',
-  'fe.cmpx.add': 'Add to mine',
-  'fe.cmpx.addUs': 'Add for the couple',
-  'fe.cmpx.edit': 'Edit mine',
-  'fe.cmpx.editUs': 'Edit for the couple',
+  'fe.cmpx.add': "Add interest",
+  'fe.cmpx.addUs': "Add the couple’s interest",
+  'fe.cmpx.edit': "Edit interest",
+  'fe.cmpx.editUs': "Edit the couple’s interest",
   'fe.cmpx.topic': 'About this interest',
 };

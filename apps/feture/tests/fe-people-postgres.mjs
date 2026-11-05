@@ -137,7 +137,7 @@ test('faces in lists: photo, age only when shown (own always), badges; nothing f
     const media = { storage: null, delivery: null };
     assert.equal(typeof (await facesOf(db, media, { profileId: c, accountId: accC }, [c])).get(c)?.age, 'number');
     const pair = await coupleOf([c, d]);
-    assert.deepEqual((await facesOf(db, media, { profileId: a, accountId: accA }, [pair])).get(pair), { avatar: null, age: null, photoVerified: false, premium: true });
+    assert.deepEqual((await facesOf(db, media, { profileId: a, accountId: accA }, [pair])).get(pair), { avatar: null, age: null, photoVerified: false, premium: true, kind: 'couple' });
 
     // Blocked either way, or not active: nothing at all.
     await call('ub', b, { action: 'block.set', opId: op(), profileId: a, on: true });

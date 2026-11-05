@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {KeyRound,Camera,ChevronRight,Clock,Eye,Lock,LockOpen,PenLine,Send,ShieldCheck,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {AddCard,Alert,Av,Btn,Card,CheckList,Chips,ChoiceChips,Counter,Empty,Field,FilePick,Group,MultiChips,Note,PersonLine,PhotoAdd,PhotoSlot,PhotoSlots,Pill,RequestCard,Row,SectionLabel,SelectRow,Sheet,Skel,Stack,TextArea,VaultHead,Veil} from './kit';
+import {AddCard,Alert,Av,Btn,Card,CheckList,Chips,ChoiceChips,Counter,Empty,Field,FilePick,Group,MultiChips,Note,PersonLine,PhotoAdd,PhotoSlot,PhotoSlots,Pill,RequestCard,Row,SectionLabel,SelectRow,Sheet,Skel,Stack,TextArea,VaultHead,Veil,ProfileAv} from './kit';
 import {Uploader} from './kit/Uploader';
 import {FIELD,textLength,useChecks} from './kit/validate';
 import {useSendPhoto} from './media-upload';
@@ -22,7 +22,7 @@ import {PhotoViewer,mediaSrc,plural} from './profile-extras';
 export type Scope='info'|'photos'|'video'|'interests';
 const SCOPES:Scope[]=['info','photos','video','interests'];
 const scopes=z.array(z.string()).transform(a=>SCOPES.filter(s=>a.includes(s)));
-const who=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).nullable();
+const who=z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).nullable();
 type Who=z.infer<typeof who>;
 const quotaShape=z.object({left:z.number(),max:z.number(),resetsAt:z.string().nullable()});
 type QuotaT=z.infer<typeof quotaShape>;
@@ -237,7 +237,7 @@ export function useGrantActions(reload:()=>void){
 /** One person I opened my private part to: what, until when, «Изменить» / «Отозвать». */
 export function GrantCard({g,onEdit,onRevoke}:{g:GrantItem,onEdit:()=>void,onRevoke:()=>void}){
  const {t}=useI18n();const navigate=useNavigate();const w=useAccessWords();const name=nameOf(g.profile);
- return <RequestCard person={<PersonLine av={<Av name={name} seed={g.profile?.id??name} src={g.profile?.avatar}/>} label={name}
+ return <RequestCard person={<PersonLine av={<ProfileAv p={g.profile??{id:name,name}} size=""/>} label={name}
    onOpen={()=>g.profile&&navigate('/n/people/'+g.profile.id)} name={<>{name}<NameBadges p={g.profile}/></>} sub={w.what(g.scopes)}/>}
   actions={<><Btn size="md" kind="soft" onClick={onEdit}>{t('fe.ac.edit')}</Btn><Btn size="md" kind="danger" onClick={onRevoke}>{t('fe.mx.pr.revoke')}</Btn></>}>
   <Chips><Pill tone="v" icon={Clock}>{w.until(g.until)}</Pill></Chips>
@@ -254,7 +254,7 @@ export function RequestCards({data,onChanged}:{data:IncomingList,onChanged:()=>v
  const [grantFor,setGrantFor]=useState<Incoming|null>(null);const cp=acting?.kind==='couple';
  return <><Stack gap={2}>
   {data.items.map(r=><RequestCard key={r.id} id={'req-'+r.id}
-   person={<PersonLine av={<Av name={nameOf(r.profile)} seed={r.profile?.id??r.id} src={r.profile?.avatar}/>} label={nameOf(r.profile)} onOpen={()=>r.profile&&navigate('/n/people/'+r.profile.id)}
+   person={<PersonLine av={<ProfileAv p={r.profile??{id:r.id,name:'?'}} size=""/>} label={nameOf(r.profile)} onOpen={()=>r.profile&&navigate('/n/people/'+r.profile.id)}
     name={<>{withAge(nameOf(r.profile),r.profile)}<NameBadges p={r.profile}/></>} sub={<>{cp?t('fe.mx.pr.asksUs'):t('fe.priv.asks')} · {when(r.created_at,locale)}</>}/>}
    actions={<><Btn size="md" onClick={()=>setGrantFor(r)}>{t('fe.priv.grant')}</Btn>
     <Btn size="md" kind="soft" onClick={()=>void decline(r.id,nameOf(r.profile),onChanged)}>{t('fe.priv.decline')}</Btn></>}>
