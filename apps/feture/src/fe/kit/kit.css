@@ -315,7 +315,7 @@ button.pill{cursor:pointer}
 .v21 .act-line>span{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .v21 .act-line>span::after{content:" ·"}
 .v21 .act-line>button{flex:none;padding:0;border:0;background:none;font:inherit;color:var(--accent);cursor:pointer}
-@media (hover:hover){.v21 .act-line>button:hover{text-decoration:underline}}
+@media (hover:hover) and (pointer:fine){.v21 .act-line>button:hover{text-decoration:underline}}
 
 /* The photo viewer is a layer of its own above the bars, the dock, the bottom buttons and the toasts. */
 .v21 .layer:has(>.viewer){z-index:70}
@@ -472,7 +472,7 @@ html:has(.fe-v21),html:has(.fe-v21) body{overscroll-behavior-y:none}
 .v21 .rsvp.rsvp{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s-2)}
 .v21 .rsvp.rsvp button,.v21 .rsvp.rsvp.us button{flex-direction:row;gap:6px;min-height:var(--h-md);padding:0 var(--s-2);border-radius:var(--r-m);font-size:var(--fs-sm);font-weight:600;line-height:1.2;
  background:color-mix(in srgb,var(--ink) 5%,transparent);color:var(--ink);box-shadow:none}
-@media (hover:hover){.v21 .rsvp.rsvp button:not(.on):not(:disabled):hover{background:color-mix(in srgb,var(--ink) 10%,transparent)}}
+@media (hover:hover) and (pointer:fine){.v21 .rsvp.rsvp button:not(.on):not(:disabled):hover{background:color-mix(in srgb,var(--ink) 10%,transparent)}}
 .v21 .rsvp.rsvp button span,.v21 .rsvp.rsvp.us button>span{display:block;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
 .v21 .rsvp.rsvp button svg{flex:none;width:18px;height:18px}
 .v21 .rsvp.rsvp button.r-not{grid-column:1/-1;min-height:var(--h-sm);font-weight:550}
@@ -538,7 +538,7 @@ html:has(.fe-v21),html:has(.fe-v21) body{overscroll-behavior-y:none}
    text would vanish (the old `.btn.primary` fill rule came after `.btn.on` and painted it over). */
 .v21 .btn.quiet{background:color-mix(in srgb,var(--ink) 5%,transparent);color:var(--ink);box-shadow:none}
 .v21 .btn.ghost{background:none;color:var(--ink);box-shadow:none}
-@media (hover:hover){.v21 .btn.quiet:hover{background:color-mix(in srgb,var(--ink) 10%,transparent)}.v21 .btn.ghost:hover{background:color-mix(in srgb,var(--ink) 6%,transparent)}}
+@media (hover:hover) and (pointer:fine){.v21 .btn.quiet:hover{background:color-mix(in srgb,var(--ink) 10%,transparent)}.v21 .btn.ghost:hover{background:color-mix(in srgb,var(--ink) 6%,transparent)}}
 .v21 .btn.btn.on,.v21 .btn.btn[aria-pressed="true"]{background:var(--accent-soft);border-color:transparent;color:var(--accent);box-shadow:none}
 /* A quiet toggle stays quiet when on (a list row's «✓ Подписаны»): the tick says it, not a pink plate. */
 .v21 .btn.btn.quiet.on,.v21 .btn.btn.quiet[aria-pressed="true"]{background:color-mix(in srgb,var(--ink) 5%,transparent);color:var(--ink)}
@@ -649,7 +649,7 @@ html:has(.fe-v21),html:has(.fe-v21) body{overscroll-behavior-y:none}
 .v21 .ctx .empty.k-empty-compact>h3{margin:0;font:400 var(--fs-sm)/1.35 var(--font);color:var(--mute)}
 .v21 .ctx .empty.k-empty-compact>.btns{grid-column:1/-1;margin:0;max-width:none}
 .v21 .ctx .k-ctx-link{color:var(--mute);font:inherit;padding:0}
-@media (hover:hover){.v21 .ctx .k-ctx-link:hover{color:var(--ink)}}
+@media (hover:hover) and (pointer:fine){.v21 .ctx .k-ctx-link:hover{color:var(--ink)}}
 .v21 .ctx.k-ctx-always{display:block;width:320px;padding:22px 18px 40px;border-left:1px solid var(--line)}
 /* A Seg in place of a header title (Bar `seg`, «Как видят» on the photo): on a 360 phone three full labels
    («С доступом», «Знакомства») fit in the smaller caption size instead of being cut. */

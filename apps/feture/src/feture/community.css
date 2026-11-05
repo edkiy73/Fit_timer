@@ -14,7 +14,7 @@
 .ft-community>nav.ft-form-actions button{min-height:44px;min-width:0;padding:10px 14px;border:1px solid var(--ft-border);border-radius:14px;color:var(--ft-muted);background:var(--ft-white);font-size:12px;font-weight:700;line-height:1.35;white-space:normal;transition:background 150ms ease,border-color 150ms ease,transform 150ms ease}
 .ft-community>nav.ft-form-actions button[aria-pressed=true]{background:var(--ft-accent-soft);color:var(--ft-accent-ink);border-color:var(--ft-rose)}
 .ft-community>nav.ft-form-actions .ft-community-compose-cta{margin-inline-start:auto;background:var(--ft-action-fill);color:white;border-color:var(--ft-action-fill)}
-@media (hover:hover){.ft-community>nav.ft-form-actions .ft-community-compose-cta:hover{filter:brightness(1.05)}}
+@media (hover:hover) and (pointer:fine){.ft-community>nav.ft-form-actions .ft-community-compose-cta:hover{filter:brightness(1.05)}}
 .ft-community :is(button,summary,input,textarea,select):focus-visible{outline:3px solid var(--ft-violet);outline-offset:3px}
 .ft-community .ft-posts{min-width:0;margin:0;display:grid;align-content:start;gap:16px}
 .ft-community .ft-posts>.ft-post{margin:0;padding:clamp(16px,2.1vw,24px);border:1px solid var(--ft-border);border-radius:22px;background:var(--ft-white);box-shadow:var(--ft-shadow)}
@@ -27,7 +27,7 @@
 .ft-community .ft-posts .ft-form-actions button{min-height:44px;border-radius:13px;padding:10px 12px;border:1px solid var(--ft-border);background:var(--ft-surface);color:var(--ft-ink);font-size:12px}
 .ft-community .ft-posts .ft-form-actions button[aria-pressed=true]{border-color:var(--ft-rose);background:var(--ft-accent-soft);color:var(--ft-accent-ink)}
 .ft-community .ft-posts>.ft-post>button{border:1px solid var(--ft-border);border-radius:13px;background:var(--ft-surface);color:var(--ft-ink);min-height:44px;padding:10px 14px;font-size:12px;font-weight:700}
-@media (hover:hover){.ft-community .ft-posts>.ft-post>button:hover{border-color:var(--ft-rose)}}
+@media (hover:hover) and (pointer:fine){.ft-community .ft-posts>.ft-post>button:hover{border-color:var(--ft-rose)}}
 .ft-community .ft-community-layout{gap:18px;align-items:start}
 .ft-community .ft-community-editor{margin:0;scroll-margin-top:24px;padding:clamp(16px,2.2vw,24px);border:1px solid var(--ft-border);background:var(--ft-white);border-radius:22px}
 .ft-community .ft-community-editor h2{font-size:clamp(19px,2.3vw,25px);line-height:1.25;letter-spacing:-.025em;margin:0 0 8px}
