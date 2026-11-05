@@ -87,15 +87,10 @@ test('reports: a chat with the selected messages, communities and events; remova
   } finally { await pg.close(); }
 });
 
-test('city queue and event reminders the day before, once, to admitted people', async () => {
+test('event reminders the day before, once, to admitted people', async () => {
   const { pg, db, call, member } = await world();
   try {
     const a = await member('ua', 'Alex'), b = await member('ub', 'Kira');
-    const [{ id: city }] = await db.query(`insert into feture.place (country, name_ru, state) values ('DE', 'Лейпциг', 'pending') returning id`);
-    assert.ok((await call('um', null, { action: 'staff.placeQueue' })).items.some((/** @type {any} */ x) => x.id === city));
-    await call('um', null, { action: 'staff.placeDecide', opId: op(), placeId: city, decision: 'approve', nameEn: 'Leipzig' });
-    const [{ state, name_en }] = await db.query('select state, name_en from feture.place where id = $1', [city]);
-    assert.deepEqual([state, name_en], ['approved', 'Leipzig']);
 
     const ev = { title: 'Вечер знакомств', kind: 'meetup', description: 'Спокойный вечер для знакомства, без спешки и давления.',
       format: 'online', joinUrl: 'https://meet.example/x', tz: 'Europe/Berlin', startsAt: new Date(Date.now() + 20 * 36e5).toISOString(), endsAt: new Date(Date.now() + 23 * 36e5).toISOString() };

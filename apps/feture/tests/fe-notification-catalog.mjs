@@ -141,8 +141,10 @@ test('the migration fills the record kind the catalog says', () => {
   const listed = new Set([...sql.slice(sql.indexOf('when type in')).matchAll(/'([a-zA-Z.]+)'/g)].map(m => m[1]).filter(t => !['result', 'notice'].includes(t)));
   // Types added after that migration had no rows to fill.
   const later = ['pair.inviteExpired', 'eventLate'];
+  // Types dropped after that migration (a city is no longer proposed, owner 06.11.2026).
+  const gone = ['placeDecided'];
   const results = new Set([...writtenTypes()].filter(t => CATALOG[t].kind === 'result' && !later.includes(t)));
-  assert.deepEqual([...listed].sort(), [...results].sort());
+  assert.deepEqual([...listed].filter(t => !gone.includes(t)).sort(), [...results].sort());
 });
 
 test('the resolver makes a precise route for every entry, and the service worker and the app accept exactly those', () => {

@@ -65,6 +65,9 @@ compatibility for couples/profiles that exist now: a migration may reshape or re
 a data-preserving path. This stops being true on the day the owner announces the launch; from then on migrations must
 keep real users' data. Until then do not mention «existing couples» as a risk in a plan.
 
+## Licences and credits: the «copyright» document (owner, 06.11.2026)
+Whenever the product takes something from outside — a dataset (GeoNames cities), a photo or a stock picture, an icon set, a font, a library that asks for a notice, a map or a model — **look at its licence first, and if it asks for attribution or a notice, put exactly that into the published «copyright» document in the same change** (not «later»). The document is built up in parts: one short section per source, with what it is, who made it, the licence and its link, and the exact wording the licence requires; add your section to what is already there. In the PR description name the source, the licence, and the section you added. If the licence forbids our use (non-commercial, no derivatives, a share-alike we cannot meet), stop and ask the owner before using it. Sources so far: **GeoNames** (cities; CC BY 4.0). The lawyer completes the document before the launch; until then it carries at least the credits the licences require.
+
 ## Product decisions in force
 
 - **Discover starts off** (28.10.2026). New accounts and couples have `discover_mode = 'off'`. Turning Discover on

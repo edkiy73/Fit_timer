@@ -52,7 +52,6 @@ const appealItem=z.object({person,id:z.uuid(),target_type:z.string(),target_id:z
  decision:opt(z.object({action:z.string(),detail:z.unknown().optional(),at:ts,mine:z.boolean().optional()}).passthrough())});
 const noticeItem=z.object({id:z.uuid(),target_url:opt(z.string()),reason:z.string(),explanation:opt(z.string()),created_at:ts,answerable:opt(z.boolean()),
  target:opt(z.object({type:z.string(),id:z.string()})),object:objectDto});
-const placeItem=z.object({id:z.uuid(),country:opt(z.string()),name_ru:opt(z.string()),name_en:opt(z.string()),created_at:ts,used:opt(z.number())});
 const journalItem=z.object({id:z.union([z.string(),z.number()]),person:opt(z.object({id:z.string(),kind:z.string().optional(),handle:z.string().nullable().optional(),name:z.string().nullable().optional()})),staff_account_id:opt(z.string()),staff_name:opt(z.string()),staff_handle:opt(z.string()),action:z.string(),target_type:opt(z.string()),target_id:opt(z.string()),detail:z.unknown().optional(),created_at:ts});
 const disputeClaim=z.object({tagged:z.boolean(),hid:z.boolean().optional(),at:ts,trust:z.string(),strikes:z.number()});
 const disputeItem=z.object({person,id:z.uuid(),disputed_at:ts,opened_at:ts,excerpt:opt(z.string()),media:opt(z.number()),hidden:z.boolean().optional(),urgent:z.boolean().optional(),
@@ -65,8 +64,8 @@ const measure=z.object({rule:z.string().nullable(),until:ts}).nullable();
 const measuresRes=z.object({ok:z.literal(true),profileId:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable(),state:z.string().optional(),createdAt:z.string().nullable().optional(),openReports:z.number().optional(),watched:z.object({at:z.string(),note:z.string().nullable(),by:z.string().nullable()}).nullable().optional(),restricted:measure,suspended:measure});
 
 type MediaItem=z.infer<typeof mediaItem>;type CommItem=z.infer<typeof commItem>;type EventItem=z.infer<typeof eventItem>;type AgeItem=z.infer<typeof ageItem>;type PhotoItem=z.infer<typeof photoItem>;
-type DisputeItem=z.infer<typeof disputeItem>;type RevisionItem=z.infer<typeof revisionItem>;type ReportItem=z.infer<typeof reportItem>;type AppealItem=z.infer<typeof appealItem>;type NoticeItem=z.infer<typeof noticeItem>;type PlaceItem=z.infer<typeof placeItem>;
-type Items={dispute:DisputeItem[],report:ReportItem[],revision:RevisionItem[],media:MediaItem[],community:CommItem[],event:EventItem[],age:AgeItem[],photo:PhotoItem[],appeal:AppealItem[],notice:NoticeItem[],place:PlaceItem[]};
+type DisputeItem=z.infer<typeof disputeItem>;type RevisionItem=z.infer<typeof revisionItem>;type ReportItem=z.infer<typeof reportItem>;type AppealItem=z.infer<typeof appealItem>;type NoticeItem=z.infer<typeof noticeItem>;
+type Items={dispute:DisputeItem[],report:ReportItem[],revision:RevisionItem[],media:MediaItem[],community:CommItem[],event:EventItem[],age:AgeItem[],photo:PhotoItem[],appeal:AppealItem[],notice:NoticeItem[]};
 type QueueId=keyof Items;
 /** `locked`: documents and selfies wait for a fresh second-factor code (staff.ageCheckQueue, staff.photoCheckQueue). */
 const list=<T extends z.ZodType>(item:T)=>z.object({ok:z.literal(true),items:z.array(item),locked:z.boolean().optional(),next:z.string().nullable().optional(),tail:z.string().nullable().optional(),total:z.number().optional()});
@@ -83,7 +82,6 @@ const QUEUES:{[K in QueueId]:{action:string,schema:z.ZodType<{items:Items[K],loc
  photo:{action:'staff.photoCheckQueue',schema:list(photoItem),key:x=>x.id},
  appeal:{action:'staff.appealQueue',schema:list(appealItem),key:x=>x.id},
  notice:{action:'staff.noticeQueue',schema:list(noticeItem),key:x=>x.id},
- place:{action:'staff.placeQueue',schema:list(placeItem),key:x=>x.id},
 };
 const QUEUE_IDS=Object.keys(QUEUES) as QueueId[];
 /** Who may open what (the server's requireStaff lists); the screen only asks for what the roles allow. Queues not
@@ -330,7 +328,7 @@ type Level='urgent'|'late'|null;
 type Entry={id:QueueId,item:unknown,key:string,level:Level,since:number};
 const HOUR=3600e3;
 /** How long an item may wait before it is late (owner's working rules, pre-launch; one place to change them). */
-const SLA:Record<QueueId,number>={dispute:24*HOUR,report:24*HOUR,revision:48*HOUR,media:24*HOUR,community:48*HOUR,event:48*HOUR,age:24*HOUR,photo:24*HOUR,appeal:72*HOUR,notice:24*HOUR,place:7*24*HOUR};
+const SLA:Record<QueueId,number>={dispute:24*HOUR,report:24*HOUR,revision:48*HOUR,media:24*HOUR,community:48*HOUR,event:48*HOUR,age:24*HOUR,photo:24*HOUR,appeal:72*HOUR,notice:24*HOUR};
 /** When an item started to wait. */
 function sinceOf(id:QueueId,x:unknown):number{
  const o=x as Record<string,unknown>;
@@ -347,7 +345,7 @@ function urgencyOf(id:QueueId,x:unknown):{level:Level,since:number}{
  return {level:urgent?'urgent':Date.now()-since>SLA[id]?'late':null,since};
 }
 const queueLabel=(id:QueueId,t:T)=>id==='photo'?t('fe.pc.staff.tab'):t('fe.staff.q.'+id);
-const QUEUE_ICON:Record<QueueId,LucideIcon>={dispute:UserX,report:Flag,revision:FilePen,media:Image,community:Users,event:CalendarDays,age:IdCard,photo:BadgeCheck,appeal:Scale,notice:Gavel,place:MapPin};
+const QUEUE_ICON:Record<QueueId,LucideIcon>={dispute:UserX,report:Flag,revision:FilePen,media:Image,community:Users,event:CalendarDays,age:IdCard,photo:BadgeCheck,appeal:Scale,notice:Gavel};
 type T=(k:string,v?:Record<string,string>)=>string;
 const nick=(h:unknown)=>typeof h==='string'&&h?'@'+h:'';
 function titleOf(e:Entry,t:T):string{
@@ -376,7 +374,6 @@ function gistOf(e:Entry,t:T):[string,string]{
   case 'photo':return [nick(o.profile?.handle),''];
   case 'appeal':return [[nick(o.handle),t('fe.staff.report.type.'+o.target_type)].filter(Boolean).join(' · '),snip(o.body)];
   case 'notice':return [t('fe.staff.notice.reason.'+o.reason).startsWith('fe.')?'':t('fe.staff.notice.reason.'+o.reason),snip(o.target_url)];
-  case 'place':return [[o.name_ru,o.name_en].filter(Boolean).join(' / '),[o.country,o.used?t('fe.staff.place.usedN',{n:String(o.used)}):''].filter(Boolean).join(' · ')];
   default:return ['',''];
  }
 }
@@ -406,7 +403,6 @@ function QueueList({id,items,onDone}:{id:QueueId,items:unknown[],onDone:(key:str
    case 'report':return <ReportCard key={k} item={x as ReportItem} onDone={done}/>;
    case 'appeal':return <AppealCard key={k} item={x as AppealItem} onDone={done}/>;
    case 'notice':return <NoticeCard key={k} item={x as NoticeItem} onDone={done}/>;
-   case 'place':return <PlaceCard key={k} item={x as PlaceItem} onDone={done}/>;
   }
  })}</>;
 }
@@ -1029,20 +1025,6 @@ function NoticeCard({item,onDone}:{item:NoticeItem,onDone:()=>void}){
  </StCard>;
 }
 
-function PlaceCard({item,onDone}:{item:PlaceItem,onDone:()=>void}){
- const {t}=useI18n();const when=useWhen();const d=useDecide(onDone);
- const [ru,setRu]=useState(item.name_ru??'');const [en,setEn]=useState(item.name_en??'');const [ask,setAsk]=useState(false);
- return <StCard task={t('fe.staff.task.place')} title={[item.name_ru,item.name_en].filter(Boolean).join(' / ')||t('fe.staff.place.unnamed')} meta={when(item.created_at)}>
-  <Kv rows={[[t('fe.staff.place.country'),item.country],[t('fe.staff.place.used'),String(item.used??0)]]}/>
-  <LineField label={t('fe.staff.place.nameRu')} value={ru} max={80} onChange={setRu}/>
-  <LineField label={t('fe.staff.place.nameEn')} value={en} max={80} onChange={setEn}/>
-  {ask?<Confirm text={t('fe.staff.place.confirmReject')} busy={d.busy} onNo={()=>setAsk(false)} onYes={()=>d.run('staff.placeDecide',{placeId:item.id,decision:'reject'})}/>
-   :<Actions><Btn icon={Check} disabled={d.busy} onClick={()=>d.run('staff.placeDecide',{placeId:item.id,decision:'approve',
-     ...(ru.trim()?{nameRu:ru.trim()}:{}),...(en.trim()?{nameEn:en.trim()}:{})})}>{t('fe.staff.approve')}</Btn>
-    <Btn kind="soft" icon={Ban} disabled={d.busy} onClick={()=>setAsk(true)}>{t('fe.staff.reject')}</Btn></Actions>}
-  
- </StCard>;
-}
 
 // ——— «Меры»: what is in force for a profile, and lifting it ———
 

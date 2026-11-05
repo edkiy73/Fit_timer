@@ -46,7 +46,7 @@ export function MeEditScreen(){
  const [cat,setCat]=useState<z.infer<typeof catalogRes>|null>(null);const [jars,setJars]=useState({all:0,granted:0});const [grants,setGrants]=useState(0);
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);const setFailure=useFail();
  const [whoOpen,setWhoOpen]=useState<boolean|null>(null);const [ageSheet,setAgeSheet]=useState(false);const [phSheet,setPhSheet]=useState<{k:'photos'|'privMedia',i:number}|null>(null);
- const [askOff,setAskOff]=useState(false);const [nickErr,setNickErr]=useState('');const [askLast,setAskLast]=useState<number|null>(null);const [discoverOn,setDiscoverOn]=useState(false);const [added,setAdded]=useState<Place|null>(null);const [uploading,setUploading]=useState<'photos'|'privMedia'|null>(null);
+ const [askOff,setAskOff]=useState(false);const [nickErr,setNickErr]=useState('');const [askLast,setAskLast]=useState<number|null>(null);const [discoverOn,setDiscoverOn]=useState(false);const [uploading,setUploading]=useState<'photos'|'privMedia'|null>(null);
  // «Обо мне» (person only) keeps its own draft next to the rest; «Сохранить» writes it with the profile.
  const [ab,setAb]=useState<{base:AboutDraft,d:AboutDraft}|null>(null);
  const file=useRef<HTMLInputElement>(null);const fileKind=useRef<'photos'|'privMedia'>('photos');const fid=useId();
@@ -150,12 +150,9 @@ export function MeEditScreen(){
    const j=list.findIndex(y=>!y.video);if(j<0){toast(t('fe.mx.ph.clipNeedsPhoto'),{type:'info'});setPhSheet(null);return;}
    const [y]=list.splice(j,1);list.unshift(y!);}
   set({[k]:list} as Partial<Draft>);setPhSheet(null);};
- // A city the person added is pending (not in the catalog yet): its name comes from the profile or the picker.
- const placeName=(id:string|null)=>{const x=id?cat?.places?.find(y=>y.id===id)??(added?.id===id?added:null):null;
+ // A city that is not in the catalog (chosen before it was complete): its name comes from the profile.
+ const placeName=(id:string|null)=>{const x=id?cat?.places?.find(y=>y.id===id):null;
   if(x)return (locale==='en'?x.en:x.ru)??null;return id&&id===base?.cityId&&p?.city?(locale==='en'?p.city.en:p.city.ru):null;};
- const addPlace=async(country:string,name:string):Promise<Place>=>{
-  const r=await call('place.submit',{opId:newOpId(),country,name},z.object({placeId:z.string()}),{asAccount:true});
-  const x={id:r.placeId,country,ru:name,en:name,pending:true};setAdded(x);toast(t('fe.kit.place.added',{name}),{type:'ok'});return x;};
  // The same picker as sign-up (kit ChipPick): five chips and «Все · N» for a long list, not a wall of every option.
  const chips=(f:string,kind:string)=>{if(!d)return null;const v=d.details[f];const multi=f!=='status';const sel=multi?(Array.isArray(v)?v as string[]:[]):(typeof v==='string'?[v]:[]);
   const opts=cat?.options.filter(x=>x.kind===kind)??[];
@@ -191,7 +188,7 @@ export function MeEditScreen(){
        <Field id={fid+'h'} name="handle" label={cp?t('fe.nn.nickUs'):t('fe.nn.nick')} error={nickErr||undefined}
         hint={p.nickAt?t('fe.nn.nickAt',{date:dayMonth(p.nickAt)}):p.nickFirst?t('fe.nn.nickFirst'):t('fe.nn.nickEvery')}>
         <div className="inwrap"><AtSign/><Input id={fid+'h'} value={d.handle} maxLength={20} autoCapitalize="off" spellCheck={false} disabled={!!p.nickAt} invalid={!!nickErr} onChange={e=>{set({handle:e.target.value.replace(/^@/,'')});setNickErr('');}}/></div></Field>
-       <CityField label={t('fe.mx.ed.city')} placeholder={t('fe.mx.ed.noCity')} places={cat?.places??[]} value={d.cityId} onChange={id=>set({cityId:id})} clear={t('fe.mx.ed.noCity')} none add={addPlace} fallbackName={placeName(d.cityId)}/>
+       <CityField label={t('fe.mx.ed.city')} placeholder={t('fe.mx.ed.noCity')} places={cat?.places??[]} value={d.cityId} onChange={id=>set({cityId:id})} clear={t('fe.mx.ed.noCity')} none fallbackName={placeName(d.cityId)}/>
        {!cp&&p.age&&<PickField label={t('fe.mb.age')} icon={Cake} value={d.showAge?t('fe.mb.ageShow',{n:String(p.age)}):t('fe.mb.ageHide')} placeholder="" onClick={()=>setAgeSheet(true)}/>}
        <Field id={fid+'b'} name="bio" label={t('fe.mx.ed.about')} error={checks.error('bio')}><TextArea id={fid+'b'} rows={4} {...checks.input('bio')} value={d.bio} placeholder={t('fe.mx.ed.aboutPh')} onChange={e=>set({bio:e.target.value})}/><Counter n={textLength(d.bio)} max={FIELD.bio.max}/></Field>
       </>}
