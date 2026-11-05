@@ -33,7 +33,7 @@ export function statusText(n:Row,t:T,locale:string):string|null{
    const k=c>1?'fe.ibx.staff.'+what+'.many':what==='report'?'fe.ibx.staff.report.'+(d.reason==='minor'?'minor':'threat'):'fe.ibx.staff.'+what;
    return t(k)!==k?t(k,{n:String(c)}):line();
   }
-  case 'premiumGranted':return line({date:day(d.until)});
+  case 'premiumGranted':case 'premiumGrantedBulk':case 'premiumEnding':case 'premiumPair':return line({date:day(d.until)});
   case 'staffRole':{const role=String(d.role??'');return line({role:known('fe.staff.role.'+role)??role});}
   case 'contentRemoved':{const head=line();const r=rule(d.rule);return r?t('fe.ibx.withRule',{head,rule:r}):head;}
   case 'profileSuspended':case 'profileRestricted':{

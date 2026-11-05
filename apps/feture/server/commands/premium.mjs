@@ -201,14 +201,15 @@ const BULK_MAX = 20000;
 
 /** One more period of Premium for an account, queued after its current one: recomputes the end, tells the person (unless
  * `notify: false`) and the partners of their couple. @param {Q} q @param {string} accountId @param {'staff' | 'promo' | 'referral'} source
- * @param {number} days @param {{reason?: string | null, grantedBy?: string | null, notify?: boolean}} [opts] */
-export async function grantPeriod(q, accountId, source, days, { reason = null, grantedBy = null, notify = true } = {}) {
+ * @param {number} days @param {{reason?: string | null, grantedBy?: string | null, notify?: boolean, why?: 'welcome' | 'invited' | 'promo'}} [opts]
+ * `why`: what the person is told it is for (a welcome, an invitation bonus, a promo code). */
+export async function grantPeriod(q, accountId, source, days, { reason = null, grantedBy = null, notify = true, why = undefined } = {}) {
   const [e] = await q.query(
     `insert into feture.entitlement (account_id, source, starts_at, ends_at, granted_by, reason)
      select $1, $2, s, s + make_interval(days => $3), $4, $5 from (select greatest(now(), coalesce((select premium_until from feture.account where id = $1), now())) s) x returning id, ends_at`,
     [accountId, source, days, grantedBy, reason]);
   await recompute(q, accountId);
-  if (notify) await enqueue(q, 'premium.granted', await accountProfile(q, accountId), { for: accountId, days, until: new Date(e.ends_at).toISOString() });
+  if (notify) await enqueue(q, 'premium.granted', await accountProfile(q, accountId), { for: accountId, days, until: new Date(e.ends_at).toISOString(), ...(why ? { why } : {}) });
   await tellPartners(q, [accountId], e.ends_at);
   return e;
 }
@@ -219,7 +220,7 @@ export async function grantWelcome(q, accountId) {
   const [promo] = await q.query('select welcome_days from feture.premium_promo where id');
   if (!promo?.welcome_days) return;
   if ((await q.query(`select 1 from feture.entitlement where account_id = $1 and source = 'promo' and reason = 'welcome'`, [accountId])).length) return;
-  await grantPeriod(q, accountId, 'promo', promo.welcome_days, { reason: 'welcome' });
+  await grantPeriod(q, accountId, 'promo', promo.welcome_days, { reason: 'welcome', why: 'welcome' });
 }
 
 /** Ends the account's subscriptions at their providers before the account is deleted: a deleted account must not go on
@@ -547,7 +548,7 @@ const run = {
                     select id, 'promo', s, s + make_interval(days => $2), $3, $4 from t returning account_id, ends_at),
             upd as (update feture.account a set premium_until = ins.ends_at, updated_at = now() from ins where a.id = ins.account_id returning a.id)
        select account_id, ends_at from ins`, [targets.map(r => r.id), input.days, account.id, input.reason]);
-    for (const g of given) await enqueue(q, 'premium.granted', targets.find(r => r.id === g.account_id)?.person_profile_id ?? null, { for: g.account_id, days: input.days, until: new Date(g.ends_at).toISOString() });
+    for (const g of given) await enqueue(q, 'premium.grantedBulk', targets.find(r => r.id === g.account_id)?.person_profile_id ?? null, { for: g.account_id, days: input.days, until: new Date(g.ends_at).toISOString() });
     await journal(q, account.id, 'premium.grantAll', 'premium', account.id, { count: given.length, days: input.days, audience: input.audience, before: input.before ?? null, reason: input.reason });
     return { count: given.length };
   },

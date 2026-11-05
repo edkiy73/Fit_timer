@@ -688,6 +688,7 @@ test('Premium in bulk: a count first, one period each queued after their own, jo
     assert.ok(Math.abs(await until(a) - (Date.now() + 7 * 86400000)) < 60000);
     assert.ok(Math.abs(await until(b) - (kiraBefore + 7 * 86400000)) < 60000, 'queued after her own 10 days');
     assert.equal((await db.query(`select count(*)::int n from feture.entitlement where source = 'promo'`))[0].n, 4);
+    assert.equal((await db.query(`select count(*)::int n from feture.outbox where topic = 'premium.grantedBulk'`))[0].n, 4, 'told, without an email each');
     assert.equal((await db.query(`select count(*)::int n from feture.staff_action where action = 'premium.grantAll'`))[0].n, 1);
     assert.equal((await call('uo', null, { action: 'staff.premiumGrantAll', opId: op(), audience: 'before', before: '2000-01-01', days: 7, reason: 'никому' })).rule, 'nobody');
 
@@ -745,6 +746,7 @@ test('invitations and promo codes: rewarded only after onboarding and the age ch
     assert.ok(Math.abs(new Date(await until(n1)).getTime() - (Date.now() + 7 * DAY)) < 60000, 'the newcomer: 7 days');
     assert.ok(Math.abs(new Date(await until(inviter)).getTime() - (Date.now() + 7 * DAY)) < 60000, 'the inviter: 7 days, once');
     assert.equal((await db.query(`select count(*)::int n from feture.outbox where topic = 'premium.referral'`))[0].n, 1);
+    assert.ok((await db.query(`select payload from feture.outbox where topic = 'premium.granted' order by created_at desc limit 5`)).some(r => r.payload.why === 'invited'), 'the newcomer is told it is the invitation bonus');
     const stats = await call('ua', inviter, { action: 'referral.mine', opId: op() });
     assert.deepEqual([stats.invited, stats.rewarded], [1, 1]);
 
