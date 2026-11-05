@@ -48,16 +48,10 @@ export const ru = {
   'fe.cc.coverUpload': 'Загрузить фото 16:9',
   'fe.cc.coverReplace': 'Заменить фото',
   'fe.cc.coverRemove': 'Убрать обложку',
-  'fe.cc.coverOr': 'Или выбери цвет',
+  'fe.cc.err.coverNeeded': 'Добавь обложку — без неё сообщество не создать',
   'fe.cc.coverUploading': 'Загружаем…',
   'fe.cc.coverType': 'Подойдёт фото в JPEG, PNG или WebP',
   'fe.cc.coverSize': 'Фото больше 20 МБ — выбери поменьше',
-  'fe.cc.plate.lilac': 'Сиреневый',
-  'fe.cc.plate.rose': 'Розовый',
-  'fe.cc.plate.sea': 'Морской',
-  'fe.cc.plate.amber': 'Янтарный',
-  'fe.cc.plate.moss': 'Моховой',
-  'fe.cc.plate.coal': 'Угольный',
 } as const;
 
 export const en = {
@@ -109,14 +103,8 @@ export const en = {
   'fe.cc.coverUpload': 'Upload a 16:9 photo',
   'fe.cc.coverReplace': 'Replace photo',
   'fe.cc.coverRemove': 'Remove cover',
-  'fe.cc.coverOr': 'Or pick a colour',
+  'fe.cc.err.coverNeeded': 'Add a cover — a community can’t be created without one',
   'fe.cc.coverUploading': 'Uploading…',
   'fe.cc.coverType': 'Use a JPEG, PNG or WebP photo',
   'fe.cc.coverSize': 'The photo is over 20 MB — pick a smaller one',
-  'fe.cc.plate.lilac': 'Lilac',
-  'fe.cc.plate.rose': 'Rose',
-  'fe.cc.plate.sea': 'Sea',
-  'fe.cc.plate.amber': 'Amber',
-  'fe.cc.plate.moss': 'Moss',
-  'fe.cc.plate.coal': 'Coal',
 } as const;

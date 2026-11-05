@@ -32,9 +32,12 @@ export default [
    await t.see('.stepper:has-text("1/4")');
    await next(t);
    await t.see('.field.err:has-text("Минимум 5 символов")'); await t.see('.field.err:has-text("Выбери тип события")');
+   await t.see('.err:has-text("Добавь обложку")'); // the cover is required (06.11.2026)
    await t.fill('input[name="title"]', 'E2E проверка шагов');
    await t.tap('.chip:has-text("Обсуждение")');
    await t.fill('textarea[name="desc"]', 'Описание для проверки шагов формы события, длинное достаточно.');
+   await t.page.locator('[data-field="cover"] input[type="file"]').setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: PNG });
+   await uploaderDone(t);
    await next(t); await t.see('.stepper:has-text("2/4")');
    await t.tap('.chip:has-text("Онлайн")');
    await t.fill('input[name="link"]', 'http://plain');
@@ -75,7 +78,8 @@ export default [
    await t.fill('input[name="title"]', title);
    await t.tap('.chip:has-text("Встреча")');
    await t.fill('textarea[name="desc"]', 'Тестовое событие сценариев: заявки, ответы, объявления, отмена.');
-   await t.tap('button[aria-label="Морской"]');
+   await t.page.locator('[data-field="cover"] input[type="file"]').setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: PNG });
+   await uploaderDone(t);
    await next(t); await t.see('.stepper:has-text("2/4")');
    const d = new Date(Date.now() + 3 * 864e5); const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
    await t.fill('input[name="date"]', iso);

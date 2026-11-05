@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {CircleAlert,Clock,Image as ImageIcon,Lock,RefreshCw,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActingAv,AddCard,Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Counter,Empty,FilePick,Group,Input,Note,SelectRow as KitSelectRow,Skel,Stack,Swatches,TextArea,useLeaveGuard,View} from './kit';
+import {ActingAv,AddCard,Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Counter,Empty,FilePick,Group,Input,Note,SelectRow as KitSelectRow,Skel,Stack,TextArea,useLeaveGuard,View} from './kit';
 import {useFe} from './session';
 import {Uploader} from './kit/Uploader';
 import {CityField} from './kit/Place';
@@ -77,8 +77,8 @@ const uploadIntent=z.object({ok:z.literal(true),assetId:z.uuid(),upload:z.object
 const okOnly=z.object({ok:z.literal(true)}).passthrough();
 export type Cover={id:string,preview:string};
 
-/** The cover block: a 16:9 photo (reviewed like any photo) or one of the colour plates. */
-export function CoverField({purpose,plate,setPlate,cover,setCover}:{purpose:'community'|'event',plate:string,setPlate:(k:PlateKey)=>void,cover:Cover|null,setCover:(c:Cover|null)=>void}){
+/** The cover block: a required 16:9 photo (reviewed like any photo); no colour stand-ins (owner 06.11.2026). */
+export function CoverField({purpose,cover,setCover}:{purpose:'community'|'event',cover:Cover|null,setCover:(c:Cover|null)=>void}){
  const {call}=useFe();const {t}=useI18n();const file=useRef<HTMLInputElement>(null);
  const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
  // A cover is one 16:9 photo through the kit uploader (crop, compress, no metadata).
@@ -91,9 +91,7 @@ export function CoverField({purpose,plate,setPlate,cover,setCover}:{purpose:'com
    onDone={got=>{setPicked(null);const g=got[0];if(g)setCover({id:g.id,preview:g.url});}}/>}
   {!cover&&<>
    <AddCard icon={ImageIcon} title={busy?t('fe.cc.coverUploading'):t('fe.fd.addCover')} sub="16:9" disabled={busy} onClick={()=>file.current?.click()}/>
-   {err&&<FErr>{err}</FErr>}
-   <div className="cov-or"><span>{t('fe.cc.coverOr')}</span>
-    <Swatches label={t('fe.cc.coverOr')} value={plate as PlateKey} onChange={k=>{setPlate(k);setCover(null);}} options={PLATE_KEYS.map(k=>[k,t('fe.cc.plate.'+k),namedPlate(k)] as const)}/></div></>}
+   {err&&<FErr>{err}</FErr>}</>}
  </div>;
 }
 
@@ -109,7 +107,7 @@ export function ChipGroup({items,selected,onToggle}:{items:[string,string][],sel
 }
 
 type Privacy='open'|'closed'|'hidden';
-type Errors=Partial<Record<'name'|'desc'|'topics'|'q0'|'rules'|'where',string>>;
+type Errors=Partial<Record<'name'|'desc'|'topics'|'q0'|'rules'|'where'|'cover',string>>;
 const created=z.object({ok:z.literal(true),id:z.uuid().optional(),state:z.string().optional(),pending:z.unknown().optional()}).passthrough();
 const ruleLines=(s:string)=>s.split('\n').map(x=>x.trim()).filter(Boolean);
 
@@ -181,6 +179,7 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
   const eq=privacy!=='open'?textError(t,'joinQuestion',q0):undefined;if(eq)e.q0=eq;
   const er=rulesError(rules);if(er)e.rules=er;
   if(!where)e.where=t('fe.cc.err.cityNeeded');
+  if(!cover)e.cover=t('fe.cc.err.coverNeeded');
   setErr(e);return !Object.keys(e).length;
  };
  /** The edit as `community.update` takes it: only the fields that differ from what was loaded. */
@@ -255,7 +254,8 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
     {where!=='online'&&<CityField label={t('fe.ce.city')} placeholder={t('fe.ce.cityPh')} places={catalog?.places??[]} value={where||null} error={err.where} fallbackName={t('fe.ece.c.placeCurrent')}
      onChange={id=>{if(id){setWhere(id);lastCity.current=id;clear('where');}}}/>}
     <Field name="rules" label={t('fe.cc.rules')} ph={t('fe.cc.rulesPh')} max={1000} check={rulesError} textarea rows={4} value={rules} onChange={v=>{setRules(v);clear('rules');}} err={err.rules}/>
-    <CoverField purpose="community" plate={plate} setPlate={setPlate} cover={cover} setCover={setCover}/>
+    <CoverField purpose="community" cover={cover} setCover={setCover}/>
+    {err.cover&&<FErr>{err.cover}</FErr>}
    </Card></Group>
    {failure&&<Alert kind="err" noIcon action={stale&&reload?<Btn kind="text" auto icon={RefreshCw} onClick={reload}>{t('fe.ece.reload')}</Btn>:undefined}>{failure}</Alert>}
   </div></div>

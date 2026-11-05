@@ -111,6 +111,7 @@ export const ru = {
   'fe.ce.err.question': 'Задай хотя бы один вопрос',
   'fe.ce.err.questionLong': 'Максимум 120 символов',
   'fe.ce.err.reqsLong': 'Максимум 500 символов',
+  'fe.ce.err.coverNeeded': 'Добавь обложку — без неё событие не создать',
   'fe.ce.err.cover': 'Эту обложку сейчас нельзя использовать — выбери другую',
 } as const;
 
@@ -226,5 +227,6 @@ export const en = {
   'fe.ce.err.question': 'Ask at least one question',
   'fe.ce.err.questionLong': 'At most 120 characters',
   'fe.ce.err.reqsLong': 'At most 500 characters',
+  'fe.ce.err.coverNeeded': 'Add a cover — an event can’t be created without one',
   'fe.ce.err.cover': 'This cover can’t be used right now — pick another',
 } as const;

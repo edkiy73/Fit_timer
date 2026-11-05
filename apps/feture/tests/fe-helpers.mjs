@@ -73,6 +73,21 @@ export async function setup({ commands, migrations = MIGRATIONS, signals, realti
   });
   /** @param {string} user @param {string | null} profile @param {Record<string, unknown>} body @param {Record<string, string>} [headers] */
   const call = async (user, profile, body, headers = {}) => {
+    // A cover photo is required to create a community or an event (owner 06.11.2026). Tests that are about something
+    // else get a fresh approved one; a test about the cover itself passes `coverAssetId: null` (or its own asset).
+    if (profile && body && typeof body === 'object') {
+      const purpose = body.action === 'community.create' ? 'community' : body.action === 'event.submit' || body.action === 'event.update' ? 'event' : null;
+      const form = purpose === 'event' ? body.event : body;
+      if (purpose && form && typeof form === 'object' && !('coverAssetId' in form)) {
+        // An edit keeps the event's own cover (a different one would go to staff review); a new one only when it has none.
+        const [own] = body.action === 'event.update' ? await db.query('select cover_asset_id id from feture.event where id = $1', [body.eventId]) : [];
+        const [{ id }] = own?.id ? [own] : await db.query(
+          `insert into feture.media_asset (owner_profile_id, uploaded_by, kind, purpose, storage_key, mime, declared_bytes, state, explicitness, copies_at)
+           select $1, a.id, 'image', $2, 'u/' || gen_random_uuid(), 'image/jpeg', 10, 'approved', 'safe', now() from feture.account a
+           where a.id in (select account_id from feture.profile_member where profile_id = $1 union select id from feture.account where person_profile_id = $1) limit 1 returning id`, [profile, purpose]);
+        body = purpose === 'event' ? { ...body, event: { ...form, coverAssetId: id } } : { ...body, coverAssetId: id };
+      }
+    }
     const res = { statusCode: 0, setHeader() {}, end(s) { this.body = JSON.parse(s); } };
     await handler({ method: 'POST', headers: { 'x-test-user': user, ...(profile ? { 'x-fe-profile': profile } : {}), ...headers }, body }, res);
     return { status: res.statusCode, ...res.body };

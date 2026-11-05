@@ -14,7 +14,7 @@
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 import { PROD, api, boot, post, session, sleep, uuid7 } from './lib.mjs';
-import { persona } from './personas.mjs';
+import { persona, coverFor } from './personas.mjs';
 const APP = process.env.APP || PROD;
 const LANE = process.env.E2E_LANE || 'local';
 const DIR = new URL('.', import.meta.url).pathname;
@@ -64,6 +64,8 @@ for (const sc of scenarios) {
     wait: ms => page.waitForTimeout(ms),
     api: (action, input, as, profile) => api(as || email, action, input, profile),
     persona: kind => persona(LANE, kind),
+    // An approved cover photo for a community or an event: required to create either.
+    cover: (purpose, as) => coverFor(as || email, purpose),
     admin: (action, body) => post('/api/admin', { action, ...body }, { 'x-admin-key': process.env.FE_ADMIN_KEY ?? '' }),
     pid: async as => { await api(as || email, 'profile.settings', {}); return (await session(as || email)).personId; },
     boot: as => boot(as || email), // session.bootstrap; also refreshes the cached person / couple ids for t.api
