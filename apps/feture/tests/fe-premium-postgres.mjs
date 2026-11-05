@@ -6,12 +6,13 @@ import { platform } from '../server/commands/platform.mjs';
 import { me } from '../server/commands/me.mjs';
 import { staff } from '../server/commands/staff.mjs';
 import { discover } from '../server/commands/discover.mjs';
-import { premium, sweepSelfies, verificationHandlers } from '../server/commands/premium.mjs';
+import { premium, sweepPremium, sweepSelfies, verificationHandlers } from '../server/commands/premium.mjs';
 import { photos } from '../server/commands/photos.mjs';
 import { verification } from '../server/commands/verification.mjs';
 import { mediaDto } from '../server/media/assets.mjs';
 import { tokenDelivery } from '../server/media/delivery.mjs';
 import { drain } from '../server/outbox.mjs';
+import { notifyHandlers } from '../server/notify.mjs';
 import { setup as baseSetup, op } from './fe-helpers.mjs';
 
 const setup = () => baseSetup({ commands: { ...platform, ...me, ...staff, ...discover, ...premium, ...photos, ...verification } });
@@ -476,4 +477,43 @@ test('Premium: staff grant and a gift to a couple’s nickname reach both partne
     assert.equal((await db.query(`select count(*)::int n from feture.staff_action where action = 'premium.grant'`))[0].n, 3);
     assert.equal((await call('uo', null, { action: 'staff.premiumGrant', opId: op(), handle: 'nobody1', days: 7, reason: 'нет' })).status, 404);
   } finally { await env.pg.close(); }
+});
+
+test('Premium notices: a week and a day ahead, over, once each; the partner is told; a couple’s own nickname does not double up', async () => {
+  const { pg, db, call, person, coupleOf } = await world();
+  try {
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira');
+    const pair = await coupleOf([a, b]);
+    await db.query(`update feture.profile set handle = 'alexkira' where id = $1`, [pair]);
+    const topics = async t => (await db.query(`select payload from feture.outbox where topic = $1 order by created_at`, [t])).map(r => r.payload);
+    // A grant to one partner tells the other that Premium works for the couple; a grant to the couple's nick does not.
+    await call('uo', null, { action: 'staff.premiumGrant', opId: op(), handle: 'Alex', days: 30, reason: 'Алексу' });
+    let told = await topics('premium.pair');
+    assert.equal(told.length, 1);
+    assert.equal(told[0].kind, 'started');
+    await call('uo', null, { action: 'staff.premiumGrant', opId: op(), handle: 'alexkira', days: 5, reason: 'паре' });
+    assert.equal((await topics('premium.pair')).length, 1, 'nothing extra for a grant to both');
+
+    const sweep = () => sweepPremium(db);
+    const setUntil = async (profile, sql) => db.query(`update feture.account set premium_until = ${sql} where person_profile_id = $1`, [profile]);
+    await setUntil(b, 'null'); // only Alex is in the clock's sight below
+    // Alex: 5 days left → the «week» notice, once; then under a day → «day», once.
+    await setUntil(a, `now() + interval '5 days'`);
+    assert.equal(await sweep(), 1);
+    assert.equal(await sweep(), 0, 'once');
+    await setUntil(a, `now() + interval '10 hours'`);
+    assert.equal(await sweep(), 1);
+    assert.deepEqual((await topics('premium.ending')).map(p => p.kind), ['week', 'day']);
+    // Over: «ended» once, and Kira (who has none) is told the couple lost it.
+    await setUntil(a, `now() - interval '1 hour'`);
+    assert.equal(await sweep(), 1);
+    assert.equal(await sweep(), 0);
+    assert.equal((await topics('premium.ended')).length, 1);
+    const ended = (await topics('premium.pair')).filter(p => p.kind === 'ended');
+    assert.equal(ended.length, 1);
+    // They become real rows with their own words.
+    await drain(db, notifyHandlers(db), { limit: 100, lockSeconds: 60 });
+    const rows = await db.query(`select type, data from feture.notification where type in ('premiumEnding', 'premiumEnded', 'premiumPair') order by created_at`);
+    assert.deepEqual([...new Set(rows.map(r => r.type))].sort(), ['premiumEnded', 'premiumEnding', 'premiumPair']);
+  } finally { await pg.close(); }
 });

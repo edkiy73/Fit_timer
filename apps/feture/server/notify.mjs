@@ -73,6 +73,15 @@ const TYPES = /** @type {Record<string, {type: string, actor?: string, object?: 
   // Staff decisions that used to say nothing (audit 30.10): a city proposal, a Premium grant / withdrawal, a staff role.
   'premium.granted': { type: 'premiumGranted' },
   'premium.revoked': { type: 'premiumRevoked' },
+  'premium.ending': { type: 'premiumEnding' },
+  'premium.ended': { type: 'premiumEnded' },
+  'premium.pair': { type: 'premiumPair' },
+  'premium.giftSent': { type: 'premiumGiftSent', actor: 'to' },
+  // Ready for the payment provider (docs/infra/payments.md): nothing enqueues the first two until it is connected.
+  'premium.renewalFailed': { type: 'premiumRenewalFailed' },
+  'premium.renewal': { type: 'premiumRenewal' },
+  'premium.receipt': { type: 'premiumReceipt' },
+  'premium.refunded': { type: 'premiumRefunded' },
   'staff.role': { type: 'staffRole' },
   'verification.decided': { type: 'ageCheck' },
   'verification.photoDecided': { type: 'photoCheck' },
