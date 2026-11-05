@@ -111,7 +111,7 @@ test('onboarding and profile views: own vs others, details visibility, age, nick
     assert.equal((await call('ud', d, { ...base, opId: op(), cityId: '00000000-0000-4000-8000-000000000000' })).status, 400);
     assert.equal((await call('ud', d, { ...base, opId: op(), cityId: myCity.placeId })).status, 200);
     assert.equal((await db.query('select city_id from feture.profile_details where profile_id = $1', [d]))[0].city_id, myCity.placeId);
-    assert.ok((await call('ud', null, { action: 'catalog.get' })).places.every((/** @type {any} */ x) => 'lat' in x && 'lon' in x));
+    assert.equal('places' in (await call('ud', null, { action: 'catalog.get' })), false, 'the catalog no longer carries the cities: they are searched');
     assert.equal((await call('uc', c, { action: 'profile.settings' })).settings.discoverMode, 'off');
     assert.equal((await call('ua', null, { action: 'session.bootstrap' })).account.onboarded, true);
 
@@ -322,5 +322,57 @@ test('«Обо мне» facts (owner 29.10.2026): validation, always visible to 
     const pair = await coupleOf([a, b]);
     assert.deepEqual((await up({ height: 180 }, 'ua', pair)).fields, ['height']);
     assert.deepEqual((await call('uc', c, { action: 'profile.get', profileId: pair })).profile.about, {});
+  } finally { await pg.close(); }
+});
+
+test('cities are searched on the server: popular first, word starts before the rest, ё and hyphens, a country, the nearest one', async () => {
+  const { pg, db, call, person } = await setup();
+  try {
+    await person('ua', 'Alex');
+    await db.query(`update feture.platform_setting set num = 0 where key = 'places_min_pop'`); // every size is offered here; the limit has its own test
+    const ins = (/** @type {string} */ c, /** @type {string} */ ru, /** @type {string} */ en, /** @type {number} */ lat, /** @type {number} */ lon, /** @type {number} */ pop, tz = 'Europe/Moscow') =>
+      db.query(`insert into feture.place (country, name_ru, name_en, state, lat, lon, population, tz) values ($1, $2, $3, 'approved', $4, $5, $6, $7) returning id`, [c, ru, en, lat, lon, pop, tz]);
+    const [{ id: nsk }] = await ins('RU', 'Новоградск', 'Novogradsk', 55.03, 82.92, 1600000, 'Asia/Novosibirsk');
+    await ins('RU', 'Новоградец', 'Novogradets', 66.08, 76.63, 110000);
+    await ins('RU', 'Старый Новоград', 'Old Novograd', 58.5, 31.3, 900000);
+    await ins('RU', 'Йошкар-Тест', 'Yoshkar-Test', 56.63, 47.88, 250000);
+    await ins('RU', 'Ёлкино', 'Yolkino', 55, 40, 20000);
+    await ins('RU', 'Сто%процентов', 'Hundred', 50, 40, 30000);
+    const search = async (/** @type {any} */ body) => (await call('ua', null, { action: 'place.search', ...body })).items;
+    const names = (/** @type {any[]} */ xs) => xs.map(x => x.ru);
+
+    // Nothing typed: the popular cities in the curated order; with a country its biggest ones.
+    const pop = await search({});
+    assert.deepEqual(names(pop).slice(0, 3), ['Москва', 'Санкт-Петербург', 'Берлин']);
+    assert.deepEqual(names(await search({ country: 'RU' })).slice(0, 2), ['Новоградск', 'Старый Новоград']); // by population
+    // «новог»: names that start with it first (the biggest first), then a word start, no matter the case.
+    assert.deepEqual(names(await search({ q: 'НОВОГ' })), ['Новоградск', 'Новоградец', 'Старый Новоград']);
+    // The English spelling finds it too; ё and hyphens do not matter.
+    assert.deepEqual(names(await search({ q: 'novograds' })), ['Новоградск']);
+    assert.deepEqual(names(await search({ q: 'йошкар тест' })), ['Йошкар-Тест']);
+    assert.deepEqual(names(await search({ q: 'елк' })), ['Ёлкино']);
+    // A country narrows the list; a limit is kept; % and _ typed by the person are literal.
+    const de = await search({ q: 'бер', country: 'DE' });
+    assert.equal(de[0].ru, 'Берлин');
+    assert.ok(de.every((/** @type {any} */ x) => x.country === 'DE'));
+    assert.equal((await search({ q: 'нов', limit: 2 })).length, 2);
+    assert.deepEqual(names(await search({ q: '%' })), ['Сто%процентов']);
+    assert.deepEqual(await search({ q: '_' }), []);
+    // A row carries what the screens need: coordinates, population and the time zone (the event's time follows the city).
+    const row = (await search({ q: 'новоградс' }))[0];
+    assert.deepEqual([row.id, row.country, row.en, row.pop, row.tz], [nsk, 'RU', 'Novogradsk', 1600000, 'Asia/Novosibirsk']);
+    assert.ok(typeof row.lat === 'number' && typeof row.lon === 'number');
+    assert.equal('code' in row, false, 'only the seeded cities have a code');
+    assert.equal('code' in (await search({ q: 'берлин' }))[0], true);
+
+    // By id: names for what a screen already shows; an unknown id is simply absent.
+    const got = (await call('ua', null, { action: 'place.get', ids: [nsk, '00000000-0000-4000-8000-000000000000'] })).items;
+    assert.deepEqual(got.map((/** @type {any} */ x) => x.ru), ['Новоградск']);
+    assert.equal((await call('ua', null, { action: 'place.get', ids: [] })).status, 400);
+
+    // The nearest catalog city within 150 km; open sea has none.
+    assert.equal((await call('ua', null, { action: 'place.nearest', lat: 55.1, lon: 82.9 })).place.ru, 'Новоградск');
+    assert.equal((await call('ua', null, { action: 'place.nearest', lat: 0, lon: -30 })).place, null);
+    assert.equal((await call('ua', null, { action: 'place.nearest', lat: 120, lon: 0 })).status, 400);
   } finally { await pg.close(); }
 });

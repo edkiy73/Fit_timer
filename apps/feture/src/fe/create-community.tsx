@@ -8,6 +8,7 @@ import {ActingAv,AddCard,Alert,Bar,Btn,Card,Chip,Chips,ChoiceChips,Counter,Empty
 import {useFe} from './session';
 import {Uploader} from './kit/Uploader';
 import {CityField} from './kit/Place';
+import {useCityApi} from './places';
 import {PhotoTiles} from './kit/PhotoTiles';
 import {useSendPhoto} from './media-upload';
 
@@ -19,10 +20,9 @@ import {PLATE_KEYS,namedPlate,type PlateKey} from './ui';
 export {PLATE_KEYS,namedPlate,type PlateKey};
 
 const catalogRes=z.object({ok:z.literal(true),
- topics:z.array(z.object({id:z.string(),ru:z.string(),en:z.string()}).passthrough()),
- places:z.array(z.object({id:z.uuid(),code:z.string().nullable().optional(),country:z.string().nullable().optional(),ru:z.string().nullable(),en:z.string().nullable()}).passthrough())}).passthrough();
+ topics:z.array(z.object({id:z.string(),ru:z.string(),en:z.string()}).passthrough())}).passthrough();
 export type Catalog=z.infer<typeof catalogRes>;
-/** Topics and approved places (`catalog.get`). */
+/** The topics (`catalog.get`); cities are searched on the server (`useCityApi`). */
 export function useCatalog(){
  const {call}=useFe();const [c,setC]=useState<Catalog|null>(null);
  useEffect(()=>{call('catalog.get',{},catalogRes,{asAccount:true}).then(setC).catch(()=>{});},[call]);
@@ -157,6 +157,7 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
  const [name,setName]=useState(pend.name??edit?.name??'');const [desc,setDesc]=useState(pend.description??edit?.description??'');const [topics,setTopics]=useState<string[]>(edit?.topics??[]);
  const lastCity=useRef('');
  const [privacy,setPrivacy]=useState<Privacy>(pend.privacy??edit?.privacy??'open');const [q0,setQ0]=useState((pend.joinQuestion!==undefined?pend.joinQuestion:edit?.joinQuestion)??'');const [where,setWhere]=useState(edit?(edit.placeId??'online'):'online');
+ const cityApi=useCityApi(where&&where!=='online'?where:null);
  const [rules,setRules]=useState(edit?.rules.join('\n')??'');const [plate,setPlate]=useState<PlateKey>(()=>PLATE_KEYS.find(k=>k===edit?.plate)??'lilac');const [cover,setCover]=useState<Cover|null>(()=>coverOf(edit));
  const [err,setErr]=useState<Errors>({});const [busy,setBusy]=useState(false);const setFailure=useFail();const [topicsMax,setTopicsMax]=useState(false);
  const couple=acting?.kind==='couple';
@@ -231,7 +232,6 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
  };
 
  const topicItems:[string,string][]=(catalog?.topics??[]).map(x=>[x.id,locale==='en'?x.en:x.ru]);
- const known=(catalog?.places??[]).map(p=>[p.id,placeName(p,locale)] as [string,string]);
  const published=edit?.state==='published';
  return <>
   {guard.node}
@@ -252,7 +252,7 @@ function CommunityForm({edit,reload}:{edit?:EditableCommunity&{rev:number},reloa
     <div className="field" data-field="where"><span className="flabel">{t('fe.cc.where')}</span>
      <ChoiceChips label={t('fe.cc.where')} value={where==='online'?'online':'city'} options={[['online',t('fe.cc.online')],['city',t('fe.cc.inCity')]]}
       onChange={v=>{if(v==='online'){if(where!=='online'&&where)lastCity.current=where;setWhere('online');}else setWhere(lastCity.current);clear('where');}}/></div>
-    {where!=='online'&&<CityField label={t('fe.ce.city')} placeholder={t('fe.ce.cityPh')} places={catalog?.places??[]} value={where||null} error={err.where} fallbackName={t('fe.ece.c.placeCurrent')}
+    {where!=='online'&&<CityField api={cityApi} label={t('fe.ce.city')} placeholder={t('fe.ce.cityPh')} value={where||null} error={err.where} fallbackName={t('fe.ece.c.placeCurrent')}
      onChange={id=>{if(id){setWhere(id);lastCity.current=id;clear('where');}}}/>}
     <Field name="rules" label={t('fe.cc.rules')} ph={t('fe.cc.rulesPh')} max={1000} check={rulesError} textarea rows={4} value={rules} onChange={v=>{setRules(v);clear('rules');}} err={err.rules}/>
     <CoverField purpose="community" cover={cover} setCover={setCover}/>

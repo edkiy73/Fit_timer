@@ -7,11 +7,12 @@ import {FeError,feErrorMessage} from '../feture/fe-api';
 import {ActingAv,Alert,Bar,Btn,Card,Chip,Chips,Counter,Empty,EventHero,Fact,Group,Note,RichEditor,Row,Seg,Select,Skel,Stack,Steps,ToggleRow,useLeaveGuard,View,useBack} from './kit';
 import {NamedPlate} from './comm-kit';
 import {RichText} from './post-parts';
-import {CityField} from './kit/Place';
+import {CityField,type Place} from './kit/Place';
+import {useCityApi} from './places';
 import {useFe} from './session';
 import {ONLINE_ZONES,placeZone,zoneLabel} from './event-time';
 import {FIELD,lineRule,serverFields,textError,textErrorMessage,type FieldName} from './kit/validate';
-import {ChipGroup,CoverField,FErr,Field,PLATE_KEYS,SelectRow,placeName,reviewNotice,shakeFirstErr,useCatalog,useOp,type Cover,type PlateKey} from './create-community';
+import {ChipGroup,CoverField,FErr,Field,PLATE_KEYS,SelectRow,placeName,reviewNotice,shakeFirstErr,useOp,type Cover,type PlateKey} from './create-community';
 import {useFail,useToast} from './toast';
 
 /** V21 E11 «Новое событие»: four steps (basics, time and place, admission, review), the draft saved on the server at
@@ -210,7 +211,7 @@ export function EditEventScreen(){
 }
 
 function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void,resume?:Resume,community?:string|null}){
- const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const catalog=useCatalog();
+ const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();
  const draftOp=useOp(),submitOp=useOp(),deleteOp=useOp(),updateOp=useOp();
  const [f,setF]=useState<Form>(()=>edit?.form??resume?.form??{...fresh(),communityId:community??''});const [step,setStep]=useState(resume?.step??1);const [cityOpen,setCityOpen]=useState(false);const [err,setErr]=useState<Errors>({});
  const [draftId,setDraftId]=useState<string|null>(resume?.id??null);const [busy,setBusy]=useState(false);const [kept,setKept]=useState(false);
@@ -227,10 +228,11 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
  // No city is chosen for the organiser: the place is an empty required choice (checked on step 2).
  useEffect(()=>{document.querySelector('.v21 .view')?.scrollTo({top:0});},[step]);
 
- const placeOf=(id:string)=>catalog?.places.find(p=>p.id===id);
- // An offline event keeps the zone of its city; the zone is never typed in.
- const pickPlace=(id:string)=>setF(x=>({...x,placeId:id,tz:placeZone(placeOf(id))??x.tz}));
- const pickFormat=(k:'offline'|'online')=>setF(x=>({...x,format:k,tz:k==='offline'?(placeZone(placeOf(x.placeId))??x.tz):(ONLINE_ZONES.includes(x.tz)?x.tz:ONLINE_ZONES.includes(userTz())?userTz():ONLINE_ZONES[0]!)}));
+
+ // The chosen city (its name, its time zone) comes from the server; an offline event keeps the zone of its city, never typed in.
+ const cityApi=useCityApi(f.placeId||null);const city=cityApi.current;
+ const pickPlace=(id:string,p?:Place)=>setF(x=>({...x,placeId:id,tz:placeZone(p)??x.tz}));
+ const pickFormat=(k:'offline'|'online')=>setF(x=>({...x,format:k,tz:k==='offline'?(placeZone(city)??x.tz):(ONLINE_ZONES.includes(x.tz)?x.tz:ONLINE_ZONES.includes(userTz())?userTz():ONLINE_ZONES[0]!)}));
  const set=<K extends Key>(k:K,v:Form[K])=>{setF(x=>({...x,[k]:v}));setErr(e=>{if(!e[k])return e;const n={...e};delete n[k];return n;});};
  const saveDraft=async(nextStep:number)=>{
   const payload={...(draftId?{draftId}:{}),step:nextStep,form:draftOf(f)};
@@ -302,7 +304,6 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
  };
 
  const names=[1,2,3,4].map(i=>t('fe.ce.step.'+i));
- const places:[string,string][]=(catalog?.places??[]).map(p=>[p.id,placeName(p,locale)]);
  const tzItems:[string,string][]=[...new Set([f.tz,...ONLINE_ZONES])].map(z=>[z,zoneLabel(z,f.date?new Date(times(f).start||Date.now()).toISOString():new Date().toISOString(),locale)] as [string,string]);
  const chip=(on:boolean,label:string,onClick:()=>void,key:string)=><Chip key={key} on={on} onClick={onClick}>{label}</Chip>;
 
@@ -335,8 +336,8 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
    <Select label={t('fe.ce.tz')} value={f.tz} onChange={v=>set('tz',v)} options={tzItems}/>
    {err.tz?<FErr>{err.tz}</FErr>:<div className="fhint">{t('fe.ce.tzHintOnline')}</div>}</label>}
   {f.format==='offline'?<>
-   <div data-field="city"><CityField label={t('fe.ce.city')} placeholder={t('fe.ce.cityPh')} places={catalog?.places??[]} value={f.placeId||null} error={err.placeId}
-     onChange={id=>{if(id){pickPlace(id);setErr(e=>({...e,placeId:''}));}}}/>
+   <div data-field="city"><CityField api={cityApi} label={t('fe.ce.city')} placeholder={t('fe.ce.cityPh')} value={f.placeId||null} error={err.placeId}
+     onChange={(id,p)=>{if(id){pickPlace(id,p);setErr(e=>({...e,placeId:''}));}}}/>
     {f.placeId&&<div className="fhint" data-field="tz">{t('fe.ce.tzFromCity',{zone:zoneLabel(f.tz,new Date(times(f).start||Date.now()).toISOString(),locale)})}</div>}</div>
    <Field name="area" label={t('fe.ce.area')} ph={t('fe.ce.areaPh')} check="eventArea" value={f.area} onChange={v=>set('area',v)} err={err.area}/>
    <Field name="addr" label={t('fe.ce.addr')} icon={Lock} ph={t('fe.ce.addrPh')} check="eventAddress" value={f.exactAddress} onChange={v=>set('exactAddress',v)} err={err.exactAddress}/>
@@ -362,7 +363,7 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
   const fmt=(ms:number,o:Intl.DateTimeFormatOptions)=>{try{return new Date(ms).toLocaleString(locale==='en'?'en':'ru',{...o,timeZone:tzView});}catch{return new Date(ms).toLocaleString(locale==='en'?'en':'ru',o);}};
   const priceText=f.price==='free'?t('fe.ce.price.free'):`${f.amount.trim()} ${f.currency}`;
   const site=f.price==='ext'?ticketHref(f.ticketUrl).replace(/^https?:\/\//i,'').split('/')[0]??'':'';
-  const area=f.format==='online'?t('fe.ce.online'):f.area.trim()||(catalog?placeName(catalog.places.find(p=>p.id===f.placeId)??{ru:'',en:''},locale):'');
+  const area=f.format==='online'?t('fe.ce.online'):f.area.trim()||(city?placeName(city,locale):'');
   body=<>
    <Seg value={pv} onChange={setPv} options={[{id:'all',label:t('fe.ce.pv.all')},{id:'ok',label:t('fe.ce.pv.ok')}]}/>
    {/* The same skeleton as the event's own page: the cover with the title, who organises, when / where / price, about. */}

@@ -6,6 +6,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Search,Ban,Bell,CalendarDays,Check,ChevronDown,ChevronLeft,ChevronRight,EyeOff,Heart,Ellipsis,History,Info,KeyRound,LocateFixed,Lock,MapPin,MessageCircle,SlidersHorizontal,Sparkles,Undo2,Users,X} from 'lucide-react';
 import {CityField} from './kit/Place';
+import {useCityApi} from './places';
 import {Alert,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,IconBtn,LikeTile,Note,PairArt,PersonName,PhotoBars,Pill,Radar,Range,RangeDual,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Soon,Stack,Text,View,plate,useScrollTo,ProfileAv,useKept} from './kit';
 import {useFe,useShown} from './session';
 import {useFail,useToast} from './toast';
@@ -151,7 +152,7 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
  const on=dfOn(f);
  const apply=async()=>{setBusy(true);
   try{const r=await call('discover.setFilter',{opId:newOpId(),filter:f},filterRes);onApplied(r.filter);}catch(e){fail(feErrorMessage(e,t));}finally{setBusy(false);}};
- const place=f.cityId?cat?.places.find(p=>p.id===f.cityId):null;
+ const cityApi=useCityApi(f.cityId);const place=cityApi.current??null;
  const summary=()=>{
   const parts:string[]=[];
   if(f.placeMode==='nearby')parts.push(fill(t('fe.w7.df.sumNear'),{n:f.radiusKm}));else if(!f.cityId)parts.push(t('fe.df.sumAnywhere'));else if(place)parts.push(lab(place));
@@ -193,7 +194,7 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
      <Stack gap={3}>
      <ChoiceChips label={t('fe.df.where')} value={where} options={(['any','city','nearby'] as const).map(v=>[v,v==='nearby'?t('fe.w7.df.nearby'):t('fe.df.where.'+v)] as const)}
       onChange={setWhereTo}/>
-     {where==='city'&&<CityField label={t('fe.df.city')} placeholder={t('fe.df.pickCity')} places={cat?.places??[]} value={f.cityId}
+     {where==='city'&&<CityField api={cityApi} label={t('fe.df.city')} placeholder={t('fe.df.pickCity')} value={f.cityId}
       clear={t('fe.df.where.any')} onChange={id=>{if(id)setF(x=>({...x,placeMode:'city',cityId:id}));else setWhereTo('any');}}/>}
      </Stack>
      {where==='nearby'&&<Stack gap={2} className="df-near">

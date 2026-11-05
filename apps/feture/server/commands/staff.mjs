@@ -7,6 +7,7 @@ import { passSignin } from '../signin.mjs';
 import { staffFactorRequired } from '../staff-factor-switch.mjs';
 import { pageInfo, plainRows, queuePageSql } from '../queue-page.mjs';
 import { staffOwn } from '../sql-rules.mjs';
+import { placesMinPop } from '../places.mjs';
 
 /** Media queue sort: the upload time, then the id (unique). */
 /** The journal reads newest first, always. */
@@ -452,6 +453,27 @@ const run = {
       });
     }
     return { state: input.decision === 'approve' ? 'approved' : input.reason === 'csam_suspected' ? 'blocked' : 'rejected' };
+  },
+
+  async 'staff.placeLimit'(q, { account }) {
+    await requireStaff(q, account, ['owner', 'lead']);
+    const minPop = await placesMinPop(q);
+    // How many cities each step would offer (the curated ones with a code are always there).
+    const [c] = await q.query(`select count(*)::int total, count(*) filter (where code is not null)::int seeded,
+        count(*) filter (where population >= 15000 or code is not null)::int p15, count(*) filter (where population >= 30000 or code is not null)::int p30,
+        count(*) filter (where population >= 50000 or code is not null)::int p50, count(*) filter (where population >= 100000 or code is not null)::int p100,
+        count(*) filter (where population >= 250000 or code is not null)::int p250, count(*) filter (where population >= 500000 or code is not null)::int p500
+      from feture.place where state = 'approved'`);
+    return { minPop, total: c.total, steps: [[15000, c.p15], [30000, c.p30], [50000, c.p50], [100000, c.p100], [250000, c.p250], [500000, c.p500]].map(([pop, cities]) => ({ minPop: pop, cities })) };
+  },
+
+  async 'staff.placeLimitSet'(q, { account, input }) {
+    await requireStaff(q, account, ['owner', 'lead']);
+    await q.query(
+      `insert into feture.platform_setting (key, num, changed_by, changed_at) values ('places_min_pop', $1, $2, now())
+       on conflict (key) do update set num = $1, changed_by = $2, changed_at = now()`, [input.minPop, account.id]);
+    await journal(q, account.id, 'place.limit', 'platform', null, { minPop: input.minPop });
+    return { minPop: input.minPop };
   },
 
   async 'staff.datingSwitch'(q, { account, input }) {

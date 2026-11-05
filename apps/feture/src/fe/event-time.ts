@@ -59,23 +59,12 @@ export function evRange(e:Timed,locale:string){
 const CODE_TZ:Record<string,string>={abakan:'Asia/Krasnoyarsk',krasnoyarsk:'Asia/Krasnoyarsk',novosibirsk:'Asia/Novosibirsk',yekaterinburg:'Asia/Yekaterinburg'};
 const COUNTRY_TZ:Record<string,string>={DE:'Europe/Berlin',RU:'Europe/Moscow',GB:'Europe/London',AT:'Europe/Vienna',CH:'Europe/Zurich',NL:'Europe/Amsterdam',
  FR:'Europe/Paris',ES:'Europe/Madrid',IT:'Europe/Rome',PL:'Europe/Warsaw',CZ:'Europe/Prague',UA:'Europe/Kyiv',TR:'Europe/Istanbul',GE:'Asia/Tbilisi',KZ:'Asia/Almaty'};
-export const placeZone=(p:{code?:string|null|undefined,country?:string|null|undefined}|null|undefined)=>
- p?(p.code&&CODE_TZ[p.code])||(p.country&&COUNTRY_TZ[p.country.toUpperCase()])||null:null;
+/** The zone of a city: its own (GeoNames gives every catalog city one); the short tables only back up a city without it. */
+export const placeZone=(p:{code?:string|null|undefined,country?:string|null|undefined,tz?:string|null|undefined}|null|undefined)=>
+ p?p.tz||(p.code&&CODE_TZ[p.code])||(p.country&&COUNTRY_TZ[p.country.toUpperCase()])||null:null;
 /** Zones offered for an online event, which has no city. */
 export const ONLINE_ZONES=['Europe/Berlin','Europe/Moscow','Europe/London','Europe/Kyiv','Europe/Istanbul','Asia/Tbilisi','Asia/Dubai','Asia/Almaty','Asia/Tashkent','Asia/Yekaterinburg','Asia/Novosibirsk','Asia/Krasnoyarsk','Asia/Irkutsk','Asia/Vladivostok','Asia/Bangkok','Asia/Singapore','Asia/Tokyo','Australia/Sydney','Pacific/Auckland','America/Sao_Paulo','America/New_York','America/Chicago','America/Denver','America/Los_Angeles','UTC'];
 
-const placesRes=z.object({ok:z.literal(true),places:z.array(z.object({id:z.uuid(),ru:z.string().nullable(),en:z.string().nullable()}).passthrough())}).passthrough();
-let placesCache:Promise<Map<string,{ru:string|null,en:string|null}>>|null=null;
-/** City names of approved places, loaded once for every card on the screen. */
-export function usePlaces(){
- const {call}=useFe();const [m,setM]=useState<Map<string,{ru:string|null,en:string|null}>|null>(null);
- useEffect(()=>{
-  placesCache??=call('catalog.get',{},placesRes,{asAccount:true}).then(r=>new Map(r.places.map(p=>[p.id,{ru:p.ru,en:p.en}] as const)));
-  let live=true;placesCache.then(x=>{if(live)setM(x);}).catch(()=>{placesCache=null;});
-  return ()=>{live=false;};
- },[call]);
- return m;
-}
 /** «Берлин · Кройцберг» — the city and the district, never the exact address. */
 export function evWhere(e:{format:string,area?:string|null|undefined,place_id?:string|null|undefined,placeId?:string|null|undefined},
  places:Map<string,{ru:string|null,en:string|null}>|null,locale:string,online:string,fallback:string){

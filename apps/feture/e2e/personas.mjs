@@ -212,7 +212,7 @@ async function hostEvent(email, title, price, extra = {}) {
   const ev = (await api(email, 'event.mine', {})).organizing ?? [];
   let e = ev.find(x => x.title === title && ['published', 'in_review'].includes(x.state) && (!x.startsAt || Date.parse(x.startsAt) > Date.now() + 7 * 864e5));
   if (!e) {
-    const places = (await api(email, 'catalog.get', {})).places ?? [];
+    const places = (await api(email, 'place.search', { q: 'берлин', country: 'DE' })).items ?? []; // the catalog is searched, not listed
     const start = new Date(Date.now() + 60 * 864e5); start.setUTCHours(17, 0, 0, 0);
     const r = must(await api(email, 'event.submit', { opId: uuid7(), event: {
       title, kind: 'meetup', description: 'Открытая встреча для сценариев: отметки «иду», адрес, сохранение.', format: 'offline',
