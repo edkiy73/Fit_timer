@@ -463,7 +463,7 @@ export function ProfilePage({p,preview,seg,bar,onMore,menu,onRefresh,pre,gal,chi
    <ProfileHero p={p} rel={rel} inert={inert} onOpen={setView}/>
    {/* Owner 05.11.2026, one order on every profile: the buttons right under the photo, then the comparison, the bio, the pair, «Обо мне». My own pair has no buttons at all. */}
    {noActs?null:rel||inert?<PersonActions p={p} rel={rel} setRel={setRel} inert={inert}/>:<div className="pa-hold" aria-hidden="true"><i className="sk"/><i className="sk"/><i className="sk"/></div>}
-   {!preview&&!self&&<CompatSummary profileId={p.id} {...(pre?{pre:pre.compat}:{})}/>}
+   {!preview&&!noActs&&<CompatSummary profileId={p.id} {...(pre?{pre:pre.compat}:{})}/>}
    <PersonBio p={p}/>
    <PairGroup p={p} inert={inert}/>
    <AboutGroup p={p} inert={inert}/>
