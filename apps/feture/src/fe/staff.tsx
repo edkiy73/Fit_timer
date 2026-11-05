@@ -6,7 +6,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ArrowUpDown,BadgeCheck,Ban,CalendarDays,Check,ClipboardCheck,ChevronLeft,ChevronRight,Eye,FilePen,Flag,Gavel,IdCard,Image,ImageOff,Inbox,ListFilter,Lock,MapPin,Minus,RefreshCw,Scale,Search,ShieldAlert,ShieldCheck,User,UserPlus,Tags,Plus,FileText,EyeOff,ChartColumn,Copy,Filter,UserX,Users,X,Ellipsis,Film,Mic,Camera,Image as ImageIcon,LifeBuoy,Crown,Wrench,ScrollText,KeyRound,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Actions,Alert,Btn,Swipe,Card,CheckList,ToggleRow,RadioList,Chip,ChoiceChips,MultiChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewBar,ReviewCard,StatCard,ReviewMedia,ReviewObject,ReviewPair,ReviewTiles,ReviewPreview,type Slide,useBackClose,Row,SearchInput,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble,useKept} from './kit';
-import {askFactor,useFe,useLive} from './session';
+import {askFactor,useFe,useLive,useSeen} from './session';
 import {useToast} from './toast';
 import {pullStaffCounts,useStaffCounts} from './staff-counts';
 import {Viewer} from './post-parts';
@@ -191,7 +191,7 @@ function mergeLive(d:Loaded|null,id:QueueId,order:Order,r:PageOf):Loaded|null{
 
 function Queues(){
  const {call}=useFe();const {t}=useI18n();const toast=useToast();const roles=useStaffRoles();
- const [data,setData]=useState<Loaded|null>(null);const [tab,setTab]=useKept<QueueId|'all'>('tab','all');const [notice,setNotice]=useState('');
+ const [data,setData]=useSeen<Loaded|null>('Queues.data',()=>null);const [tab,setTab]=useKept<QueueId|'all'>('tab','all');const [notice,setNotice]=useState('');
  // One list by the time each item arrived, newest on top (a new arrival is where it is expected); the button turns it round.
  const [order,setOrder]=useState<Order>('new');
  const [only,setOnly]=useState<'all'|'urgent'|'late'>('all');
@@ -1146,7 +1146,7 @@ const wordsRes=z.object({ok:z.literal(true),items:z.array(z.object({word:z.strin
  * the report queue («Автофильтр»); it is not held back. Whole words, any case. */
 function Words(){
  const {call}=useFe();const {t}=useI18n();const toast=useToast();
- const [items,setItems]=useState<z.infer<typeof wordsRes>['items']|null>(null);const [error,setError]=useState<unknown>(null);
+ const [items,setItems]=useSeen<z.infer<typeof wordsRes>['items']|null>('Words.items',()=>null);const [error,setError]=useState<unknown>(null);
  const [word,setWord]=useState('');const [busy,setBusy]=useState(false);
  const load=useCallback(()=>{call('staff.words',{},wordsRes,{asAccount:true}).then(r=>{setItems(r.items);setError(null);}).catch(setError);},[call]);
  useEffect(load,[load]);
@@ -1179,7 +1179,7 @@ function Transparency(){
  const day=(d:Date)=>d.toISOString().slice(0,10);
  const [months,setMonths]=useState<'6'|'12'>('6');
  const to=day(new Date()),from=day(new Date(Date.now()-Number(months)*30.5*864e5));
- const [data,setData]=useState<z.infer<typeof reportRes>|null>(null);const [error,setError]=useState<unknown>(null);
+ const [data,setData]=useSeen<z.infer<typeof reportRes>|null>('Transparency.data',()=>null);const [error,setError]=useState<unknown>(null);
  useEffect(()=>{setData(null);call('staff.transparency',{from,to},reportRes,{asAccount:true}).then(r=>{setData(r);setError(null);}).catch(setError);},[call,from,to]);
  const hours=(h:number|null|undefined)=>h==null?'—':h<48?t('fe.staff.dsa.hours',{n:Math.round(h)}):t('fe.staff.dsa.days',{n:Math.round(h/24)});
  const outcome=(r:z.infer<typeof numRow>)=>[t('fe.staff.dsa.received',{n:r.received??0}),r.removed!=null?t('fe.staff.dsa.removed',{n:r.removed}):null,r.kept!=null?t('fe.staff.dsa.kept',{n:r.kept}):null,
@@ -1232,7 +1232,7 @@ const docBlocks=(text:string):DocBlock[]=>{
  * version new accounts accept (a fresh code); published versions never change. */
 function Documents(){
  const {call}=useFe();const {t,locale}=useI18n();const toast=useToast();const when=useWhen();
- const [data,setData]=useState<z.infer<typeof docsRes>|null>(null);const [error,setError]=useState<unknown>(null);
+ const [data,setData]=useSeen<z.infer<typeof docsRes>|null>('Documents.data',()=>null);const [error,setError]=useState<unknown>(null);
  const [lang,setLang]=useState<'ru'|'en'>(locale==='en'?'en':'ru');const [open,setOpen]=useState<string|null>(null);
  const load=useCallback(()=>{call('staff.documents',{},docsRes,{asAccount:true}).then(r=>{setData(r);setError(null);}).catch(setError);},[call]);
  useEffect(load,[load]);
@@ -1291,7 +1291,7 @@ type Category=z.infer<typeof topicsRes>['categories'][number];
  * and the app shows the change at once. Topics are never deleted (people keep their answers): a hidden one is not offered. */
 function Topics(){
  const {call}=useFe();const {t,locale}=useI18n();const toast=useToast();
- const [data,setData]=useState<z.infer<typeof topicsRes>|null>(null);const [error,setError]=useState<unknown>(null);
+ const [data,setData]=useSeen<z.infer<typeof topicsRes>|null>('Topics.data',()=>null);const [error,setError]=useState<unknown>(null);
  const [open,setOpen]=useState<TopicRow|'new'|null>(null);const [cat,setCat]=useState<Category|'new'|null>(null);
  const load=useCallback(()=>{call('staff.topics',{},topicsRes,{asAccount:true}).then(r=>{setData(r);setError(null);}).catch(setError);},[call]);
  useEffect(load,[load]);
@@ -1366,7 +1366,7 @@ type Waived=z.infer<typeof teamRes>['waived'][number];
 /** «Сотрудники» (owner 05.11.2026): who has which role; the owner gives and takes roles by @nick (a fresh code, journalled). */
 function Team(){
  const {call}=useFe();const {t}=useI18n();const toast=useToast();
- const [items,setItems]=useState<Member[]|null>(null);const [waived,setWaived]=useState<Waived[]>([]);const [error,setError]=useState<unknown>(null);
+ const [items,setItems]=useSeen<Member[]|null>('Team.items',()=>null);const [waived,setWaived]=useState<Waived[]>([]);const [error,setError]=useState<unknown>(null);
  const [open,setOpen]=useState<Member|'new'|null>(null);const [free,setFree]=useState<Waived|'new'|null>(null);
  const load=useCallback(()=>{call('staff.team',{},teamRes,{asAccount:true}).then(r=>{setItems(r.items);setWaived(r.waived);setError(null);}).catch(setError);},[call]);
  useEffect(load,[load]);

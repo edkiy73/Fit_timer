@@ -1,4 +1,5 @@
 import {createContext,useCallback,useContext,useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
+import {useLocation} from 'react-router';
 import {z} from 'zod';
 import type {AuthSession} from '@appbase/core/auth.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
@@ -359,6 +360,13 @@ export function useShown<T>(key:string,initial:()=>T):[T,(v:T|((x:T)=>T))=>void]
  useKeyChange(full,()=>{fullRef.current=full;setV(shownMemo.has(full)?shownMemo.get(full) as T:initial());});
  const set=useCallback((next:T|((x:T)=>T))=>setV(cur=>{const n=typeof next==='function'?(next as (x:T)=>T)(cur):next;shownMemo.set(fullRef.current,n);return n;}),[]);
  return [v,set];
+}
+
+/** `useShown` for a screen's own data, keyed by where it is (route and query): the screen opened again — Back, a dock tab,
+ * a return from a deeper screen — draws what it showed last at once, and its reads replace it. No skeleton on a revisit. */
+export function useSeen<T>(name:string,initial:()=>T):[T,(v:T|((x:T)=>T))=>void]{
+ const {pathname,search}=useLocation();
+ return useShown<T>(pathname+search+'#'+name,initial);
 }
 
 export function useKeyChange(key:string,reset:()=>void){const [was,setWas]=useState(key);if(was!==key){setWas(key);reset();}}

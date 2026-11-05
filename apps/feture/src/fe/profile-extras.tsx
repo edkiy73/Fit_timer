@@ -7,7 +7,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Ban,Check,Crown,ChevronLeft,ChevronRight,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,KeyRound,Link as LinkIcon,Lock,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
 import {ActingAv,Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,LoadMore,Note,PersonName,PhotoBars,PhotoTrack,ProfileAv,PullRefresh,Row,Seg,Skel,Stack,Text,ToggleRow,View,coupleNames,plate,useKept} from './kit';
-import {onReadsDropped,useFe,useKeyChange,useOwnProfiles,useShown} from './session';
+import {onReadsDropped,useFe,useKeyChange,useOwnProfiles,useShown,useSeen} from './session';
 import {ReportSheet} from './report';
 import {faceFields,NameBadges} from './faces';
 import {PostCard,postSchema,type Post} from './feed';
@@ -588,7 +588,7 @@ export function CmpRow({i,topic,me,them,t,why:showWhy=true,lock}:{i:CompatItem,t
 /** `/n/people/:id/compat` — the full comparison (SC.P05). */
 export function CompatScreen(){
  const {id=''}=useParams();const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const topic=useTopics();
- const [c,setC]=useState<Compat|null>(null);const [p,setP]=useState<PersonProfile|null>(null);const [error,setError]=useState<unknown>(null);
+ const [c,setC]=useSeen<Compat|null>('CompatScreen.c',()=>null);const [p,setP]=useSeen<PersonProfile|null>('CompatScreen.p',()=>null);const [error,setError]=useState<unknown>(null);
  const load=useCallback(()=>{setError(null);Promise.all([call('profile.compat',{profileId:id},compatRes),call('profile.get',{profileId:id},personProfileRes)])
   .then(([a,b])=>{setC(a);setP(b.profile);}).catch(setError);},[call,id]);
  useEffect(()=>{load();},[load]);
@@ -748,9 +748,9 @@ const historyRes=z.object({ok:z.literal(true),premium:z.boolean(),items:z.array(
 /** `/n/people/history`: free accounts see the newest decision, Premium seven days (the server decides). */
 export function HistoryScreen(){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
- const [k,setK]=useKept<'all'|'pass'|'like'>('k','all');const [r,setR]=useState<z.infer<typeof historyRes>|null>(null);const [error,setError]=useState<unknown>(null);
+ const [k,setK]=useKept<'all'|'pass'|'like'>('k','all');const [r,setR]=useSeen<z.infer<typeof historyRes>|null>('HistoryScreen.r.'+k,()=>null);const [error,setError]=useState<unknown>(null);
  const [back,setBack]=useState<Set<string>>(new Set());const [busy,setBusy]=useState(false);
- const load=useCallback(()=>{setError(null);setR(null);call('discover.history',{kind:k},historyRes).then(setR).catch(setError);},[call,k]);
+ const load=useCallback(()=>{setError(null);call('discover.history',{kind:k},historyRes).then(setR).catch(setError);},[call,k]);
  useEffect(()=>{load();},[load]);
  const restore=async(id:string,name:string,fromLikes:boolean)=>{setBusy(true);
   try{await call('discover.restore',{opId:newOpId(),profileId:id},ok);setBack(s=>new Set(s).add(id));toast(fill(t(fromLikes?'fe.px.h.backLikes':'fe.px.h.back'),{name}));}

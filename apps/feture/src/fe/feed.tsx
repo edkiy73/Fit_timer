@@ -7,7 +7,7 @@ import type {LucideIcon} from 'lucide-react';
 import {feErrorMessage,newOpId} from '../feture/fe-api';
 import {ActionLine,Actions,ActivityCard,ActivityItem,AddBtn,AddCard,Alert,ArticleCard,ArticleImage,articlePlate,Ask,Av,BAD_CHARS,Bar,Btn,Card,Chip,Chips,Counter,Empty,ExpandRow,FeedEvents,Field,FilePick,Group,H,hasLongWord,IconBtn,Input,LikesLine,LoadMore,mdImages,NewPill,Note,QuickStart,RichEditor,Row,SearchInput,SectionLabel,Seg,SelectRow,Sheet,Skel,Stack,Text,TextArea,type RichEditorHandle,useLeaveGuard,VideoBadge,View,ViewerPostBar,Who,ProfileAv,useKept,useReturning,keptList,keepList,useBack} from './kit';
 import {shakeFirstErr} from './kit/validate';
-import {refreshReads,useFe,usePartnerApproves} from './session';
+import {refreshReads,useFe,usePartnerApproves,useSeen} from './session';
 import {useNewerPosts} from './feed-newer';
 import {ActivityCardOf,activitySchema,type Act} from './feed-activity';
 import {Uploader} from './kit/Uploader';
@@ -527,7 +527,7 @@ export function PostScreen(){
  const {id=''}=useParams();const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const location=useLocation();const toast=useToast();
  // The edit screen passes what happened to the edit as `state.notice`.
  const notice=(location.state as {notice?:unknown}|null)?.notice;
- const [post,setPost]=useState<Post|null>(null);const [list,setList]=useState<Reply[]|null>(null);const [error,setError]=useState<unknown>(null);
+ const [post,setPost]=useSeen<Post|null>('PostScreen.post',()=>null);const [list,setList]=useSeen<Reply[]|null>('PostScreen.list',()=>null);const [error,setError]=useState<unknown>(null);
  const [text,setText]=useState('');const [busy,setBusy]=useState(false);const opId=useRef(newOpId());const box=useRef<HTMLTextAreaElement>(null);
  const guard=useLeaveGuard(!!text.trim()&&!busy);
  const [target,setTarget]=useState<Reply|null>(null);const [editing,setEditing]=useState<Reply|null>(null);

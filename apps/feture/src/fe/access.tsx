@@ -3,7 +3,7 @@ import {useNavigate,useSearchParams} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Lock,LockOpen,Send,X} from 'lucide-react';
 import {Av,Bar,Btn,Card,Chip,Empty,Group,LoadMore,Note,Pill,Row,Seg,Skel,Spacer,Stack,View,useScrollTo,ProfileAv} from './kit';
-import {useFe} from './session';
+import {useFe,useSeen} from './session';
 import {NameBadges} from './faces';
 import {GrantCard,grantsRes,incomingRes,nameOf,outRes,RequestCards,useAccessWords,useCancelRequest,useGrantActions,type GrantItem,type IncomingList,type OutItem} from './private';
 
@@ -14,9 +14,9 @@ import {GrantCard,grantsRes,incomingRes,nameOf,outRes,RequestCards,useAccessWord
 type Tab='byme'|'withme'|'out';
 const TONE:Record<string,'ok'|'wait'|'v'|'bad'|undefined>={pending:'wait',partial:'ok',granted:'ok',revoked:'bad',replaced:'v'};
 
-function usePaged<T,R extends {items:T[],next?:string|null|undefined}>(fetch:(cursor?:string)=>Promise<R>){
+function usePaged<T,R extends {items:T[],next?:string|null|undefined}>(fetch:(cursor?:string)=>Promise<R>,name:string){
  const {t}=useI18n();const w=useAccessWords();
- const [first,setFirst]=useState<R|null>(null);const [items,setItems]=useState<T[]|null>(null);const [next,setNext]=useState<string|null>(null);
+ const [first,setFirst]=useSeen<R|null>('usePaged.'+name+'.first',()=>null);const [items,setItems]=useSeen<T[]|null>('usePaged.'+name+'.items',()=>null);const [next,setNext]=useSeen<string|null>('usePaged.'+name+'.next',()=>null);
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState(false);
  const load=useCallback(()=>{setError(null);fetch().then(r=>{setFirst(r);setItems(r.items);setNext(r.next??null);}).catch(setError);},[fetch]);
  useEffect(()=>{load();},[load]);
@@ -50,7 +50,7 @@ export function AccessScreen(){
 function OutTab({pendingOnly,onFilter}:{pendingOnly:boolean,onFilter:(on:boolean)=>void}){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const w=useAccessWords();const cancel=useCancelRequest();
  const fetch=useCallback((cursor?:string)=>call('access.lists',{tab:'out',...(pendingOnly?{filter:'pending'}:{}),...(cursor?{cursor}:{})},outRes,{fresh:true}),[call,pendingOnly]);
- const pg=usePaged<OutItem,Awaited<ReturnType<typeof fetch>>>(fetch);
+ const pg=usePaged<OutItem,Awaited<ReturnType<typeof fetch>>>(fetch,'p1');
  const [busy,setBusy]=useState('');
  const q=pg.first?.quota;
  const head=<Stack row justify="between" align="center">
@@ -83,7 +83,7 @@ function OutTab({pendingOnly,onFilter}:{pendingOnly:boolean,onFilter:(on:boolean
 function WithMeTab(){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const w=useAccessWords();
  const fetch=useCallback((cursor?:string)=>call('access.lists',{tab:'withme',...(cursor?{cursor}:{})},grantsRes,{fresh:true}),[call]);
- const pg=usePaged<GrantItem,Awaited<ReturnType<typeof fetch>>>(fetch);
+ const pg=usePaged<GrantItem,Awaited<ReturnType<typeof fetch>>>(fetch,'p2');
  if(pg.failed)return pg.failed;
  if(!pg.items)return <Skel kind="list"/>;
  if(!pg.items.length)return <Empty icon={LockOpen} title={t('fe.ac.wm.empty')} text={t(acting?.kind==='couple'?'fe.ac.wm.emptyTextUs':'fe.ac.wm.emptyText')}/>;
@@ -103,10 +103,10 @@ function ByMeTab(){
  useEffect(()=>{loadOne();},[loadOne]);
  // Requests to me are paged like the grants below (a long list is no longer cut at the first page); the server gives no total.
  const fetchIn=useCallback((cursor?:string)=>call('access.lists',{tab:'incoming',...(cursor?{cursor}:{})},incomingRes,{fresh:true}),[call]);
- const inPg=usePaged<IncomingList['items'][number],Awaited<ReturnType<typeof fetchIn>>>(fetchIn);
+ const inPg=usePaged<IncomingList['items'][number],Awaited<ReturnType<typeof fetchIn>>>(fetchIn,'p3');
  const reloadIn=inPg.load;
  const fetch=useCallback((cursor?:string)=>call('access.lists',{tab:'byme',...(cursor?{cursor}:{})},grantsRes,{fresh:true}),[call]);
- const pg=usePaged<GrantItem,Awaited<ReturnType<typeof fetch>>>(fetch);
+ const pg=usePaged<GrantItem,Awaited<ReturnType<typeof fetch>>>(fetch,'p4');
  const acts=useGrantActions(pg.load);
  const changed=()=>{reloadIn();pg.load();loadOne();};
  useScrollTo(rid&&one?.items.length?'req-'+rid:null,!!one&&!!pg.items&&!!inPg.items);

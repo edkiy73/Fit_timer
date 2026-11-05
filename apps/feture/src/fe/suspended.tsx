@@ -5,7 +5,7 @@ import {Ban,LogOut} from 'lucide-react';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {feErrorMessage} from '../feture/fe-api';
 import {Actions,Alert,Btn,Empty,Skel} from './kit';
-import {useFe} from './session';
+import {useFe,useSeen} from './session';
 import {AppealSheet} from './appeal';
 import {SupportSheet} from './support';
 import {ToastProvider} from './toast';
@@ -17,7 +17,7 @@ const res=z.object({ok:z.literal(true),suspended:z.boolean(),rule:z.string().nul
  * «Написать в поддержку», «Выйти». Suspected child abuse reads as «нарушение закона», without an appeal (В1). */
 export function SuspendedScreen(){
  const {call,reload}=useFe();const {t,locale}=useI18n();const auth=useOptionalAuth();
- const [s,setS]=useState<z.infer<typeof res>|null>(null);const [error,setError]=useState<unknown>(null);
+ const [s,setS]=useSeen<z.infer<typeof res>|null>('SuspendedScreen.s',()=>null);const [error,setError]=useState<unknown>(null);
  const [sheet,setSheet]=useState<''|'appeal'|'support'>('');const [notice,setNotice]=useState('');
  const load=useCallback(()=>{call('account.suspension',{},res,{asAccount:true}).then(r=>{if(!r.suspended)reload();else setS(r);}).catch(setError);},[call,reload]);
  useEffect(()=>{load();},[load]);

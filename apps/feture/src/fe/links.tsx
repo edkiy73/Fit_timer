@@ -6,7 +6,7 @@ import {CircleAlert,Link2,Pencil,Trash2,User,Users,X} from 'lucide-react';
 import {useToast as useToastV21} from './toast';
 import {newOpId} from '../feture/fe-api';
 import {AddBtn,AddCard,Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,Note,PersonLine,RadioList,RequestCard,Row,SearchInput,SectionLabel,Seg,SelectRow,Skel,Spacer,useLeaveGuard,useScrollTo,View,Who,ProfileAv,useKept,useBack} from './kit';
-import {useFe,useKeyChange,useShown} from './session';
+import {useFe,useKeyChange,useShown,useSeen} from './session';
 import {NameBadges,faceFields,withAge} from './faces';
 import {KINDS,SIDES,Sheet,linkLabel,linksMineRes,mediaSrc,personName,personProfileRes,pxError,type Kind,type LinkView,type LinksMine,type PersonProfile} from './profile-extras';
 
@@ -102,7 +102,7 @@ function LinkPicker({mine,onClose}:{mine:LinksMine,onClose:()=>void}){
 /** `/n/me/links` — SC.P21 for the own profile. */
 export function LinksScreen(){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToastV21();
- const [r,setR]=useState<LinksMine|null>(null);const [from,setFrom]=useState<LinksFrom|null>(null);const [error,setError]=useState<unknown>(null);
+ const [r,setR]=useSeen<LinksMine|null>('LinksScreen.r',()=>null);const [from,setFrom]=useState<LinksFrom|null>(null);const [error,setError]=useState<unknown>(null);
  const [busy,setBusy]=useState(false);const [menu,setMenu]=useState<{l:LinkView,pend:boolean}|null>(null);const [removing,setRemoving]=useState<LinkView|null>(null);
  const [picking,setPicking]=useState(false);
  const load=useCallback(()=>{setError(null);Promise.all([call('links.mine',{},linksMineRes),call('profile.settings',{},settingsRes).catch(()=>null)])
