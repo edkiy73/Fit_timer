@@ -229,6 +229,9 @@ function FeLayout(){
   document.addEventListener('focusin',on);document.addEventListener('focusout',out);
   window.addEventListener('resize',sync);vv?.addEventListener('resize',sync);
   return ()=>{clearTimeout(off);document.removeEventListener('focusin',on);document.removeEventListener('focusout',out);window.removeEventListener('resize',sync);vv?.removeEventListener('resize',sync);};},[]);
+ // Where each tab was left (its last screen), for the dock to return to.
+ const tabLoc=useRef(new Map<string,{to:string,tab?:string}>());
+ useEffect(()=>{tabLoc.current.set(current,{to:pathname+search,...(typeof fromTab==='string'?{tab:fromTab}:{})});},[current,pathname,search,fromTab]);
  const side=sideCurrent(current,parts,search);
  const nodock=current==='staff'||hiders>0||typing;
  const badge=useTabBadges();
@@ -246,7 +249,10 @@ function FeLayout(){
    const view=main.current?.querySelector<HTMLElement>('.view');
    if(view){view.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});return;}
   }
-  navigate('/n/'+id);
+  // Every tab keeps its own place, as in other apps: another tab opens where it was left (its screen, scroll, tab and
+  // loaded list), and the tab you are already in, from a deeper screen, goes back to its own root as it was.
+  const saved=current===id?null:tabLoc.current.get(id);
+  navigate(saved?.to??'/n/'+id,{state:{...(saved?.tab?{tab:saved.tab}:{}),restore:true}});
  };
  // The side menu: «События», «Сообщества» and «Уведомления» open their own screen; a tap on the one already lit scrolls to the top.
  const goSide=(id:string)=>{

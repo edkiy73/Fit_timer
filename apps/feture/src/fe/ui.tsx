@@ -132,7 +132,7 @@ export function Seg<T extends string>({value,options,onChange,label}:{value:T,op
 const KEPT=new Map<string,unknown>();
 /** `useState` for a tab or filter: coming BACK to the screen (Back button or swipe) shows what was chosen, a fresh open starts from `initial`. */
 export function useKept<T>(name:string,initial:T|(()=>T)):[T,(next:T|((prev:T)=>T))=>void]{
- const {pathname,search}=useLocation();const back=useNavigationType()==='POP';
+ const {pathname,search}=useLocation();const back=useReturning();
  const key=pathname+search+'#'+name;
  const [value,setValue]=useState<T>(()=>back&&KEPT.has(key)?KEPT.get(key) as T:typeof initial==='function'?(initial as ()=>T)():initial);
  const set=useCallback((next:T|((prev:T)=>T))=>{
@@ -144,7 +144,12 @@ export function useKept<T>(name:string,initial:T|(()=>T)):[T,(next:T|((prev:T)=>
 const KEPT_LISTS=new Map<string,unknown>();
 export function keptList<T>(key:string,back:boolean):T|undefined{return back?KEPT_LISTS.get(key) as T|undefined:undefined;}
 export function keepList(key:string,value:unknown){KEPT_LISTS.set(key,value);}
-export function useReturning(){return useNavigationType()==='POP';}
+/** True when this screen is shown again rather than opened anew: Back (POP), or a dock tap that returns to a tab
+ * (`state.restore`, set by the dock). Screens then bring back their scroll, tab, filters and loaded pages. */
+export function useReturning(){
+ const nav=useNavigationType();const st=useLocation().state as {restore?:unknown}|null;
+ return nav==='POP'||st?.restore===true;
+}
 
 /** Scroll positions kept per route for this tab's life. */
 const SCROLLS=new Map<string,number>();
@@ -157,7 +162,7 @@ export function View({children,className,refresh,keep}:{children:ReactNode,class
   * `null` to opt out (a step form that must start from the top). */
  keep?:string|null|undefined}){
  const ref=useRef<HTMLDivElement>(null);
- const {pathname,search}=useLocation();const back=useNavigationType()==='POP';
+ const {pathname,search}=useLocation();const back=useReturning();
  const key=keep===undefined?pathname+search:keep;
  useEffect(()=>{
   const el=ref.current;if(!el||!key)return;
