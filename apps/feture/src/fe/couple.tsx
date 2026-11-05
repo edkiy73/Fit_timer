@@ -230,7 +230,7 @@ function useSheetParts(a:Approval){
    [t('fe.ap.access.term'),(has('fe.ap.access.term.'+x.term)?t('fe.ap.access.term.'+x.term):x.term)+(x.until?' · '+t('fe.ap.access.until',{date:date(x.until)}):'')]]}/>;
  }else if(p?.reply){content=<ReviewPost title={t('fe.ap.title.reply.create')}><p>{p.reply.body}</p></ReviewPost>;
  }else if(p?.message){content=<ReviewPost title={t('fe.ap.msg')} meta={p.message.photo?t('fe.ap.msgPhoto'):undefined}>{p.message.body?<p>{p.message.body}</p>:null}</ReviewPost>;
- }else if(p?.link){content=<KeyValues rows={[[t('fe.ap.link.kind'),has('fe.lk.kind.'+p.link.kind)?t('fe.lk.kind.'+p.link.kind):p.link.kind]]}/>;
+ }else if(p?.link){content=<KeyValues rows={[[t('fe.ap.link.kind'),has('fe.px.lk.k.'+p.link.kind)?t('fe.px.lk.k.'+p.link.kind):p.link.kind]]}/>;
  }else if(p?.photos){content=<Note>{t('fe.ap.photos',{now:p.photos.now,after:p.photos.after,adds:p.photos.adds})}</Note>;
  }else if(p?.location?.near){const c=p.location.near;content=<Note>{t('fe.ap.near',{city:(locale==='en'?c.en:c.ru)??''})}</Note>;}
  const k=KINDS.includes(a.kind)?a.kind:'profile.update';
