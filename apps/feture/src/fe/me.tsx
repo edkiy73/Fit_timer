@@ -40,7 +40,7 @@ export {Ask,AudTag};
 
 /** The loading state shaped like the profile layer: the photo grid, then two cards. */
 export function MeSkel(){
- return <div aria-busy="true"><Group className="ph20"><PhotoSlots loading/></Group><Skel kind="card" rows={2}/></div>;
+ return <div aria-busy="true"><Group tight className="ph20"><PhotoSlots loading/></Group><Skel kind="card" rows={2}/></div>;
 }
 
 /** «Данные» — the filled rows only, «Изменить» in the header like «Обо мне» (owner 04.11.2026); everyone sees them. */
@@ -59,7 +59,7 @@ export const photoSrc=(m:{src:Record<string,string>|null},size:'card'|'thumb'|'f
 
 /** `mePhotos20()` — the grid of profile photos: the main one big, «Ещё фото» next to it; a tap opens what can be done
  * with that photo; «Изменить» opens the photo editor (P02 `only:'media'`). */
-export function PhotosBlock({p,settings,onChanged,action}:{p:Profile,settings:Settings,onChanged:()=>void,action?:ReactNode}){
+export function PhotosBlock({p,settings,onChanged,action,tight}:{p:Profile,settings:Settings,onChanged:()=>void,action?:ReactNode,tight?:boolean}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
  const [open,setOpen]=useState<number|null>(null);const [busy,setBusy]=useState(false);const [viewing,setViewing]=useState<number|null>(null);
  const cp=p.kind==='couple';
@@ -76,7 +76,7 @@ export function PhotosBlock({p,settings,onChanged,action}:{p:Profile,settings:Se
   poll();return ()=>{live=false;window.clearTimeout(id);};
  },[waiting,p.id,call,onChanged]);
  const edit=()=>navigate('/n/me/edit?only=media');
- if(!items.length)return <Group className="ph20" id="mePh" title={t('fe.me.photos')} action={action}>
+ if(!items.length)return <Group className="ph20" id="mePh" title={t('fe.me.photos')} action={action} tight={tight}>
   <AddCard icon={Camera} title={cp?t('fe.mx.ph.addCouple'):t('fe.me.photoAdd')} sub={settings.discoverMode==='visible'?(cp?t('fe.mx.ph.needCouple'):t('fe.mx.ph.need')):t('fe.mx.ph.mainHint')} onClick={edit}/>
  </Group>;
  const write=async(ids:string[],msg:string,prev?:string[])=>{
@@ -97,7 +97,7 @@ export function PhotosBlock({p,settings,onChanged,action}:{p:Profile,settings:Se
   :<PhotoAdd key={'g'+i} ghost/>);
  const x=open!==null?items[open]:undefined;
  // No «Изменить» (owner 05.11.2026: nobody saw it): a tap on a photo opens what it can do, a hold moves it, «+» adds.
- return <Group className="ph20" id="mePh" title={t('fe.me.photos')} action={action}>
+ return <Group className="ph20" id="mePh" title={t('fe.me.photos')} action={action} tight={tight}>
   <PhotoSlots>{slots}</PhotoSlots>
   {x&&open!==null&&<Sheet title={open===0?t('fe.mx.ph.main'):t('fe.mx.ph.nOf',{n:open+1,total:items.length})} onClose={()=>setOpen(null)}>
    <div className="ph-sheet-prev">{photoSrc(x)&&<img src={photoSrc(x)!} alt="" draggable={false}/>}{x.pending&&<span className="ph-rev"><Clock/><span>{t('fe.mx.ph.review')}</span></span>}</div>
