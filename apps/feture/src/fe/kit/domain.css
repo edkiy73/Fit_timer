@@ -315,7 +315,7 @@
 /* Staff sheets («Меры») use the rows of a staff card (KeyValues): the same height, padding and type (owner 05.11.2026). */
 .v21 .st-sheet .radio{min-height:0;padding:9px 14px;gap:10px}
 .v21 .st-sheet .radio i{width:20px;height:20px}
-.v21 .st-sheet .radio.on i{border-width:6px}
+.v21 .st-sheet .radio.on:not(.k-chk) i{border-width:6px}
 .v21 .st-obj .st-text{font-size:var(--fs-body);color:var(--ink)}
 
 /* A file of an upload marked to be rejected while the rest is approved (owner 05.11.2026). */
