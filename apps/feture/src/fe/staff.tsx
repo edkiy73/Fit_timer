@@ -1365,7 +1365,7 @@ type Waived=z.infer<typeof teamRes>['waived'][number];
 /** «Сотрудники» (owner 05.11.2026): who has which role; the owner gives and takes roles by @nick (a fresh code, journalled). */
 function Team(){
  const {call}=useFe();const {t}=useI18n();const toast=useToast();
- const [items,setItems]=useSeen<Member[]|null>('Team.items',()=>null);const [waived,setWaived]=useState<Waived[]>([]);const [error,setError]=useState<unknown>(null);
+ const [items,setItems]=useSeen<Member[]|null>('Team.items',()=>null);const [waived,setWaived]=useSeen<Waived[]>('Team.waived',()=>[]);const [error,setError]=useState<unknown>(null);
  const [open,setOpen]=useState<Member|'new'|null>(null);const [free,setFree]=useState<Waived|'new'|null>(null);
  const load=useCallback(()=>{call('staff.team',{},teamRes,{asAccount:true}).then(r=>{setItems(r.items);setWaived(r.waived);setError(null);}).catch(setError);},[call]);
  useEffect(load,[load]);

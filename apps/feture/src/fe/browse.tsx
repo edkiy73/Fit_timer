@@ -91,8 +91,8 @@ export function TopicScreen(){
  const {items:mine,cats,topics,load:reloadMine}=useInterests();
  const tp=topics.find(x=>x.id===id);const name=tp?(locale==='en'?tp.en:tp.ru):id;const desc=tp?(locale==='en'?tp.descEn:tp.descRu):null;
  const tname=useCallback((x:string)=>{const v=topics.find(o=>o.id===x);return v?(locale==='en'?v.en:v.ru):x;},[topics,locale]);
- const [posts,setPosts]=useSeen<Post[]|null>('TopicScreen.posts',()=>null);const [next,setNext]=useState<string|null>(null);const [more,setMore]=useState(false);
- const [comms,setComms]=useState<Comm[]>([]);const [error,setError]=useState<unknown>(null);
+ const [posts,setPosts]=useSeen<Post[]|null>('TopicScreen.posts',()=>null);const [next,setNext]=useSeen<string|null>('TopicScreen.next',()=>null);const [more,setMore]=useState(false);
+ const [comms,setComms]=useSeen<Comm[]>('TopicScreen.comms',()=>[]);const [error,setError]=useState<unknown>(null);
  const [sheet,setSheet]=useState(false);const opener=useRef<HTMLButtonElement>(null);
  const load=useCallback((cursor?:string)=>{
   setError(null);if(cursor)setMore(true);
