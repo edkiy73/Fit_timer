@@ -4,7 +4,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Cake} from 'lucide-react';
 import {FeError,dayMonth,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Alert,Btn,Card,Counter,Field,Group,Input,RadioList,Sheet,Text,TextArea} from './kit';
-import {PickField,PlacePicker,type Place} from './kit/Place';
+import {CityField,PickField,type Place} from './kit/Place';
 import {FIELD,textLength} from './kit/validate';
 import {useFe} from './session';
 import {useToast} from './toast';
@@ -40,7 +40,7 @@ function BasicsSheet({p,places,onClose,onSaved}:{p:Profile,places:Place[],onClos
  const {call}=useFe();const {t,locale}=useI18n();const toast=useToast();const id=useId();const cp=p.kind==='couple';
  const [base,setBase]=useState(()=>draftOf(p));const [d,setD]=useState(base);
  useEffect(()=>{const b=draftOf(p);setBase(b);setD(b);},[p]);
- const [city,setCity]=useState(false);const [age,setAge]=useState(false);const [added,setAdded]=useState<Place|null>(null);
+ const [age,setAge]=useState(false);const [added,setAdded]=useState<Place|null>(null);
  const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [nickErr,setNickErr]=useState('');
  const set=(x:Partial<Draft>)=>setD(v=>({...v,...x}));
  const dirty=JSON.stringify(d)!==JSON.stringify(base);
@@ -79,13 +79,12 @@ function BasicsSheet({p,places,onClose,onSaved}:{p:Profile,places:Place[],onClos
     hint={p.nickAt?t('fe.nn.nickAt',{date:dayMonth(p.nickAt)}):p.nickFirst?t('fe.nn.nickFirst'):t('fe.nn.nickEvery')}>
     <div className="inwrap"><AtSign/><Input id={id+'h'} value={d.handle} maxLength={20} autoCapitalize="off" spellCheck={false} disabled={!!p.nickAt} invalid={!!nickErr}
      onChange={e=>{set({handle:e.target.value.replace(/^@/,'')});setNickErr('');}}/></div></Field>
-   <PickField label={t('fe.mx.ed.city')} value={placeName(d.cityId)} placeholder={t('fe.mx.ed.noCity')} onClick={()=>setCity(true)}/>
+   <CityField label={t('fe.mx.ed.city')} placeholder={t('fe.mx.ed.noCity')} places={places} value={d.cityId} onChange={id=>set({cityId:id})} clear={t('fe.mx.ed.noCity')} none add={addPlace} fallbackName={placeName(d.cityId)}/>
    {!cp&&p.age&&<PickField label={t('fe.mb.age')} icon={Cake} value={d.showAge?t('fe.mb.ageShow',{n:String(p.age)}):t('fe.mb.ageHide')} placeholder="" onClick={()=>setAge(true)}/>}
    <Field id={id+'b'} name="bio" label={t('fe.mx.ed.about')}>
     <TextArea id={id+'b'} rows={4} value={d.bio} maxLength={FIELD.bio.max} placeholder={t('fe.mx.ed.aboutPh')} onChange={e=>set({bio:e.target.value})}/><Counter n={textLength(d.bio)} max={FIELD.bio.max}/></Field>
    {failure&&<Alert kind="err" noIcon>{failure}</Alert>}
   </Card>
-  {city&&<PlacePicker places={places} current={d.cityId} clear={t('fe.mx.ed.noCity')} add={addPlace} onPick={x=>{set({cityId:x?.id??null});setCity(false);}} onClose={()=>setCity(false)}/>}
   {age&&<Sheet title={t('fe.mb.age')} onClose={()=>setAge(false)}>
    <RadioList label={t('fe.mb.age')} value={d.showAge?'show':'hide'} onChange={v=>{set({showAge:v==='show'});setAge(false);}}
     options={[['show',t('fe.mb.ageShow',{n:String(p.age)})],['hide',t('fe.mb.ageHide')]] as const}/>

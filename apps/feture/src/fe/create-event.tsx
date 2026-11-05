@@ -7,7 +7,7 @@ import {FeError,feErrorMessage} from '../feture/fe-api';
 import {ActingAv,Alert,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,EventHero,Fact,Group,Note,RichEditor,Row,Seg,Select,Skel,Stack,Steps,ToggleRow,useLeaveGuard,View} from './kit';
 import {NamedPlate} from './comm-kit';
 import {RichText} from './post-parts';
-import {PickField,PlacePicker} from './kit/Place';
+import {CityField} from './kit/Place';
 import {useFe} from './session';
 import {ONLINE_ZONES,placeZone,zoneLabel} from './event-time';
 import {FIELD,lineRule,serverFields,textError,textErrorMessage,type FieldName} from './kit/validate';
@@ -334,9 +334,9 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
    <Select label={t('fe.ce.tz')} value={f.tz} onChange={v=>set('tz',v)} options={tzItems}/>
    {err.tz?<FErr>{err.tz}</FErr>:<div className="fhint">{t('fe.ce.tzHintOnline')}</div>}</label>}
   {f.format==='offline'?<>
-   <div data-field="city"><PickField label={t('fe.ce.city')} value={places.find(([id])=>id===f.placeId)?.[1]??null} placeholder={t('fe.ce.cityPh')} error={err.placeId} onClick={()=>setCityOpen(true)}/>
+   <div data-field="city"><CityField label={t('fe.ce.city')} placeholder={t('fe.ce.cityPh')} places={catalog?.places??[]} value={f.placeId||null} error={err.placeId}
+     onChange={id=>{if(id){pickPlace(id);setErr(e=>({...e,placeId:''}));}}}/>
     {f.placeId&&<div className="fhint" data-field="tz">{t('fe.ce.tzFromCity',{zone:zoneLabel(f.tz,new Date(times(f).start||Date.now()).toISOString(),locale)})}</div>}</div>
-   {cityOpen&&<PlacePicker places={catalog?.places??[]} current={f.placeId||null} onPick={x=>{if(x){pickPlace(x.id);setErr(e=>({...e,placeId:''}));}setCityOpen(false);}} onClose={()=>setCityOpen(false)}/>}
    <Field name="area" label={t('fe.ce.area')} ph={t('fe.ce.areaPh')} check="eventArea" value={f.area} onChange={v=>set('area',v)} err={err.area}/>
    <Field name="addr" label={t('fe.ce.addr')} icon={Lock} ph={t('fe.ce.addrPh')} check="eventAddress" value={f.exactAddress} onChange={v=>set('exactAddress',v)} err={err.exactAddress}/>
   </>:<Field name="link" label={t('fe.ce.link')} icon={LinkIcon} type="url" inputMode="url" ph={t('fe.ce.linkPh')} value={f.joinUrl} onChange={v=>set('joinUrl',v)} err={err.joinUrl}/>}

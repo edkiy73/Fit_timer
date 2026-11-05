@@ -5,6 +5,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Search,Ban,Bell,CalendarDays,Check,ChevronDown,ChevronLeft,ChevronRight,EyeOff,Heart,Ellipsis,History,Info,KeyRound,LocateFixed,Lock,MapPin,MessageCircle,SlidersHorizontal,Sparkles,Undo2,Users,X} from 'lucide-react';
+import {CityField} from './kit/Place';
 import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,IconBtn,LikeTile,Note,PairArt,PersonName,PhotoBars,Pill,Radar,Range,RangeDual,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Soon,Stack,Text,View,plate,useScrollTo,ProfileAv} from './kit';
 import {useFe,useShown} from './session';
 import {useToast} from './toast';
@@ -101,7 +102,7 @@ const filterRes=z.object({ok:z.literal(true),filter:filterShape});
 const countRes=z.object({ok:z.literal(true),count:z.number(),capped:z.boolean()});
 const DF_ROWS=[['genders','gender'],['orients','orient'],['formats','format'],['seeks','seek'],['roles','role'],['topics','']] as const;
 type DfRow=typeof DF_ROWS[number][0];
-type DfSub=DfRow|'city';
+type DfSub=DfRow;
 const DF_DEFAULT:Filter={show:'all',ageMin:18,ageMax:99,cityId:null,placeMode:'city',radiusKm:25,genders:[],orients:[],formats:[],seeks:[],roles:[],topics:[]};
 // Topics people are not searched by (prototype dfRows); the server refuses them as well.
 const DF_HIDDEN=new Set(['limits','edge','safety']);
@@ -141,7 +142,6 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
  // onClose is `back` there.
  const groups=(k:DfSub):{title:string,list:[string,string][]}[]=>{
   if(!cat)return [];
-  if(k==='city')return [{title:'',list:cat.places.map(p=>[p.id,lab(p)] as [string,string]).sort((a,b)=>a[1].localeCompare(b[1]))}];
   if(k==='topics')return cat.categories.filter(c=>!DF_HIDDEN.has(c.id))
    .map(c=>({title:lab(c),list:cat.topics.filter(x=>x.categoryId===c.id).map(x=>[x.id,lab(x)] as [string,string])})).filter(g=>g.list.length);
   const kind=DF_ROWS.find(r=>r[0]===k)![1];
@@ -166,13 +166,13 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
  if(sub){
   const all=groups(sub);const total=all.reduce((n,g)=>n+g.list.length,0);const needle=q.trim().toLowerCase();
   const shown=all.map(g=>({...g,list:needle?g.list.filter(([id,l])=>l.toLowerCase().includes(needle)||(sub==='topics'&&(()=>{const x=cat?.topics.find(y=>y.id===id);return !!x&&topicMatches(x,needle);})())):g.list})).filter(g=>g.list.length);
-  const isOn=(id:string)=>sub==='city'?f.cityId===id:f[sub].includes(id);
-  const pick=(id:string)=>{if(sub==='city'){setF(x=>({...x,placeMode:'city',cityId:x.cityId===id?null:id}));setWhere('city');}else toggle(sub,id);};
-  const n=sub==='city'?(f.cityId?1:0):f[sub].length;
-  return <Sheet full title={sub==='city'?t('fe.df.city'):t('fe.df.row.'+sub)} onClose={back}
+  const isOn=(id:string)=>f[sub].includes(id);
+  const pick=(id:string)=>toggle(sub,id);
+  const n=f[sub].length;
+  return <Sheet full title={t('fe.df.row.'+sub)} onClose={back}
    lead={<IconBtn icon={ChevronLeft} kind="ghost" size="sm" label={t('fe.df.back')} onClick={back}/>}
    search={total>10&&<SearchInput label={t('fe.df.find')} value={q} onChange={e=>setQ(e.target.value)}/>}
-   foot={<Btn onClick={back}>{n&&sub!=='city'?fill(t('fe.df.doneN'),{n}):t('fe.df.done')}</Btn>}>
+   foot={<Btn onClick={back}>{n?fill(t('fe.df.doneN'),{n}):t('fe.df.done')}</Btn>}>
    <div ref={body as React.RefObject<HTMLDivElement>}>
     {!cat?<Skel kind="list"/>
      :shown.map((g,i)=><section key={g.title||i} className="fsec">{g.title&&<SectionLabel>{g.title}</SectionLabel>}<Chips>
@@ -191,10 +191,12 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
   </>}>
    <>
     <section className="fin"><div className="fin-t"><b>{t('fe.df.where')}</b>{where!=='any'&&clr(()=>setWhereTo('any'))}</div>
+     <Stack gap={3}>
      <ChoiceChips label={t('fe.df.where')} value={where} options={(['any','city','nearby'] as const).map(v=>[v,v==='nearby'?t('fe.w7.df.nearby'):t('fe.df.where.'+v)] as const)}
-      onChange={v=>{setWhereTo(v);if(v==='city'&&!f.cityId)setSub('city');}}/>
-     {where==='city'&&<div className="fld"><button type="button" className="fld-main" onClick={()=>setSub('city')}><MapPin/><span>{place?lab(place):t('fe.df.pickCity')}</span></button>
-      {f.cityId?clr(()=>setF(x=>({...x,cityId:null}))):<ChevronRight/>}</div>}
+      onChange={setWhereTo}/>
+     {where==='city'&&<CityField label={t('fe.df.city')} placeholder={t('fe.df.pickCity')} places={cat?.places??[]} value={f.cityId}
+      clear={t('fe.df.where.any')} onChange={id=>{if(id)setF(x=>({...x,placeMode:'city',cityId:id}));else setWhereTo('any');}}/>}
+     </Stack>
      {where==='nearby'&&<Stack gap={2} className="df-near">
       {noPlace&&loc===false&&<><div className="fld"><button type="button" className="fld-main" onClick={()=>void share()} disabled={geo==='busy'||geo==='wait'} aria-busy={geo==='busy'||undefined}>
         <LocateFixed/><span>{t('fe.w7.df.share')}</span></button><ChevronRight/></div>

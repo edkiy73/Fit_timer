@@ -204,9 +204,9 @@ export const en: typeof ru = {
   'fe.cw.kind.reply.create': 'A reply from the couple',
   'fe.cw.kind.like.send': 'A like from the couple',
   'fe.cw.kind.follow.set': 'A follow from the couple',
-  'fe.cw.kind.link.change': "A change to the couple's link",
-  'fe.cw.kind.link.changeAnswer': "The couple's answer to a link change",
-  'fe.cw.kind.community.update': "An edit to the couple's community",
+  'fe.cw.kind.link.change': 'A change to the couple’s link',
+  'fe.cw.kind.link.changeAnswer': 'The couple’s answer to a link change',
+  'fe.cw.kind.community.update': 'An edit to the couple’s community',
 
   'fe.c6.actAs': 'Act as',
   'fe.c6.actAsFoot': 'Chats, notifications and “To decide” arrive in one place. Each shows who it is for.',

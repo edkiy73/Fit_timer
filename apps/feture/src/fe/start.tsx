@@ -21,7 +21,7 @@ export function AuthBar({onBack,onLeave,lang}:{onBack?:()=>void,/** «Выйти
  const {t,locale,canSwitch,setPreference}=useI18n();
  return <Bar title="" {...(onBack?{onBack}:{})}>
   {onLeave&&<Btn kind="text" size="sm" onClick={onLeave}>{t('fe.set.logout')}</Btn>}
-  {lang&&canSwitch&&<div className="langsw" role="group" aria-label="Language">{(['ru','en'] as const).map(l=><button key={l} type="button" className={locale===l?'on':''} aria-pressed={locale===l} onClick={()=>setPreference(l)}>{l.toUpperCase()}</button>)}</div>}
+  {lang&&canSwitch&&<div className="langsw" role="group" aria-label="Язык / Language">{(['ru','en'] as const).map(l=><button key={l} type="button" className={locale===l?'on':''} aria-pressed={locale===l} onClick={()=>setPreference(l)}>{l.toUpperCase()}</button>)}</div>}
  </Bar>;
 }
 
