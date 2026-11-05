@@ -83,6 +83,7 @@ const followRow=z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable
 const followersRes=z.object({ok:z.literal(true),items:z.array(followRow)});
 const FOLLOW_PAGE=50;
 const withProfile=z.object({ok:z.literal(true),items:z.array(z.object({profile:z.object({id:z.uuid()}).passthrough()}).passthrough())});
+const writeStateRes=z.object({ok:z.literal(true),conversationId:z.uuid().nullable().optional(),canRequest:z.boolean().optional(),rule:z.string().optional()}).passthrough();
 const likeRes=z.object({ok:z.literal(true),state:z.string().optional(),conversationId:z.uuid().optional()}).passthrough();
 const withdrawRes=z.object({ok:z.literal(true),withdrawn:z.boolean().optional()}).passthrough();
 /** «Отозвать симпатию» from a profile or «Люди → исходящие». A like that became a match is not taken back (the server
@@ -144,7 +145,7 @@ export function MatchOverlay({other,conversationId,onClose}:{other:{id:string,na
  </div></Layer>;
 }
 
-/** `.p-acts` of another profile: «Нравится / Отправлено / Написать» and «Подписаться / В подписках». */
+/** `.p-acts` of another profile: «Нравится / Нравится ✓ / Написать» and «Подписаться / Вы подписаны». */
 export function PersonActions({p,rel,setRel,inert}:{p:PersonProfile,rel:Relation|null,setRel:(f:(r:Relation|null)=>Relation|null)=>void,inert?:boolean|undefined}){
  const {call,acting}=useFe();const toast=useToast();const {t}=useI18n();const navigate=useNavigate();
  const [busy,setBusy]=useState<''|'like'|'follow'>('');const [why,setWhy]=useState<string|null>(null);const [match,setMatch]=useState<{conversationId?:string}|null>(null);
@@ -152,6 +153,9 @@ export function PersonActions({p,rel,setRel,inert}:{p:PersonProfile,rel:Relation
  // Owner R04 (28.10): with my own dating off a like from a profile still goes out — but the first time, a sheet says
  // what it means. Sending from it is remembered on this device only (a convenience, not a setting).
  const [ownOff,setOwnOff]=useState<boolean|null>(null);const [explain,setExplain]=useState(false);
+ // Whether a message can go out at all, and the reason when not (the server's `chat.with`): «Написать» is dimmed, a tap says why.
+ const [wr,setWr]=useState<{ok:boolean,rule?:string|undefined}|null>(null);
+ useEffect(()=>{if(inert||!acting)return;call('chat.with',{profileId:p.id},writeStateRes).then(r=>setWr({ok:!!r.conversationId||!!r.canRequest,rule:r.rule})).catch(()=>setWr(null));},[call,acting,inert,p.id,rel?.mutual]);
  useEffect(()=>{if(inert||!acting)return;call('profile.settings',{},ownSettingsRes).then(r=>setOwnOff(r.settings.discoverMode==='off')).catch(()=>{});},[call,acting,inert]);
  const seenKey='feture.fe.offLikeSeen.'+(acting?.id??'');
  const seen=()=>{try{return localStorage.getItem(seenKey)==='1';}catch{return false;}};
@@ -177,6 +181,8 @@ export function PersonActions({p,rel,setRel,inert}:{p:PersonProfile,rel:Relation
   try{const r=await takeBack(p.id,()=>void relike());setRel(x=>x&&{...x,liked:false,mutual:x.mutual||r==='matched'});}catch(e){toast(pxError(e,t),{type:'err'});}finally{setBusy('');}};
  // «Написать» (owner 29.10.2026): their chat, or the chat composer as a message request — with or without a mutual like.
  const writeTo=useWriteTo();const write=()=>void writeTo.open(p.id);
+ const writeNo=!inert&&!!wr&&!wr.ok;
+ const writeTap=()=>{if(inert)return;if(writeNo){const k='fe.px.wr.'+(wr?.rule??'other');const m=t(k);toast(m===k?t('fe.px.wr.other'):m,{type:'info'});return;}write();};
  const likeBtn=rel?.mutual?<Btn icon={MessageCircle} onClick={inert?undefined:write} disabled={inert}>{t(asUs&&!inert?'fe.px.act.writeUs':'fe.px.act.write')}</Btn>
   :rel?.liked?<Btn pressed title={t(asUs?'fe.px.act.unlikeHintUs':'fe.px.act.unlikeHint')} onClick={inert?undefined:unlike} disabled={inert||busy==='like'}><Heart fill="currentColor"/>{t(asUs&&!inert?'fe.px.act.sentUs':'fe.px.act.sent')}</Btn>
   :why?null:<Btn busy={busy==='like'} onClick={inert?undefined:tapLike} disabled={inert||busy==='like'}><Heart fill="currentColor"/>{asUs&&!inert?t('fe.px.act.likeUs'):t('fe.people.like')}</Btn>;
@@ -184,8 +190,8 @@ export function PersonActions({p,rel,setRel,inert}:{p:PersonProfile,rel:Relation
  return <>
   <div className="p-acts" inert={inert||undefined}>{likeBtn}
    <FollowButton profileId={p.id} name={name} on={iF} inert={inert} disabled={!rel} onChange={on=>setRel(x=>x&&{...x,iFollow:on,followers:Math.max(0,x.followers+(on?1:-1))})}/>
-    {!rel?.mutual&&<Btn kind="soft" square icon={MessageCircle} aria-label={t(asUs&&!inert?'fe.px.act.writeUs':'fe.px.act.write')} title={t(asUs&&!inert?'fe.px.act.writeUs':'fe.px.act.write')}
-     busy={writeTo.busy===p.id} onClick={inert?undefined:write} disabled={inert}/>}
+    {!rel?.mutual&&<Btn kind="soft" square icon={MessageCircle} className={writeNo?'dim':undefined} aria-disabled={writeNo||undefined} aria-label={t(asUs&&!inert?'fe.px.act.writeUs':'fe.px.act.write')} title={t(asUs&&!inert?'fe.px.act.writeUs':'fe.px.act.write')}
+     busy={writeTo.busy===p.id} onClick={inert?undefined:writeTap} disabled={inert}/>}
   </div>
   {why&&<p className="profile-like-note"><Heart/><span>{why==='couples_via_discover_only'?<>{t('fe.px.act.coupleVia')} <button type="button" className="linkbtn" onClick={()=>navigate('/n/me?layer=vis')}>{t('fe.px.act.turnOn')}</button></>
    :why==='own_discover_off'?<>{t('fe.px.act.ownOff')} <button type="button" className="linkbtn" onClick={()=>navigate('/n/me?layer=vis')}>{t('fe.px.act.turnOn')}</button></>:t('fe.px.act.likesOff')}</span></p>}
@@ -443,7 +449,7 @@ export function ProfilePage({p,preview,seg,bar,onMore,menu,onRefresh,pre,gal,chi
  const {t}=useI18n();const navigate=useNavigate();const goPeople=useBack('/n/people');const [rel,setRel,reloadRel]=useRelation(p.id);const [view,setView]=useState<number|null>(null);
  const scroller=useRef<HTMLDivElement>(null);const name=personName(p);const inert=!!preview;const list=photosOf(p);
  // My other profile (owner 05.11.2026: from the couple one could like, follow or write to oneself and get errors).
- const self=!!p.own&&!preview;
+ const self=!!p.own&&!preview;const noActs=(!!p.own||!!p.partner)&&!preview;
  return <>
   {bar??<header className="bar overlay pbar">
    {/* Back to where the profile was opened (the deck, «Симпатии», a list, search); opened by a link, to «Люди». */}
@@ -455,12 +461,12 @@ export function ProfilePage({p,preview,seg,bar,onMore,menu,onRefresh,pre,gal,chi
    <H level={1} className="sr-only" tabIndex={-1}>{name}</H>
    {children}
    <ProfileHero p={p} rel={rel} inert={inert} onOpen={setView}/>
-   <PersonBio p={p}/>
-   {self?null:rel||inert?<PersonActions p={p} rel={rel} setRel={setRel} inert={inert}/>:<div className="pa-hold" aria-hidden="true"><i className="sk"/><i className="sk"/><i className="sk"/></div>}
-   <PairGroup p={p} inert={inert}/>
-   {/* Owner 29.10.2026: «Обо мне» under the bio and under the main buttons. */}
-   <AboutGroup p={p} inert={inert}/>
+   {/* Owner 05.11.2026, one order on every profile: the buttons right under the photo, then the comparison, the bio, the pair, «Обо мне». My own pair has no buttons at all. */}
+   {noActs?null:rel||inert?<PersonActions p={p} rel={rel} setRel={setRel} inert={inert}/>:<div className="pa-hold" aria-hidden="true"><i className="sk"/><i className="sk"/><i className="sk"/></div>}
    {!preview&&!self&&<CompatSummary profileId={p.id} {...(pre?{pre:pre.compat}:{})}/>}
+   <PersonBio p={p}/>
+   <PairGroup p={p} inert={inert}/>
+   <AboutGroup p={p} inert={inert}/>
    <ProfileBody p={p} inert={inert} preview={preview} onOpen={setView} {...(pre?{pre}:{})} {...(gal!==undefined?{gal}:{})}/>
   </div></PullRefresh></div>
   {view!==null&&<PhotoViewer srcs={list.map(m=>m.src?.full??mediaSrc(m)!)} index={view} onClose={()=>setView(null)}/>}

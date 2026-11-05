@@ -17,6 +17,7 @@ import {useMe} from './me-new';
 import {COUPLE_ROWS,DETAIL_ROWS,MeSkel,PhotosBlock} from './me';
 import {filledFacts} from './about-facts';
 import {linksMineRes,plural} from './profile-extras';
+import {RestrictionNotice} from './restriction';
 
 /** «Я» v3 (owner's account prototype, 05.11.2026), by address only (/n/me/v3) until the owner picks it: one header,
  * then two zones of the acting profile — «Профиль» (what others see) and «Приватность» (who reaches it). The account's
@@ -61,6 +62,7 @@ export function MeV3Screen(){
    <IconBtn icon={Settings} label={t('fe.me.settings')} onClick={()=>navigate('/n/me/v3/settings')}/>
   </Bar>
   <View refresh={refresh}>
+   {state.status==='ready'&&state.boot.restriction&&<Group><RestrictionNotice/></Group>}
    {todo>0&&<Group><Card list><Row className="me-todo" icon={Inbox} tone="l" title={t('fe.mx.todo')} badge={todo} onClick={()=>navigate('/n/inbox')}/></Card></Group>}
    {/* every block of the screen is a Group, so they all stand 24 apart (the tabs too) */}
    <Group><Seg value={tab} label={t('fe.mx.whose')} onChange={v=>setParams(v==='profile'?{}:{tab:v},{replace:true})}

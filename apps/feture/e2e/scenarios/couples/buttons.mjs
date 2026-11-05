@@ -12,7 +12,7 @@ const noPicker = async t => {
 };
 
 export default [
- { name: 'profile as the couple: «Подписать пару» → «Мы подписаны» and back, like/report/block speak for the couple', persona: 'pair', run: async t => {
+ { name: 'profile as the couple: «Подписаться» → «Мы подписаны» and back, like/report/block speak for the couple', persona: 'pair', run: async t => {
    const couple = await coupleOf(t); expect(couple, 'the pair has an active couple'); await actAs(t, couple.id);
    const mate = await t.persona('mate');
    // Whom the couple follows (the profile page reads the same list).
@@ -21,15 +21,15 @@ export default [
    if ((await rel()).iFollow) await t.api('follow.set', { opId: t.uuid7(), profileId: mate.personId, on: false }, undefined, couple.id);
    try {
      await t.go('/n/people/' + mate.personId);
-     await t.tap('.p-acts button:has-text("Подписать пару")');
+     await t.tap('.p-acts button:has-text("Подписаться")');
      await toastSee(t, 'Пара теперь в подписчиках');
      await t.see('.p-acts button:has-text("Мы подписаны")');
      expect((await rel()).iFollow, 'the couple does not follow after the tap');
      await t.tap('.p-acts button:has-text("Мы подписаны")');
      await toastSee(t, 'Пара отписалась от');
-     await t.see('.p-acts button:has-text("Подписать пару")');
+     await t.see('.p-acts button:has-text("Подписаться")');
      // The like button (or why the couple likes from Discover only) — never the personal «Нравится».
-     const like = t.page.locator('.p-acts button', { hasText: /Нам нравится|Мы отправили|Написать от нас/ });
+     const like = t.page.locator('.p-acts button', { hasText: /Нам нравится|Написать/ });
      const why = t.page.locator('.profile-like-note');
      expect(await like.count() || await why.count(), 'no couple like button and no reason');
      await noPicker(t);

@@ -464,7 +464,7 @@ function TopCard({c,cardRef,nextRef,actsRef,onDecide,preview}:{c:Card,cardRef:Re
   </div>
   <div className="pc-body pc-full">
    {preview?<><PersonBio p={preview}/><AboutGroup p={preview} inert/><ProfileBody p={preview} inert preview="all" onOpen={setView}/></>
-    :pre?<><PersonBio p={pre.profile}/><AboutGroup p={pre.profile}/><CompatSummary profileId={c.id} pre={pre.compat}/><ProfileBody p={pre.profile} pre={pre} onOpen={setView}/></>
+    :pre?<><CompatSummary profileId={c.id} pre={pre.compat}/><PersonBio p={pre.profile}/><AboutGroup p={pre.profile}/><ProfileBody p={pre.profile} pre={pre} onOpen={setView}/></>
     :<><Skel kind="card" rows={2}/><Skel kind="post" rows={1}/></>}
    <div className="pc-foot"><FollowButton profileId={c.id} name={name} on={!!rel?.iFollow} inert={!!preview} disabled={!rel} onChange={on=>setRel(x=>x&&{...x,iFollow:on,followers:Math.max(0,x.followers+(on?1:-1))})}/>
     <Btn kind="soft" disabled={!!preview} onClick={()=>navigate('/n/people/'+c.id)}>{t('fe.px.deck.full')}</Btn></div>
