@@ -1,7 +1,7 @@
 // FetUre «test world» (owner, 28.10.2026): production filled with ~28 people, couples, communities, events, posts,
 // chats and requests in many different states, so the app can be looked at as if many people used it.
 //   FE_ADMIN_KEY=… node e2e/seed-world.mjs [phase…]      phases: accounts photos profile social couples communities
-//                                                        events events-more posts variety following video access moderation verify
+//                                                        events events-more posts variety following video media access moderation verify
 //                                                        (default: all, in order); verify-following reads back «Подписки»
 //                                                        only, verify-video the clip and photo + clip posts of the viewers
 // Rules (apps/feture/AGENTS.md §4, §6, e2e/README.md):
@@ -1090,8 +1090,8 @@ async function clip() {
   return { video: fs.readFileSync(vf), poster: fs.readFileSync(pf), durationMs: 6000 };
 }
 /** Uploads a clip as the composer does (intent with length and poster → two PUTs → commit); staff approves it. */
-async function uploadVideo(key, c, { approve = true } = {}) {
-  const i = await api(email(key), 'media.uploadIntent', { opId: uuid7(), purpose: 'post', kind: 'video', mime: c.mime ?? 'video/webm', bytes: c.video.length, durationMs: c.durationMs,
+async function uploadVideo(key, c, { approve = true, purpose = 'post' } = {}) {
+  const i = await api(email(key), 'media.uploadIntent', { opId: uuid7(), purpose, kind: 'video', mime: c.mime ?? 'video/webm', bytes: c.video.length, durationMs: c.durationMs,
     poster: { mime: 'image/jpeg', bytes: c.poster.length } });
   if (!i.assetId || !i.posterUpload) throw new Error('uploadIntent video ' + JSON.stringify(i).slice(0, 200));
   for (const [u, b] of [[i.upload, c.video], [i.posterUpload, c.poster]]) {
@@ -1241,6 +1241,15 @@ const VIDEO_REPLIES = {
   'После дождя': [['lev', 'Красиво. Ночью город совсем другой.']],
 };
 
+/** Owner 06.11.2026: clips are short and light — about three seconds (FE_CLIP_SECONDS), a small frame, a low bitrate. The
+ * shots keep their proportions; crossfades are 0.4 s. */
+const CLIP_SECONDS = Number(process.env.FE_CLIP_SECONDS ?? 3);
+function shorten(spec) {
+  const n = spec.shots.length, f = n > 1 ? 0.4 : 0;
+  const sum = spec.shots.reduce((a, s) => a + s[1], 0), want = CLIP_SECONDS + (n - 1) * f;
+  return { ...spec, fade: f, size: spec.size[0] > spec.size[1] ? [640, 360] : [360, 640], shots: spec.shots.map(s => [s[0], s[1] * want / sum, s[2], s[3]]) };
+}
+
 /** Records the missing clips in Chrome (H.264 MP4) — or Playwright's Chromium (WebM) — and caches them. */
 export async function makeClips(names) {
   const dir = CACHE + 'clips/';
@@ -1258,7 +1267,7 @@ export async function makeClips(names) {
       const queue = [...todo];
       const worker = async () => {
         for (let n; (n = queue.shift());) {
-          const spec = CLIPS[n];
+          const spec = shorten(CLIPS[n]);
           const imgs = {};
           for (const [pic] of spec.shots) imgs[pic] ??= 'data:image/jpeg;base64,' + (await stock(pic)).bytes.toString('base64');
           const page = await browser.newPage();
@@ -1316,7 +1325,7 @@ async function renderClip({ spec, imgs, mime, seed }) {
   const b64 = async blob => { const buf = new Uint8Array(await blob.arrayBuffer()); let s = ''; for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode(...buf.subarray(i, i + 0x8000)); return btoa(s); };
   draw(Math.min(1, total / 2)); const poster = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.88));
   draw(0);
-  const rec = new MediaRecorder(c.captureStream(30), { mimeType: mime, videoBitsPerSecond: 2_800_000 }); const parts = [];
+  const rec = new MediaRecorder(c.captureStream(30), { mimeType: mime, videoBitsPerSecond: 1_200_000 }); const parts = [];
   rec.ondataavailable = e => parts.push(e.data);
   rec.start(1000);
   const t0 = performance.now();
@@ -1336,9 +1345,9 @@ async function video() {
       if (have) return have.id;
       const mediaIds = [];
       for (const m of media) mediaIds.push(typeof m === 'string' ? await upload(key, 'post', await stock(m), { approve: false }) : await uploadVideo(key, clips[m.clip], { approve: false }));
-      await Promise.all(mediaIds.map(approveAsset));
       const d = must(await api(email(key), 'post.saveDraft', { opId: uuid7(), post: { type: 'post', audience: 'all', topics, body, mediaIds } }), 'saveDraft');
       const id = d.id ?? d.postId;
+      await Promise.all(mediaIds.map(approveAsset)); // staff approve only media that is attached to something
       must(await api(email(key), 'post.publish', { opId: uuid7(), postId: id }), 'publish');
       (await postsOf(key)).push({ id, body });
       log('  posted', key, media.map(m => (typeof m === 'string' ? 'photo' : 'video')).join('+'));
@@ -1382,6 +1391,66 @@ async function videoVerify() {
     }
   }
   return out;
+}
+
+// ---------------------------------------------------------------- phase: media (covers and clips everywhere)
+// Owner, 06.11.2026: a cover photo is required for an event and a community, so entries of the world that lack one get a
+// stock picture; short clips go wherever a clip may be — a profile's photos (never the first, at most one) and the
+// private part (text + media) — next to the clip posts of the «video» phase. A few entries stay without a picture on
+// purpose (a cancelled event, a rejected community, the QA lanes' ones) to keep the «no picture» states testable.
+const COVERS = {
+  community: [['mira', 'Утренние разговоры', 'coffee']],
+  event: [['lev', 'Онлайн-воркшоп: афтеркер после практик', 'tea'], ['kira', 'Чтения вслух: письма о близости', 'books']],
+};
+const PROFILE_CLIPS = [['mira', 'mira-morning'], ['lev', 'lev-jute'], ['kira', 'kira-evening'], ['daniel', 'daniel-shop'], ['katya', 'katya-night'], ['oleg', 'oleg-canal']];
+const PRIVATE_CLIPS = [['mira', 'mira-rain'], ['lev', 'lev-prep'], ['alisa', 'alisa-velvet'], ['vesta', 'kira-candle']];
+const eventForm = e => ({ title: e.title, kind: e.kind, description: e.description, format: e.format, placeId: e.placeId ?? null, area: e.area ?? null,
+  exactAddress: e.exactAddress ?? null, joinUrl: e.joinUrl ?? null, tz: e.tz, startsAt: e.startsAt, endsAt: e.endsAt, price: e.price ?? { kind: 'free' },
+  requiresApplication: !!e.requiresApplication, questions: e.questions ?? [], requirements: e.requirements ?? null, plate: e.plate ?? 'lilac',
+  communityId: e.communityId ?? null, seats: e.seats ?? null });
+async function media() {
+  await staff();
+  for (const [host, name, pic] of COVERS.community) await step(`cover community ${name}`, async () => {
+    const c = await communityByName(host, name); if (!c) throw new Error('no community');
+    const full = (await api(email(host), 'community.get', { communityId: c.id })).community;
+    if (full.cover || full.pendingChange?.coverAssetId) return;
+    const cover = await upload(host, 'community', await stock(pic));
+    must(await api(email(host), 'community.update', { opId: uuid7(), communityId: c.id, rev: full.rev, coverAssetId: cover }), 'community.update');
+    if (full.state === 'published') await approveCommunity(c.id);
+  });
+  for (const [host, title, pic] of COVERS.event) await step(`cover event ${title}`, async () => {
+    const e = await eventByTitle(host, title); if (!e) throw new Error('no event');
+    const full = (await api(email(host), 'event.get', { eventId: e.id })).event;
+    if (full.cover) return;
+    const cover = await upload(host, 'event', await stock(pic));
+    must(await api(email(host), 'event.update', { opId: uuid7(), eventId: e.id, rev: full.rev, event: { ...eventForm(full), coverAssetId: cover } }), 'event.update');
+    if (full.state === 'published') {
+      const now = (await api(email(host), 'event.get', { eventId: e.id })).event;
+      must(await api(STAFF, 'staff.eventDecide', { opId: uuid7(), eventId: e.id, rev: now.rev, decision: 'approve' }), 'staff.eventDecide');
+    }
+  });
+  const clips = await makeClips([...new Set([...PROFILE_CLIPS, ...PRIVATE_CLIPS].map(x => x[1]))]);
+  for (const [key, clipName] of PROFILE_CLIPS) await step(`profile clip ${key}`, async () => {
+    const me = await pid(key), prof = (await api(email(key), 'profile.get', { profileId: me })).profile;
+    const have = prof?.photos ?? [];
+    if (!have.length || have.some(m => m.kind === 'video')) return; // a video is never the first, at most one
+    const ids = have.filter(m => m.id && !m.postId).map(m => m.id).slice(0, 5);
+    if (!ids.length) return;
+    const clip = await uploadVideo(key, clips[clipName], { purpose: 'avatar', approve: false });
+    must(await api(email(key), 'profile.photosSet', { opId: uuid7(), assetIds: [...ids, clip] }), 'photosSet clip');
+    await approveAsset(clip); // staff approve only media that is attached to something
+    log('  profile clip', key);
+  });
+  for (const [key, clipName] of PRIVATE_CLIPS) await step(`private clip ${key}`, async () => {
+    const me = await pid(key), pv = await api(email(key), 'private.get', { profileId: me });
+    if (!pv.on) return; // only people who have the private part on
+    const have = pv.media ?? [];
+    if (have.some(m => m.kind === 'video')) return;
+    const clip = await uploadVideo(key, clips[clipName], { purpose: 'private', approve: false });
+    must(await api(email(key), 'private.setMedia', { opId: uuid7(), assetIds: [...have.map(m => m.id), clip] }), 'private.setMedia');
+    await approveAsset(clip);
+    log('  private clip', key);
+  });
 }
 
 // ---------------------------------------------------------------- phase: access requests
@@ -1495,7 +1564,7 @@ async function verify() {
 const PHASES = { accounts: async () => { for (const c of CAST) await step('account ' + c.key, () => account(c)); },
   photos: async () => { await staff(); for (const c of CAST) if (c.face || c.tier === 'doc') await step('photo/age ' + c.key, () => photo(c)); },
   profile: async () => { for (const c of CAST) if (!['fresh', 'min'].includes(c.tier)) await step('profile ' + c.key, () => profileExtras(c)); },
-  social, couples, communities, events, 'events-more': eventsMore, posts, variety, following, video, access, moderation,
+  social, couples, communities, events, 'events-more': eventsMore, posts, variety, following, video, media, access, moderation,
   verify: async () => { const v = await verify(); console.log(JSON.stringify({ ...v, ...await varietyVerify(), ...await followingVerify(), ...await videoVerify() }, null, 1)); },
   'verify-following': async () => console.log(JSON.stringify(await followingVerify(), null, 1)),
   'verify-video': async () => console.log(JSON.stringify(await videoVerify(), null, 1)) };
