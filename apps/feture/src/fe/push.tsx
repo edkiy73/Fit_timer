@@ -8,7 +8,7 @@ import {Alert,BRAND,Btn,Card,Note,Row,Sheet,Spacer,ToggleRow} from './kit';
 import {useFe} from './session';
 import {useToast} from './toast';
 import {disableWebPush,enableWebPush,needsHomeScreen,onUseful,refreshWebPush,webPushState,webPushSupported,type WebPushState} from './push-web';
-import {disableNativePush,enableNativePush,nativePushOfferable,nativePushState,nativePushSupported,onNativePushTap,refreshNativePush} from './push-native';
+import {disableNativePush,enableNativePush,nativePushOfferable,nativePushState,nativePushSupported,PUSH_TAP_EVENT,refreshNativePush,takePushTap} from './push-native';
 
 /** The notification settings as stored (passthrough: an update sends back exactly what the server has, plus a change). */
 const settingsRes=z.object({ok:z.literal(true),settings:z.object({push:z.boolean(),offered:z.boolean().optional()}).passthrough()});
@@ -59,7 +59,14 @@ export function PushOffer(){
  useEffect(()=>{if(!native&&webKey)void refreshWebPush((...a)=>callRef.current(...a),webKey);},[webKey]);
  useEffect(()=>{if(native&&ready)void refreshNativePush((...a)=>callRef.current(...a));},[ready]);
  // In the app a tap on a notification opens its screen (only /#/n/... routes, see pushRoute).
- useEffect(()=>native?onNativePushTap(route=>navigate(route)):undefined,[navigate]);
+ // The tap itself is written down at the app's root (rememberPushTaps in FeRoot); here it is opened once the session is ready.
+ useEffect(()=>{
+  if(!native||!ready)return;
+  const open=()=>{const route=takePushTap();if(route)navigate(route);};
+  open();
+  window.addEventListener(PUSH_TAP_EVENT,open);
+  return ()=>window.removeEventListener(PUSH_TAP_EVENT,open);
+ },[ready,navigate]);
  useEffect(()=>{
   if(native?!ready:!webKey)return;
   return onUseful(()=>{

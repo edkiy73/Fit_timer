@@ -20,6 +20,7 @@ import {SignedOut} from './start';
 import {SigninFactor} from './factor';
 import {ToastProvider,useToast} from './toast';
 import {PushOffer} from './push';
+import {rememberPushTaps} from './push-native';
 import {ActAsSheet,actAsCouple} from './couple';
 import {CreateSheet} from './create-entry';
 import {AppUpdateProvider,UpdateRequired,UpdateSheet,useUpdateRequired} from './app-update';
@@ -77,6 +78,7 @@ function useImageFade(){
 
 export function FeRoot(){
  useEffect(()=>{sweepDrafts();},[]);
+ useEffect(()=>rememberPushTaps(),[]);
  return <FeSessionProvider><AppUpdateProvider><ImageFade/><div className="v21 fe-v21"><MaintenanceGate><FeGate/></MaintenanceGate></div></AppUpdateProvider></FeSessionProvider>;
 }
 function ImageFade(){useImageFade();return null;}
