@@ -151,8 +151,9 @@ export function FeedTab(){
  const [items,setItems]=useState<FeedItem[]|null>(null);const [next,setNext]=useState<string|null>(null);const [error,setError]=useState<unknown>(null);const [more,setMore]=useState(false);
  const [hidden,setHidden]=useState<number|null>(null);const [sheet,setSheet]=useState<'create'|'filters'|'popInfo'|null>(null);
  const [gone,setGone]=useState<Record<string,Gone>>({});const [actMenu,setActMenu]=useState<Act|null>(null);
- // Quick topics come from the posts this tab really shows (most frequent first) and stay put while filtering.
- const [quick,setQuick]=useState<Record<Tab,string[]>>({forYou:[],following:[],popular:[]});
+ // Quick topics come from the posts this tab really shows (most frequent first) and stay put while filtering. They are
+ // kept with the list: coming Back (from the editor, a post) the list is restored without a new read, and its topics with it.
+ const [quick,setQuick]=useKept<Record<Tab,string[]>>('quick',{forYou:[],following:[],popular:[]});
  // Only the latest request may fill the list: a slow answer for the tab or filter left behind never overwrites the current one.
  const req=useRef(0);
  const shownItems=useRef(items);shownItems.current=items;
