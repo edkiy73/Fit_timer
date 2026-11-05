@@ -121,7 +121,7 @@ function ProfileZone({p,settings,load,cp,links}:{p:MeData['p'],settings:MeData['
  const privSub=privOn===undefined?undefined:!privOn?t('fe.m2.off'):[t('fe.m2.on'),privParts.length?privParts.join(', '):t('fe.v3.s.emptyLow')].join(' · ');
  const cap=(x:string|undefined)=>x&&x[0]!.toUpperCase()+x.slice(1);
  return <>
-  {!p||!settings?<MeSkel/>:<PhotosBlock p={p} settings={settings} onChanged={load} tight action={<button type="button" onClick={go('/n/me/preview')}>{t('fe.v3.preview')}</button>}/>}
+  {!p||!settings?<MeSkel/>:<PhotosBlock p={p} settings={settings} onChanged={load} action={<button type="button" onClick={go('/n/me/preview')}>{t('fe.v3.preview')}</button>}/>}
   <Group title={t('fe.v3.g.profileData')}><Card list className="k-one-line">
    <Row icon={UserRound} title={t('fe.me.basics')} sub={basics} onClick={go('/n/me/edit?only=basics')}/>
    {/* the pair where the public profile shows it, under the name (owner 05.11.2026): «Ваша пара», its name and nick */}
