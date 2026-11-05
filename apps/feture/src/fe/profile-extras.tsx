@@ -6,7 +6,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Ban,Check,Crown,ChevronLeft,ChevronRight,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,KeyRound,Link as LinkIcon,Lock,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
-import {ActingAv,Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,LoadMore,Note,PersonName,PhotoBars,PhotoTrack,PullRefresh,Row,Seg,Skel,Stack,Text,ToggleRow,View,coupleNames,plate} from './kit';
+import {ActingAv,Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,LoadMore,Note,PersonName,PhotoBars,PhotoTrack,PullRefresh,Row,Seg,Skel,Stack,Text,ToggleRow,View,coupleNames,plate,useKept} from './kit';
 import {onReadsDropped,useFe,useKeyChange,useOwnProfiles,useShown} from './session';
 import {ReportSheet} from './report';
 import {faceFields,NameBadges} from './faces';
@@ -311,7 +311,7 @@ const ownVis=z.object({ok:z.literal(true),settings:z.object({activityVis:z.enum(
  * видят» (`preview`) shows it only when everyone may. */
 const actsOf=(r:z.infer<typeof actRes>)=>r.items.flatMap(x=>{const a=activitySchema.safeParse(x);return a.success?[a.data]:[];});
 function Activity({profileId,inert,preview,pre}:{profileId:string,inert?:boolean|undefined,preview?:boolean|undefined,pre?:CardPre|undefined}){
- const {call,acting}=useFe();const {t}=useI18n();const [items,setItems]=useState<Post[]|null>(()=>pre?pre.posts?.items??[]:null);const [tab,setTab]=useState<'posts'|'notes'|'acts'>('posts');
+ const {call,acting}=useFe();const {t}=useI18n();const [items,setItems]=useState<Post[]|null>(()=>pre?pre.posts?.items??[]:null);const [tab,setTab]=useKept<'posts'|'notes'|'acts'>('tab','posts');
  const [acts,setActs]=useState<Act[]|null>(()=>pre?pre.activity?actsOf(pre.activity):[]:null);const own=profileId===acting?.id;const [vis,setVis]=useState<string|null>(null);
  const given=!!pre;
  // The first three of each list are drawn; «Показать ещё» opens the rest and the existing paging (`next`) loads further pages.
@@ -743,7 +743,7 @@ const historyRes=z.object({ok:z.literal(true),premium:z.boolean(),items:z.array(
 /** `/n/people/history`: free accounts see the newest decision, Premium seven days (the server decides). */
 export function HistoryScreen(){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
- const [k,setK]=useState<'all'|'pass'|'like'>('all');const [r,setR]=useState<z.infer<typeof historyRes>|null>(null);const [error,setError]=useState<unknown>(null);
+ const [k,setK]=useKept<'all'|'pass'|'like'>('k','all');const [r,setR]=useState<z.infer<typeof historyRes>|null>(null);const [error,setError]=useState<unknown>(null);
  const [back,setBack]=useState<Set<string>>(new Set());const [busy,setBusy]=useState(false);
  const load=useCallback(()=>{setError(null);setR(null);call('discover.history',{kind:k},historyRes).then(setR).catch(setError);},[call,k]);
  useEffect(()=>{load();},[load]);

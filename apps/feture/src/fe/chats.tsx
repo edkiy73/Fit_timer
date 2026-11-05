@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Archive,ArchiveRestore,Ban,Bell,BellOff,Calendar,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Film,Flag,Image as ImageIcon,Inbox,Info,Lock,LockOpen,MessageCircle,Search,SendHorizontal,Sparkles,Undo2,User,UserCheck,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActingAv,Actions,AddBtn,Alert,Av,Bar,Btn,Card,ChatList,ChatPane,ChatPick,ChatRequest,ChatRow,Check as CheckBox,Chip,Chips,CoupleTag,Empty,Field,FilePick,Group,IconBtn,Layer,NewMatch,NewMatches,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Spacer,Text,TextArea,ToggleRow,type Voice,Typing,useBack,VideoBadge,VideoPlayer,View,VoiceBubble,VoiceRecorder} from './kit';
+import {ActingAv,Actions,AddBtn,Alert,Av,Bar,Btn,Card,ChatList,ChatPane,ChatPick,ChatRequest,ChatRow,Check as CheckBox,Chip,Chips,CoupleTag,Empty,Field,FilePick,Group,IconBtn,Layer,NewMatch,NewMatches,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Spacer,Text,TextArea,ToggleRow,type Voice,Typing,useBack,VideoBadge,VideoPlayer,View,VoiceBubble,VoiceRecorder,useKept} from './kit';
 import {VIDEO_TYPES} from './kit/media';
 import {Uploader,type SendPhoto,type SendVideo,type Uploaded} from './kit/Uploader';
 import {useSendPhoto,useSendVideo,useSendVoice} from './media-upload';
@@ -139,7 +139,7 @@ export function ChatsTab(){
  const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const couple=useCouple();
  const [params]=useSearchParams();const archived=params.get('archived')==='1';
  useScreenTag(archived?'H05':'H01');
- const [kind,setKind]=useState<'all'|'me'|'couple'>('all');const [items,setItems]=useState<Chat[]|null>(null);const [error,setError]=useState<unknown>(null);
+ const [kind,setKind]=useKept<'all'|'me'|'couple'>('kind','all');const [items,setItems]=useState<Chat[]|null>(null);const [error,setError]=useState<unknown>(null);
  // «Запросы» (message requests to my profiles, not answered yet): a folder at the top with their count.
  const [requests,setRequests]=useState<Chat[]>([]);
  const [searching,setSearching]=useState(false);const [q,setQ]=useState('');const qRef=useRef<HTMLInputElement>(null);

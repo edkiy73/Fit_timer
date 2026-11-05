@@ -5,7 +5,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ArrowUpDown,BadgeCheck,Ban,CalendarDays,Check,ClipboardCheck,ChevronLeft,ChevronRight,Eye,FilePen,Flag,Gavel,IdCard,Image,ImageOff,Inbox,ListFilter,Lock,MapPin,Minus,RefreshCw,Scale,Search,ShieldAlert,ShieldCheck,User,UserPlus,Tags,Plus,FileText,EyeOff,ChartColumn,Copy,Filter,UserX,Users,X,Ellipsis,Film,Mic,Camera,Image as ImageIcon,LifeBuoy,Crown,Wrench,ScrollText,KeyRound,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,Alert,Btn,Swipe,Card,CheckList,ToggleRow,RadioList,Chip,ChoiceChips,MultiChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewBar,ReviewCard,StatCard,ReviewMedia,ReviewObject,ReviewPair,ReviewTiles,ReviewPreview,type Slide,useBackClose,Row,SearchInput,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble} from './kit';
+import {Actions,Alert,Btn,Swipe,Card,CheckList,ToggleRow,RadioList,Chip,ChoiceChips,MultiChips,Chips,Divider,Empty,ExpandRow,Field,Form,Group,IconBtn,Input,KeyValues,LoadMore,MoreInfo,Note,Pill,ReviewBar,ReviewCard,StatCard,ReviewMedia,ReviewObject,ReviewPair,ReviewTiles,ReviewPreview,type Slide,useBackClose,Row,SearchInput,SectionLabel,Seg,Select,Sheet,Skel,Stack,SubBar,Text,TextArea,VideoPlayer,View,VoiceBubble,useKept} from './kit';
 import {askFactor,useFe,useLive} from './session';
 import {useToast} from './toast';
 import {pullStaffCounts,useStaffCounts} from './staff-counts';
@@ -125,7 +125,7 @@ export function StaffEntry(){
 
 export function StaffScreen(){
  const {t}=useI18n();const {roles,factor,checked,reload}=useStaffMe({fresh:true});const navigate=useNavigate();
- const [section,setSection]=useState<Section>('queues');
+ const [section,setSection]=useKept<Section>('section','queues');
  const ok:Section[]=roles?SECTIONS.filter(id=>can(roles,SECTION_ROLES[id])):[];const cur:Section=ok.includes(section)?section:ok[0]??'queues';
  // The whole cabinet is on the screen (owner 05.11.2026: nothing hidden in a menu): a row of areas, and under it the
  // sections of the area when it has several. An area shows only to who has a role for one of its sections.
@@ -191,7 +191,7 @@ function mergeLive(d:Loaded|null,id:QueueId,order:Order,r:PageOf):Loaded|null{
 
 function Queues(){
  const {call}=useFe();const {t}=useI18n();const toast=useToast();const roles=useStaffRoles();
- const [data,setData]=useState<Loaded|null>(null);const [tab,setTab]=useState<QueueId|'all'>('all');const [notice,setNotice]=useState('');
+ const [data,setData]=useState<Loaded|null>(null);const [tab,setTab]=useKept<QueueId|'all'>('tab','all');const [notice,setNotice]=useState('');
  // One list by the time each item arrived, newest on top (a new arrival is where it is expected); the button turns it round.
  const [order,setOrder]=useState<Order>('new');
  const [only,setOnly]=useState<'all'|'urgent'|'late'>('all');
