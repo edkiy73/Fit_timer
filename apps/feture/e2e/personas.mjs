@@ -18,6 +18,7 @@
 //   inviter, invitee   two `basic` people for the couple flow (free of couples between runs)
 //   staff      the shared qa moderator (STAFF) — only for staff screens and review steps; its second factor (TOTP) is
 //              enrolled on first use and a code is entered whenever needed (lib.mjs staffFactor)
+//   mod-*      QA moderators with one role each (lead, moderator, verifier, auditor, support) and mod-multi
 //   staff2     a second staff account (STAFF2, moderator) whose factor scenarios reset and enrol again on the screen
 // Building is idempotent: a second call only adds what is missing (fresh kinds excepted). Staff steps (approving
 // photos, the age check, communities and events) are done by STAFF, which holds the moderator role on production
@@ -31,7 +32,16 @@ const handleOf = (lane, kind) => `qa_${lane}_${kind}`.slice(0, 20);
 const must = (r, what) => { if (r.status && r.status >= 400) throw new Error(`${what}: ${r.status} ${JSON.stringify(r).slice(0, 300)}`); return r; };
 const FULL = new Set(['full', 'pa', 'pb', 'asker', 'asker2', 'asker3', 'mate', 'chats', 'host']);
 const BASIC = new Set(['basic', 'stranger', 'inviter', 'invitee']);
-export const KINDS = ['new', 'temp', 'owner', ...BASIC, ...FULL, 'pair', 'staff', 'staff2'];
+// QA moderators, one per staff role plus a mixed one (06.11.2026): mod-lead, mod-moderator, mod-verifier, mod-auditor,
+// mod-support (exactly that role each) and mod-multi (moderator + support). Roles are granted once on the server
+// (feture.staff_role, like qa-staff's); every account enrols its own second factor on first use (lib.mjs staffFactor).
+export const MOD_ROLES = { 'mod-lead': ['lead'], 'mod-moderator': ['moderator'], 'mod-verifier': ['verifier'], 'mod-auditor': ['auditor'],
+  'mod-support': ['support'], 'mod-multi': ['moderator', 'support'] };
+export const modMail = kind => `qa-${kind}@feture.test`;
+// «moderator» and «support» inside a handle are reserved words, so the handles are short forms.
+const MOD_HANDLES = { 'mod-lead': 'qa_mod_lead', 'mod-moderator': 'qa_mod_mdr', 'mod-verifier': 'qa_mod_ver', 'mod-auditor': 'qa_mod_aud', 'mod-support': 'qa_mod_sup', 'mod-multi': 'qa_mod_multi' };
+export const modHandle = kind => MOD_HANDLES[kind];
+export const KINDS = ['new', 'temp', 'owner', ...BASIC, ...FULL, 'pair', 'staff', 'staff2', ...Object.keys(MOD_ROLES)];
 
 let docs;
 async function documents() {
@@ -237,6 +247,15 @@ async function build(lane, kind) {
     const me = await api(STAFF2, 'staff.me');
     if (!me.roles?.length) throw new Error('qa-staff2 has no staff role — grant «moderator» once (feture.staff_role)');
     return { email: STAFF2, handle: 'qa_mod2', kind, personId: (await session(STAFF2)).personId };
+  }
+  if (MOD_ROLES[kind]) {
+    const email = modMail(kind);
+    await registered(email, modHandle(kind), 'off');
+    const me = await staffFactor(email, { fresh: true });
+    const have = new Set((me.roles ?? []).map(r => r.role ?? r));
+    const missing = MOD_ROLES[kind].filter(r => !have.has(r));
+    if (missing.length) throw new Error(`${email} lacks the staff role ${missing.join(', ')} — grant it once on the server (feture.staff_role)`);
+    return { email, handle: modHandle(kind), kind, personId: (await session(email)).personId, roles: MOD_ROLES[kind] };
   }
   if (kind === 'temp' || kind === 'owner') {
     const ts = Date.now().toString(36);
