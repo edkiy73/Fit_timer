@@ -6,7 +6,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Ban,Check,Crown,ChevronLeft,ChevronRight,Ellipsis,Eye,EyeOff,Flag,Heart,History,Info,KeyRound,Link as LinkIcon,Lock,MapPin,MessageCircle,ShieldCheck,Undo2,Users,X} from 'lucide-react';
-import {ActingAv,Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,LoadMore,Note,PersonName,PhotoBars,PhotoTrack,PullRefresh,Row,Seg,Skel,Stack,Text,ToggleRow,View,coupleNames,plate} from './kit';
+import {ActingAv,Alert,Av,Bar,Btn,Card,Empty,Group,H,IconBtn,Layer,LoadMore,Note,PersonName,PhotoBars,PhotoTrack,ProfileAv,PullRefresh,Row,Seg,Skel,Stack,Text,ToggleRow,View,coupleNames,plate} from './kit';
 import {onReadsDropped,useFe,useKeyChange,useOwnProfiles,useShown} from './session';
 import {ReportSheet} from './report';
 import {faceFields,NameBadges} from './faces';
@@ -57,7 +57,7 @@ export const personProfile=z.object({id:z.uuid(),kind:z.enum(['person','couple']
  /** One of this account's own profiles (my person while acting as the couple, or the reverse): nothing to like, follow or write. */own:z.boolean().optional(),
  /** A couple: who is in it; a person: their couple (active ones only, never across a block). */
  members:z.array(z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.string().nullable().optional()}).passthrough()).optional(),
- couple:z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.string().nullable().optional()}).passthrough().nullable().optional(),
+ couple:z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),avatar:z.string().nullable().optional(),kind:z.string().optional(),halves:faceFields.halves}).passthrough().nullable().optional(),
  age:z.number().nullable(),city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),photos:z.array(media),details:z.record(z.string(),z.unknown()),photoVerified:z.boolean().optional(),premium:z.boolean().optional()}).passthrough();
 export const personProfileRes=z.object({ok:z.literal(true),profile:personProfile});
 export type PersonProfile=z.infer<typeof personProfile>;
@@ -133,12 +133,12 @@ export function FollowCounts({id,rel,inert}:{id:string,rel:Relation|null,inert?:
 }
 
 /** «Это взаимно» (D08): both avatars, then «Написать» opens the conversation the server just created. */
-export function MatchOverlay({other,conversationId,onClose}:{other:{id:string,name:string,src?:string|null},conversationId?:string|undefined,onClose:()=>void}){
+export function MatchOverlay({other,conversationId,onClose}:{other:{id:string,name:string,src?:string|null,kind?:string|undefined,halves?:{name:string|null,avatar?:string|null}[]|undefined},conversationId?:string|undefined,onClose:()=>void}){
  const {t}=useI18n();const {acting}=useFe();const navigate=useNavigate();const first=useRef<HTMLButtonElement>(null);
  useEffect(()=>{first.current?.focus({preventScroll:true});const k=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();};addEventListener('keydown',k);return ()=>removeEventListener('keydown',k);},[onClose]);
  const me=acting?.name||acting?.handle||'?';
  return <Layer><div className="match" role="dialog" aria-modal="true" aria-label={t('fe.px.m.title')}>
-  <div className="pair"><ActingAv p={acting??{id:'me',kind:'person',name:me}}/><span className="heart"><Heart fill="currentColor"/></span><Av name={other.name} seed={other.id} src={other.src}/></div>
+  <div className="pair"><ActingAv p={acting??{id:'me',kind:'person',name:me}}/><span className="heart"><Heart fill="currentColor"/></span><ProfileAv p={{id:other.id,name:other.name,avatar:other.src??null,kind:other.kind,halves:other.halves}} size=""/></div>
   <H level={2}>{t('fe.px.m.title')}</H><p>{fill(t(acting?.kind==='couple'?'fe.px.m.textUs':'fe.px.m.text'),{name:other.name})}</p>
   <Btn ref={first} icon={MessageCircle} onClick={()=>{onClose();navigate(conversationId?'/n/chats/'+conversationId:'/n/chats');}}>{t(acting?.kind==='couple'?'fe.px.m.writeUs':'fe.px.m.write')}</Btn>
   <Btn kind="soft" onClick={onClose}>{t('fe.px.m.later')}</Btn>
@@ -195,7 +195,7 @@ export function PersonActions({p,rel,setRel,inert}:{p:PersonProfile,rel:Relation
   </div>
   {why&&<p className="profile-like-note"><Heart/><span>{why==='couples_via_discover_only'?<>{t('fe.px.act.coupleVia')} <button type="button" className="linkbtn" onClick={()=>navigate('/n/me?layer=vis')}>{t('fe.px.act.turnOn')}</button></>
    :why==='own_discover_off'?<>{t('fe.px.act.ownOff')} <button type="button" className="linkbtn" onClick={()=>navigate('/n/me?layer=vis')}>{t('fe.px.act.turnOn')}</button></>:t('fe.px.act.likesOff')}</span></p>}
-  {match&&<MatchOverlay other={{id:p.id,name,src:mediaSrc(p.avatar)}} conversationId={match.conversationId} onClose={()=>setMatch(null)}/>}
+  {match&&<MatchOverlay other={{id:p.id,name,src:mediaSrc(p.avatar),kind:p.kind,halves:halvesOf(p)}} conversationId={match.conversationId} onClose={()=>setMatch(null)}/>}
   {explain&&<Sheet title={t('fe.w7.offLike.title')} onClose={()=>setExplain(false)}
    foot={<><Btn icon={Heart} busy={busy==='like'} disabled={busy==='like'} onClick={confirmLike}>{t('fe.w7.offLike.send')}</Btn>
     <Btn kind="text" onClick={()=>{setExplain(false);navigate('/n/me?layer=vis');}}>{t('fe.w7.offLike.turnOn')}</Btn></>}>
@@ -368,7 +368,7 @@ function GalleryGroup({p,inert,preview,gal}:{p:PersonProfile,inert?:boolean|unde
 export const galleryList=z.object({ok:z.literal(true),items:z.array(z.object({postId:z.string(),media:z.object({src:z.record(z.string(),z.string()).nullable()}).passthrough(),audience:z.string().optional()}).passthrough()),next:z.string().nullable()});
 
 /** Interests group of another profile (pubJars → jarShelf, six then «Ещё N»). */
-function InterestsGroup({profileId,name,avatar,inert,pre,preview}:{profileId:string,name:string,avatar?:string|null|undefined,inert?:boolean|undefined,pre?:CardPre|undefined,preview?:'all'|'granted'|undefined}){
+function InterestsGroup({profileId,name,avatar,face,inert,pre,preview}:{profileId:string,name:string,avatar?:string|null|undefined,face?:{kind?:string|undefined,halves?:{name:string|null,avatar?:string|null}[]|undefined}|undefined,inert?:boolean|undefined,pre?:CardPre|undefined,preview?:'all'|'granted'|undefined}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const topic=useTopics();
  // «Как видят» reads the own list (every audience): keep only what that audience gets — public ones, plus «По доступу»
  // with access; «Только я» never; a hard limit only as a limit, as the server sends it to others.
@@ -385,7 +385,7 @@ function InterestsGroup({profileId,name,avatar,inert,pre,preview}:{profileId:str
  const theirs=(id:string)=>{const j=items.find(x=>x.topicId===id);return j?asInterest(j):undefined;};
  return <Group title={t('fe.px.int.title')}>
   <Card><Jars items={items} topic={topic} max={6} {...(inert?{}:{onTopic:(id:string)=>own?navigate('/n/topics/'+id):setOpen(id)})}/></Card>
-  {open&&<CompareSheet key={open} topicId={open} name={name} avatar={avatar} personId={profileId} theirs={theirs(open)} onClose={()=>setOpen(null)}/>}</Group>;
+  {open&&<CompareSheet key={open} topicId={open} name={name} avatar={avatar} face={face} personId={profileId} theirs={theirs(open)} onClose={()=>setOpen(null)}/>}</Group>;
 }
 
 /** Everything under the photo and the buttons — the same body on the profile page and under a Discover card. */
@@ -394,7 +394,7 @@ export function ProfileBody({p,inert,preview,pre,gal}:{p:PersonProfile,inert?:bo
  return <>
   <DetailsGroup p={p}/>
   <LinksSection profileId={p.id} inert={inert} pre={pre}/>
-  <InterestsGroup profileId={p.id} name={personName(p)||'?'} avatar={mediaSrc(p.avatar)} inert={inert} pre={pre} preview={preview}/>
+  <InterestsGroup profileId={p.id} name={personName(p)||'?'} avatar={mediaSrc(p.avatar)} face={{kind:p.kind,halves:halvesOf(p)}} inert={inert} pre={pre} preview={preview}/>
   <GalleryGroup p={p} inert={inert} preview={!!preview} gal={gal}/>
   <PrivateVault profileId={p.id} name={personName(p)} {...(preview?{preview}:{})} {...(pre?{pre:pre.private??{ok:true,exists:false}}:{})}/>
   <Activity profileId={p.id} inert={inert} preview={!!preview} pre={pre}/>
@@ -446,10 +446,11 @@ export function cardRead(actingId:string,profileId:string){const hit=cardMemo.ge
  * nothing pressable. */
 export function ProfilePage({p,preview,seg,bar,onMore,menu,onRefresh,pre,gal,children}:{p:PersonProfile,/** The screen's own header («Как видят»: back and the tabs, the same on every tab) instead of the one over the cover. */ bar?:ReactNode,/** Everything under the photo, read before the page is drawn: nothing pops in later. */ pre?:CardPre|undefined,gal?:GalleryData|null|undefined,preview?:'all'|'granted'|undefined,seg?:ReactNode,onMore?:(()=>void)|undefined,
  menu?:((rel:Relation|null,reload:()=>void)=>ReactNode)|undefined,/** Pull-to-refresh: reads the profile again. */ onRefresh?:(()=>unknown)|undefined,children?:ReactNode}){
- const {t}=useI18n();const navigate=useNavigate();const goPeople=useBack('/n/people');const [rel,setRel,reloadRel]=useRelation(p.id);const [view,setView]=useState<number|null>(null);
+ const {acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const goPeople=useBack('/n/people');const [rel,setRel,reloadRel]=useRelation(p.id);const [view,setView]=useState<number|null>(null);
  const scroller=useRef<HTMLDivElement>(null);const name=personName(p);const inert=!!preview;const list=photosOf(p);
  // My other profile (owner 05.11.2026: from the couple one could like, follow or write to oneself and get errors).
- const self=!!p.own&&!preview;const noActs=(!!p.own||!!p.partner)&&!preview;
+ const self=!!p.own&&!preview;// No buttons and no comparison on my own pair: my other profile (the couple from a person, a person from the couple) and, as the couple, my partner. One partner looking at the other is an ordinary profile.
+ const noActs=(!!p.own||(!!p.partner&&acting?.kind==='couple'))&&!preview;
  return <>
   {bar??<header className="bar overlay pbar">
    {/* Back to where the profile was opened (the deck, «Симпатии», a list, search); opened by a link, to «Люди». */}
@@ -481,7 +482,7 @@ function PairGroup({p,inert}:{p:PersonProfile,inert?:boolean|undefined}){
  if(!people.length)return null;
  return <Group title={t(p.kind==='couple'?'fe.px.pair.members':'fe.px.pair.couple')}><Card list>
   {people.map(x=>{const name=x.name||x.handle||'?';
-   return <Row key={x.id} av={<Av name={name} seed={x.id} size="sm" src={x.avatar??null}/>} title={name} sub={x.handle?'@'+x.handle:undefined}
+   return <Row key={x.id} av={<ProfileAv p={x} size="sm"/>} title={name} sub={x.handle?'@'+x.handle:undefined}
     {...(inert?{}:{onClick:()=>navigate('/n/people/'+x.id)})}/>;})}
  </Card></Group>;
 }
@@ -521,14 +522,14 @@ const byGroup=(c:Compat)=>{const out:Record<Group,CompatItem[]>={complement:[],m
  const min=(i:CompatItem)=>Math.min(i.mine.value??0,i.theirs.value??0);for(const g of GROUPS)out[g].sort((a,b)=>min(b)-min(a));return out;};
 
 /** compatWords / sharedHead: one number («N общих тем»), then how they split; never a score. */
-function compatWords(c:Compat,t:T,locale:string,consent:boolean){
+function compatWords(c:Compat,t:T,locale:string){
  if(c.few)return t('fe.px.cmp.fewText');
  const g=byGroup(c),m=g.match.length,k=g.complement.length,n=m+k,parts:string[]=[];
  if(n)parts.push(plural(t,locale,'fe.px.topic',n)+(m&&k?fill(t('fe.px.cmp.alikeComp'),{m,c:k}):k?t('fe.px.cmp.compOnly'):''));
  if(g.try.length)parts.push(fill(t('fe.px.cmp.tryN'),{n:g.try.length}));
  if(g.discuss.length)parts.push(fill(t('fe.px.cmp.discussN'),{n:g.discuss.length}));
  const s=parts.join(' · ')||t('fe.px.cmp.something');
- return consent?s+'. '+t('fe.px.cmp.notConsent'):s;
+ return s;
 }
 function Venn({n}:{n:number|string}){return <div className="venn mini"><i/><i/><b>{n}</b></div>;}
 
@@ -540,7 +541,7 @@ export function CompatSummary({profileId,pre}:{profileId:string,/** Already read
  if(!c)return null;
  // The full comparison says «совпадение — не согласие»; the summary stays one short line (29.10 sweep).
  return <section className="compat v14c"><button type="button" className="cp-h" onClick={()=>navigate('/n/people/'+profileId+'/compat')}>
-  <Venn n={c.few?'?':c.count}/><span className="grow"><b>{c.few?t('fe.px.cmp.few'):t('fe.px.cmp.hasTalk')}</b><span>{compatWords(c,t,locale,false)}</span></span><ChevronRight/>
+  <Venn n={c.few?'?':c.count}/><span className="grow"><b>{c.few?t('fe.px.cmp.few'):t('fe.px.cmp.hasTalk')}</b><span>{compatWords(c,t,locale)}</span></span><ChevronRight/>
  </button></section>;
 }
 
@@ -559,7 +560,11 @@ export function explain(i:CompatItem,t:T,name:string){
 }
 
 /** cmpRow: my fill with the topic inside, both values at the ends; a limit is a word, never a number. */
-export function CmpRow({i,topic,me,them,t,why:showWhy=true,lock}:{i:CompatItem,topic:string,me:{name:string,id:string,src?:string|null},them:{name:string,id:string,src?:string|null},t:T,
+export type CmpSide={name:string,id:string,src?:string|null|undefined,/** A couple: its avatar is two halves. */ kind?:string|undefined,halves?:{name:string|null,avatar?:string|null}[]|undefined};
+const sideAv=(x:CmpSide)=><ProfileAv p={{id:x.id,name:x.name,avatar:x.src??null,kind:x.kind,halves:x.halves}} size=""/>;
+/** The two halves of a couple's avatar from the profile's partners (their own photos). */
+export const halvesOf=(p:{kind?:string|undefined,members?:{name?:string|null|undefined,handle?:string|null|undefined,avatar?:string|null|undefined}[]|undefined}|null|undefined)=>p?.kind==='couple'&&p.members?.length===2?p.members.map(m=>({name:m.name||m.handle||null,avatar:m.avatar??null})):undefined;
+export function CmpRow({i,topic,me,them,t,why:showWhy=true,lock}:{i:CompatItem,topic:string,me:CmpSide,them:CmpSide,t:T,
  /** false: no line under the bar (the interest sheet says it in its verdict). */ why?:boolean,/** My answer is not public: a key on my avatar (its label says who sees it). */ lock?:string|undefined}){
  const lim=i.group==='bound'||!!i.mine.mark;const lv=lim?0:(i.mine.value??0);
  const val=(s:z.infer<typeof side>)=>s.mark==='hard'?<small className="lim t">{t('fe.px.cmp.taboo')}</small>:s.mark==='discuss'?<small className="lim s">{t('fe.px.cmp.negot')}</small>:<b>{s.value??'—'}</b>;
@@ -569,11 +574,11 @@ export function CmpRow({i,topic,me,them,t,why:showWhy=true,lock}:{i:CompatItem,t
   <span className={['cr',hard?'hard':'',soft?'soft':''].filter(Boolean).join(' ')} style={{'--v':lv,'--lv':lv} as React.CSSProperties}>
    {lv?<span className="cr-f"/>:null}
    <div className="cr-l">
-    <i className="cr-av me"><Av name={me.name} seed={me.id} src={me.src}/>{lock&&<span className="cr-key" role="img" aria-label={lock}><KeyRound/></span>}</i>
+    <i className="cr-av me">{sideAv(me)}{lock&&<span className="cr-key" role="img" aria-label={lock}><KeyRound/></span>}</i>
     <span className="cr-v">{val(i.mine)}{ra&&<em>{ra}</em>}</span>
     <span className="cr-n">{topic}</span>
     <span className="cr-v r">{val(i.theirs)}{rb&&<em>{rb}</em>}</span>
-    <i className="cr-av them"><Av name={them.name} seed={them.id} src={them.src}/></i>
+    <i className="cr-av them">{sideAv(them)}</i>
    </div>
   </span>
   {why&&<p className="cr-why">{why}</p>}
@@ -588,8 +593,8 @@ export function CompatScreen(){
   .then(([a,b])=>{setC(a);setP(b.profile);}).catch(setError);},[call,id]);
  useEffect(()=>{load();},[load]);
  const name=personName(p);
- const me={name:acting?.name||acting?.handle||'?',id:acting?.id??'me',src:acting?.avatar??null};
- const them={name:name||'?',id,src:mediaSrc(p?.avatar)};
+ const me:CmpSide={name:acting?.name||acting?.handle||'?',id:acting?.id??'me',src:acting?.avatar??null,kind:acting?.kind,halves:acting?.halves};
+ const them:CmpSide={name:name||'?',id,src:mediaSrc(p?.avatar),kind:p?.kind,halves:halvesOf(p)};
  // A line under a row that only repeats its group's description is left out (29.10 sweep: «Роли дополняют друг друга» ×N).
  const same=new Set(['fe.px.cmp.w.roles','fe.px.cmp.w.into','fe.px.cmp.w.try'].map(k=>t(k)));
  return <>
@@ -601,7 +606,7 @@ export function CompatScreen(){
      <div className="cmp14"><Venn n={c.few?(c.topics.length||'?'):c.count}/><div className="cmp-head">
       <small>{fill(t('fe.px.cmp.you'),{name})}</small>
       <b>{c.few?(c.topics.length?fill(t('fe.px.cmp.fewN'),{topics:plural(t,locale,'fe.px.topic',c.topics.length)}):t('fe.px.cmp.few')):t('fe.px.cmp.talk')}</b>
-      <span>{c.few?c.topics.map(topic).join(', '):compatWords(c,t,locale,false)}</span>
+      <span>{c.few?c.topics.map(topic).join(', '):compatWords(c,t,locale)}</span>
      </div></div>
      <Alert icon={ShieldCheck}>{t('fe.px.cmp.consent')}</Alert>
      {c.few&&<Alert icon={Info}><b>{t('fe.px.cmp.fewTitle')}</b>{t('fe.px.cmp.fewBody')}</Alert>}
@@ -624,7 +629,7 @@ export const SIDES:Partial<Record<Kind,readonly ['dom','sub']|readonly ['mentor'
 export const OPPOSITE:Record<string,string>={dom:'sub',sub:'dom',mentor:'mentee',mentee:'mentor'};
 /** «Наставничество · учит» — the kind, plus the other side's role (`side` is the own side) when the kind has sides. */
 export const linkLabel=(t:T,kind:string,side?:string|null)=>{const theirs=side?OPPOSITE[side]:null;return t('fe.px.lk.k.'+kind)+(theirs?' · '+t('fe.px.lk.s.'+theirs).toLowerCase():'');};
-const linkOther=z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable(),...faceFields});
+const linkOther=z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),...faceFields});
 const linkView=z.object({id:z.uuid(),kind:z.string(),side:z.string().nullable(),vis:z.enum(['all','followers','us']),other:linkOther,
  change:z.object({kind:z.string(),mine:z.boolean()}).nullable()});
 export type LinkView=z.infer<typeof linkView>;
@@ -647,7 +652,7 @@ export function LinksSection({profileId,inert,pre}:{profileId:string,inert?:bool
   <Card list>{shown.map(l=>{const name=l.other.name||(l.other.handle?'@'+l.other.handle:'?');
    // `side` is this profile's side; the row names the other one's, as in the prototype's linkLabel.
    const label=linkLabel(t,l.kind,l.side);const mine=own.has(l.other.id);
-   return <Row key={l.id} disabled={!!inert} av={<Av name={name} seed={l.other.id} size="sm" src={l.other.avatar}/>}
+   return <Row key={l.id} disabled={!!inert} av={<ProfileAv p={l.other} size="sm"/>}
     title={<>{name}<NameBadges p={l.other}/>{mine?' · '+t(acting?.kind==='couple'?'fe.px.lk.you2':'fe.px.lk.you'):''}</>} sub={label}
     onClick={()=>navigate(mine?(l.other.id===acting?.id?'/n/me/preview':'/n/me'):'/n/people/'+l.other.id)}/>;})}</Card>
  </Group>;

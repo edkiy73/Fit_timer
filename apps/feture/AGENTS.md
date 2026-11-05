@@ -59,6 +59,12 @@ Every command follows `server/README.md`: contract in `contracts/<area>.mjs` →
 or a helper defined twice (`tools/fe-server-baseline.json` only shrinks). Text input rules:
 `docs/input-safety-backend-checklist.md`.
 
+## Test data only until launch (owner, 05.11.2026)
+Production holds **only test accounts** until the public launch. Do not spend effort on keeping old data, old behaviour or
+compatibility for couples/profiles that exist now: a migration may reshape or reset them, and a rule may change without
+a data-preserving path. This stops being true on the day the owner announces the launch; from then on migrations must
+keep real users' data. Until then do not mention «existing couples» as a risk in a plan.
+
 ## Product decisions in force
 
 - **Discover starts off** (28.10.2026). New accounts and couples have `discover_mode = 'off'`. Turning Discover on

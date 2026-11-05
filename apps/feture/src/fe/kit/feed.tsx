@@ -2,7 +2,7 @@ import React,{forwardRef,useCallback,useEffect,useImperativeHandle,useLayoutEffe
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Bold,ChartColumn,ChevronDown,ChevronRight,Ellipsis,FileText,Heading,Heart,Image as ImageIcon,ImagePlus,Italic,Link as LinkIcon,List,ListOrdered,MessageCircle,MessageSquareText,Plus,Quote,Sparkles,Strikethrough,Video,type LucideIcon} from 'lucide-react';
 import {fmtDur} from './media';
-import {Av,Btn,Field,H,IconBtn,Input,Sheet,Skel,Text,namedPlate,type PlateKey} from './index';
+import {Av,Btn,Field,H,IconBtn,Input,ProfileAv,Sheet,Skel,Text,namedPlate,type PlateKey} from './index';
 import {domToMd,imageBlock,linkOk,mdToDom,mentionNodes} from './rich-md';
 
 export {linkOk,BAD_CHARS,hasLongWord,mdImages} from './rich-md';
@@ -143,8 +143,8 @@ function LinkSheet({text,onClose,onDone}:{text:string,onClose:()=>void,onDone:(t
 /* ---------------- Likes and activity ---------------- */
 
 /** «Нравится: Mia, Alex и ещё 3» under a post — opens the list of who liked it. */
-export function LikesLine({people,text,onClick}:{people:{id:string,name:string,avatar?:string|null|undefined}[],text:ReactNode,onClick:()=>void}){
- return <button type="button" className="likes-line" onClick={onClick}><span className="av-stack">{people.slice(0,3).map(p=><Av key={p.id} name={p.name} seed={p.id} src={p.avatar} size="xs"/>)}</span><span>{text}</span></button>;
+export function LikesLine({people,text,onClick}:{people:{id:string,name:string,avatar?:string|null|undefined,kind?:string|undefined,halves?:{name:string|null,avatar?:string|null}[]|undefined}[],text:ReactNode,onClick:()=>void}){
+ return <button type="button" className="likes-line" onClick={onClick}><span className="av-stack">{people.slice(0,3).map(p=><ProfileAv key={p.id} p={p} size="xs"/>)}</span><span>{text}</span></button>;
 }
 
 /** What an activity thumbnail shows (V21 likeThumb): a liked post — its first picture (or video poster) with the media

@@ -8,7 +8,9 @@ import { hasPhotoCheck } from './verification.mjs';
  * nothing; the age only when the person shows it (`show_age`) or it is the viewer's own; couples have no age.
  * Premium is the public gold badge (V10 «Значки»; Q12: a couple has it when an active partner has it).
  * @typedef {import('../db.mjs').Q} Q @typedef {import('../media/assets.mjs').MediaConfig} MediaConfig
- * @typedef {{avatar: string | null, age: number | null, photoVerified: boolean, premium: boolean}} Face
+ * A couple without a photo of its own also carries `halves`: its two partners' small photo (or null) and name, for the
+ * split avatar (owner 05.11.2026: a couple's avatar is never one letter).
+ * @typedef {{avatar: string | null, age: number | null, photoVerified: boolean, premium: boolean, kind?: 'person' | 'couple', halves?: {name: string | null, avatar: string | null}[]}} Face
  */
 
 /** Premium of profile `p` (a person's account, or any active partner of a couple — Q12), as a SQL expression. */
@@ -36,7 +38,7 @@ export async function facesOf(q, media, viewer, ids) {
   if (!uniq.length) return out;
   const pv = await hasPhotoCheck(q);
   const rows = await q.query(
-    `select p.id, v.own,
+    `select p.id, p.kind, v.own,
        case when p.kind = 'person' and a.birth_date is not null and (v.own or coalesce(d.show_age, false)) then a.birth_date::text end birth_date,
        ${pv ? 'feture.photo_verified(p.id)' : 'false'} pv,
        ${PREMIUM_SQL} premium,
@@ -56,8 +58,30 @@ export async function facesOf(q, media, viewer, ids) {
       const d = await mediaDto(media, asset, { viewerProfileId: viewer.profileId, place: 'public', showExplicit: false }).catch(() => null);
       avatar = d && !d.blurred && d.src ? (d.src.thumb ?? d.src.card ?? null) : null;
     }
-    out.set(r.id, { avatar, age: r.birth_date ? ageOn(String(r.birth_date).slice(0, 10)) : null, photoVerified: !!r.pv, premium: !!r.premium });
+    out.set(r.id, { avatar, age: r.birth_date ? ageOn(String(r.birth_date).slice(0, 10)) : null, photoVerified: !!r.pv, premium: !!r.premium, kind: /** @type {'person' | 'couple'} */ (r.kind) });
   }));
+  // A couple with no photo of its own: each partner's photo for the two halves, in the order of the couple's name.
+  const bare = rows.filter(r => r.kind === 'couple' && !out.get(r.id)?.avatar).map(r => r.id);
+  if (bare.length && media?.delivery && viewer.profileId) {
+    const ms = await q.query(
+      `select m.profile_id couple_id, pp.name, pp.handle, case when ma.id is null then null else to_jsonb(ma) end asset
+       from feture.profile_member m join feture.account a on a.id = m.account_id join feture.profile pp on pp.id = a.person_profile_id
+       left join feture.media_asset ma on ma.id = pp.avatar_asset_id
+       where m.profile_id = any($1::uuid[]) and m.state = 'active' order by pp.created_at, pp.id`, [bare]);
+    /** @type {Map<string, {name: string | null, avatar: string | null}[]>} */
+    const halves = new Map();
+    await Promise.all(ms.map(async (m, i) => {
+      let avatar = null;
+      if (m.asset && viewer.profileId) {
+        const asset = typeof m.asset === 'string' ? JSON.parse(m.asset) : m.asset;
+        const d = await mediaDto(media, asset, { viewerProfileId: viewer.profileId, place: 'public', showExplicit: false }).catch(() => null);
+        avatar = d && !d.blurred && d.src ? (d.src.thumb ?? d.src.card ?? null) : null;
+      }
+      ms[i] = { ...m, avatar };
+    }));
+    for (const m of ms) halves.set(m.couple_id, [...(halves.get(m.couple_id) ?? []), { name: m.name || m.handle || null, avatar: m.avatar }]);
+    for (const [id, h] of halves) { const f = out.get(id); if (f && h.length === 2) f.halves = h; }
+  }
   return out;
 }
 

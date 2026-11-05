@@ -2,10 +2,10 @@ import {useState} from 'react';
 import {useNavigate} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {ArrowLeftRight,Ban,Check,EyeOff,MessageCircle,Pencil,Plus,Sparkles,type LucideIcon} from 'lucide-react';
-import {Btn,Sheet,Skel,Text,Verdict} from './kit';
+import {Btn,Sheet,Skel,Verdict} from './kit';
 import {useFe} from './session';
 import {InterestSheet,useInterests,type Interest} from './interests';
-import {CmpRow,compatGroup,explain,type CompatItem} from './profile-extras';
+import {CmpRow,compatGroup,explain,type CmpSide,type CompatItem} from './profile-extras';
 
 /** Someone's answer as the sheet takes it (a post's snapshot, a profile's list): a limit never carries a level. */
 export const asInterest=(x:{topicId:string,value?:unknown,mark?:unknown,dir?:unknown}):Interest=>x.mark==='hard'||x.mark==='discuss'
@@ -18,7 +18,8 @@ export const asInterest=(x:{topicId:string,value?:unknown,mark?:unknown,dir?:unk
  * answer is not public; «Изменить мой» / «Добавить себе» and «Об этом интересе» at the bottom.
  * `theirs` is only what the server let the viewer see (interests.list: public, «по доступу» with the info grant; a
  * hard limit comes without level or roles). Their limit is a boundary, never a match. */
-export function CompareSheet({topicId,name,avatar,personId,theirs,onClose}:{topicId:string,name:string,/** Their photo. */ avatar?:string|null|undefined,
+export function CompareSheet({topicId,name,avatar,face,personId,theirs,onClose}:{topicId:string,name:string,/** Their photo. */ avatar?:string|null|undefined,
+ /** A couple: the two halves of their avatar when there is no photo. */ face?:{kind?:string|undefined,halves?:{name:string|null,avatar?:string|null}[]|undefined}|undefined,
  /** Their profile id (the colour of their initials). */ personId?:string|undefined,theirs:Interest|undefined,onClose:()=>void}){
  const {t,locale}=useI18n();const {acting}=useFe();const navigate=useNavigate();
  const {items:mineAll,cats,topics,load}=useInterests();
@@ -30,8 +31,8 @@ export function CompareSheet({topicId,name,avatar,personId,theirs,onClose}:{topi
  if(edit)return <InterestSheet topicId={topicId} topics={topics} cats={cats} current={mine} onClose={()=>setEdit(false)}
   onDone={()=>{setEdit(false);load();}}/>;
  const group=mine&&theirs?compatGroup(mine,theirs):null;
- const me={name:acting?.name||acting?.handle||'?',id:acting?.id??'me',src:acting?.avatar??null};
- const them={name,id:personId??'them:'+topicId,src:avatar??null};
+ const me:CmpSide={name:acting?.name||acting?.handle||'?',id:acting?.id??'me',src:acting?.avatar??null,kind:acting?.kind,halves:acting?.halves};
+ const them:CmpSide={name,id:personId??'them:'+topicId,src:avatar??null,kind:face?.kind,halves:face?.halves};
  const empty={value:null,mark:null,dir:[]};
  const item:CompatItem={topicId,group:group??'try',mine:mine??empty,theirs:theirs??empty};
  const lock=mine&&mine.vis!=='public'?t(mine.vis==='granted'?(us?'fe.cmpx.visGrantedUs':'fe.cmpx.visGranted'):(us?'fe.cmpx.visOnlyUs':'fe.cmpx.visOnly')):undefined;
@@ -49,7 +50,6 @@ export function CompareSheet({topicId,name,avatar,personId,theirs,onClose}:{topi
   {mineAll===null?<Skel kind="line" rows={2}/>:<div className="cmpx">
    <CmpRow i={item} topic={title} me={me} them={them} t={k=>t(k)} why={false} lock={lock}/>
    {verdict}
-   {group&&group!=='bound'&&group!=='discuss'&&<Text size="xs" tone="faint" center>{t('fe.px.cmp.notConsent')}</Text>}
   </div>}
  </Sheet>;
 }

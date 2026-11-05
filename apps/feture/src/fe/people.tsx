@@ -6,11 +6,11 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Search,Ban,Bell,CalendarDays,Check,ChevronDown,ChevronLeft,ChevronRight,EyeOff,Heart,Ellipsis,History,Info,KeyRound,LocateFixed,Lock,MapPin,MessageCircle,SlidersHorizontal,Sparkles,Undo2,Users,X} from 'lucide-react';
 import {CityField} from './kit/Place';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,IconBtn,LikeTile,Note,PairArt,PersonName,PhotoBars,Pill,Radar,Range,RangeDual,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Soon,Stack,Text,View,plate,useScrollTo} from './kit';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,IconBtn,LikeTile,Note,PairArt,PersonName,PhotoBars,Pill,Radar,Range,RangeDual,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Soon,Stack,Text,View,plate,useScrollTo,ProfileAv} from './kit';
 import {useFe,useShown} from './session';
 import {useToast} from './toast';
 import {DiscoverPhotoAsk} from './discover-photo';
-import {NameBadges} from './faces';
+import {NameBadges,faceFields} from './faces';
 import {BellButton} from './inbox';
 import {when} from './feed';
 import {FollowButton} from './follow';
@@ -24,7 +24,7 @@ import {topicMatches} from './topic-search';
  * only what the server returned: no invented matches, counters or scores. People search lives in the global search. */
 const media=z.object({src:z.record(z.string(),z.string()).nullable(),pending:z.boolean().optional()}).passthrough();
 const card=z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),ages:z.array(z.number()),
- city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),likedMe:z.boolean(),shared:z.number(),photoVerified:z.boolean().optional(),premium:z.boolean().optional(),
+ city:z.object({ru:z.string().nullable(),en:z.string().nullable()}).nullable(),avatar:media.nullable(),halves:faceFields.halves,likedMe:z.boolean(),shared:z.number(),photoVerified:z.boolean().optional(),premium:z.boolean().optional(),
  // Discover only: what the top card shows before it is scrolled (photos, follower counts, follow, private part).
  photos:z.array(media).optional(),followers:z.number().optional(),following:z.number().optional(),iFollow:z.boolean().optional(),
  private:z.object({exists:z.boolean(),open:z.boolean()}).optional()});
@@ -328,7 +328,7 @@ function Discover({reloadKey,onOff,filterOn,openFilter,onLikes}:{reloadKey:numbe
   if(e.key==='ArrowRight')void decide(1);if(e.key==='ArrowLeft')void decide(-1);};
   document.addEventListener('keydown',key);return ()=>document.removeEventListener('keydown',key);},[decide,match]);
  const box=(node:ReactNode)=><><View>{node}</View></>;
- const overlay=match&&<MatchOverlay other={{id:match.card.id,name:cname(match.card),src:photo(match.card)}} conversationId={match.conversationId} onClose={()=>setMatch(null)}/>;
+ const overlay=match&&<MatchOverlay other={{id:match.card.id,name:cname(match.card),src:photo(match.card),kind:match.card.kind,halves:match.card.halves}} conversationId={match.conversationId} onClose={()=>setMatch(null)}/>;
  if(error&&!cards?.length)return box(<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={()=>load()}>{t('fe.retry')}</Btn></Empty>);
  const skel=<div className="view deckmode"><div className="deck"><div className="pc top fe-pc-skel"><div className="pc-ph"><i className="sk k-sk-fill"/></div></div></div>{overlay}</div>;
  if(cards===null)return skel;
@@ -571,7 +571,7 @@ function Likes({onCount,toDiscover}:{onCount:(n:number)=>void,toDiscover:()=>voi
  if(error)body=<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>;
  else if(!inc||!out)body=k==='in'?<div className="likes">{[0,1,2,3].map(i=><div key={i} className="lk"><i className="sk k-sk-fill"/></div>)}</div>:<Skel kind="list"/>;
  else if(k==='out')body=out.length?<Card list>{out.map(l=>{const c=l.profile;
-  return <Row key={c.id} av={<Av name={cname(c)} seed={c.id} src={c.avatar?.src?.thumb}/>} title={<>{cname(c)}<NameBadges p={c}/></>}
+  return <Row key={c.id} av={<ProfileAv p={{...c,avatar:c.avatar?.src?.thumb??null}}/>} title={<>{cname(c)}<NameBadges p={c}/></>}
    sub={[t(l.source==='profile'?'fe.px.lk.fromProfile':l.source==='likes'?'fe.px.lk.fromLikes':'fe.px.lk.fromDiscover'),l.at?when(l.at,locale):null,us&&l.initiator?'@'+l.initiator:null].filter(Boolean).join(' · ')}
    onClick={()=>navigate('/n/people/'+c.id)}
    end={<><Pill tone="wait">{t('fe.px.lk.pendingPill')}</Pill><IconBtn icon={X} kind="ghost" size="sm" label={t(us?'fe.px.lk.unlikeUs':'fe.px.lk.unlike')} disabled={busy===c.id} onClick={()=>unlike(c,l.source)}/></>}/>;})}</Card>
@@ -586,7 +586,7 @@ function Likes({onCount,toDiscover}:{onCount:(n:number)=>void,toDiscover:()=>voi
  return <>
   <View refresh={load}>{seg}{body}</View>
   
-  {match&&<MatchOverlay other={{id:match.card.id,name:cname(match.card),src:photo(match.card)}} conversationId={match.conversationId} onClose={()=>setMatch(null)}/>}
+  {match&&<MatchOverlay other={{id:match.card.id,name:cname(match.card),src:photo(match.card),kind:match.card.kind,halves:match.card.halves}} conversationId={match.conversationId} onClose={()=>setMatch(null)}/>}
  </>;
 }
 

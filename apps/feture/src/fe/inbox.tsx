@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AlarmClock,AtSign,Bell,Calendar,CalendarClock,CalendarX,Check,CircleCheck,Clock,Crown,EyeOff,Filter,Heart,Image as ImageIcon,LifeBuoy,Link2,LockOpen,MapPin,Megaphone,MessageCircle,Pencil,Shield,ShieldAlert,ShieldCheck,Trash2,TriangleAlert,UserCheck,UserMinus,Users,X,type LucideIcon} from 'lucide-react';
 import {DECIDE_KINDS,FILTERS as KINDS,actOf,destination,entryFor,noteLine,textOf,type Entry} from '../../contracts/notifications.mjs';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActingAv,Actions,Answer,Av,Bar,Btn,Card,Chip,Chips,Empty,IconBtn,LoadMore,NoteDecision,NoteEvent,NoteNews,NoteResult,NoteSafety,NoteSummary,PersonLine,Pill,Row,SafetyDecision,SectionLabel,Seg,Sheet,Skel,type NoteTone,useScrollTo,View} from './kit';
+import {ActingAv,Actions,Answer,Av,Bar,Btn,Card,Chip,Chips,Empty,IconBtn,LoadMore,NoteDecision,NoteEvent,NoteNews,NoteResult,NoteSafety,NoteSummary,PersonLine,Pill,Row,SafetyDecision,SectionLabel,Seg,Sheet,Skel,type NoteTone,useScrollTo,View,ProfileAv} from './kit';
 import {useFe,useLive,useRealtime} from './session';
 import {useSideNav} from './wide';
 import {useToast} from './toast';
@@ -24,7 +24,7 @@ import {groupRows,inboxScrollKey,inboxSearch,mergeRows,readInboxUrl,type InboxFi
  * filter chips, «Прочитать все»). Every row and every task is drawn by one of the kit's six card templates, picked by
  * the catalog's `card`; every word comes from the catalog. The tab and the filter live in the address, the scroll is
  * kept per address. A moderation decision opens its own card (`InboxNoteScreen`). */
-const actor=z.object({id:z.uuid(),kind:z.enum(['person','couple']).optional(),handle:z.string().nullable().optional(),name:z.string().nullable().optional(),...faceFields}).passthrough().nullable();
+const actor=z.object({id:z.uuid(),handle:z.string().nullable().optional(),name:z.string().nullable().optional(),...faceFields}).passthrough().nullable();
 type Actor=z.infer<typeof actor>;
 const objRef=z.object({type:z.string(),id:z.uuid().nullable(),title:z.string().nullable().optional(),startsAt:z.string().optional(),tz:z.string().nullable().optional(),
  state:z.string().optional(),gone:z.boolean().optional()}).passthrough();
@@ -220,7 +220,7 @@ export function InboxScreen(){
   const icon=e?ICONS[e.icon]??Bell:Bell;const tone=(e?.tone??'') as NoteTone;
   const base={key:n.id,id:'note-'+n.id,icon,tone,time:when(n.at,locale),tag:tagOf(n.label),unread:!n.read,onClick:()=>open(group),
    gone:n.object?.gone&&e?textOf(e.gone,locale):undefined};
-  const av=n.actor?<Av name={nameOf(n.actor)} seed={n.actor.id} src={n.actor.avatar}/>:undefined;
+  const av=n.actor?<ProfileAv p={n.actor} size=""/>:undefined;
   if(group.length>1){
    // «Алиса и ещё 3 ставят лайк твоей публикации»: the plural verb of the catalog's line. Several people: the card
    // opens the list of all of them (owner 04.11.2026: «и ещё N» must say who); one person many times opens the place.
@@ -230,7 +230,7 @@ export function InboxScreen(){
    const text=many&&first?rich(verb,{name:t('fe.ibx.andMore',{name:nameOf(first),n:String(people.length-1)}),couple:coupleNameOf(n)})
     :<>{noteText(n,e)} · {t('fe.ibx.times',{n:String(group.length)})}</>;
    return <NoteSummary {...base} {...(many?{onClick:()=>{markRead(group.filter(x=>!x.read).map(x=>x.id));setWho(group);}}:{})}
-    avs={people.slice(0,3).map(({a})=><Av key={a.id} name={nameOf(a)} seed={a.id} src={a.avatar}/>)} text={text}/>;
+    avs={people.slice(0,3).map(({a})=><ProfileAv key={a.id} p={a} size=""/>)} text={text}/>;
   }
   const text=noteText(n,e);
   switch(e?.card??'news'){
@@ -286,7 +286,7 @@ export function InboxScreen(){
    case 'tag':actions=two({label:t('fe.ibx.review'),fn:()=>goDecide(d)},
     {label:t('fe.ibx.against'),fn:()=>void act(d.id+'n',()=>call('tag.answer',{opId:newOpId(),postId:d.objectId??d.id,answer:'no'},ok,asProfile(d)),t('fe.ibx.declined'))});break;
   }
-  const avEl=who?<Av name={name} seed={who.id} src={who.avatar}/>:<Av name={name} seed={d.id}/>;
+  const avEl=who?<ProfileAv p={who} size=""/>:<Av name={name} seed={d.id}/>;
   return <NoteDecision key={d.kind+d.id} id={'item-'+d.id} openLabel={t('fe.ibx.openRequest')} onOpen={()=>goDecide(d)}
    person={<PersonLine av={avEl} label={name} onOpen={d.actor?()=>navigate('/n/people/'+d.actor!.id):undefined}
     name={<>{d.kind==='tag'||joint?name:withAge(name,who)}<NameBadges p={who}/></>} sub={when(d.at,locale)}/>}
@@ -335,7 +335,7 @@ export function InboxScreen(){
   const close=()=>setWho(null);
   return <Sheet title={e?actOf(e.text,locale,true):t('fe.ibx.who.title')} sub={plural(people.length,['человек','человека','человек'],['person','people'],locale)} onClose={close}
    foot={toPlace?<Btn kind="soft" onClick={()=>{close();open(group);}}>{placeLabel}</Btn>:undefined}>
-   <Card list>{people.map(({a,n:x})=><Row key={a.id} av={<Av name={nameOf(a)} seed={a.id} src={a.avatar}/>}
+   <Card list>{people.map(({a,n:x})=><Row key={a.id} av={<ProfileAv p={a} size=""/>}
     title={<>{withAge(nameOf(a),a)}<NameBadges p={a}/></>} sub={when(x.at,locale)}
     onClick={()=>{close();navigate('/n/people/'+a.id);}}/>)}</Card>
   </Sheet>;

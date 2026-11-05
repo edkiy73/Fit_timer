@@ -3,7 +3,7 @@ import { coupleNameNow } from './sql-rules.mjs';
 import { FeError, fail } from './errors.mjs';
 import { enqueue } from './outbox.mjs';
 import { readAbout } from './notify.mjs';
-import { KIND_POINT } from '../contracts/_approve.mjs';
+import { KIND_POINT, SETTING_POINT } from '../contracts/_approve.mjs';
 
 /** @typedef {import('./db.mjs').Q} Q @typedef {import('./profiles.mjs').Acting} Acting */
 /**
@@ -22,7 +22,7 @@ import { KIND_POINT } from '../contracts/_approve.mjs';
  *
  * A domain registers each kind:
  * - `apply(q, row)` runs inside the deciding transaction; a 4xx FeError means it no longer applies (→ stale).
- * - `always`: needs both partners even when the partner trusts (opening the couple's private part to someone).
+ * - `always`: needs both partners even when the partner trusts (no kind uses it now: «private» is a point like the others).
  * - `version(q, row)`: a short string naming the object's current state; stored at creation, compared at approval.
  * - `preview(q, row)`: what both partners are shown — subject, object, before → after, the content as it would go
  *   (post text, event card without the exact address, the answers to an organizer or host). Only rows the couple may see.
@@ -57,15 +57,16 @@ export function registerApprovalKind(kind, def) {
   KINDS.set(kind, def);
 }
 
-/** True when this widening change must wait for the partner: always for the private part and visibility, otherwise when
- * the partner asks to approve the kind's point («Что подтверждает партнёр», audit item 20). Narrowing changes never call
- * this. Otherwise the change applies at once and the partner is only notified. @param {Acting} acting @param {string} kind */
-export function needsPartner(acting, kind) {
+/** True when this widening change must wait for the partner: when the partner asks to approve the kind's point
+ * («Что подтверждает партнёр»: every point can be switched, a new couple asks for the private part only). Narrowing
+ * changes never call this. Otherwise the change applies at once and the partner is only notified. `point` overrides
+ * the kind's own (a visibility setting has its own). @param {Acting} acting @param {string} kind @param {string} [pointOf] */
+export function needsPartner(acting, kind, pointOf) {
   const def = KINDS.get(kind);
   if (!def) fail(500, 'approval_kind_unknown');
   if (acting.kind !== 'couple' || !acting.partnerAccountId) return false;
-  const point = KIND_POINT[kind] ?? def.point;
-  return def.always === true || point === 'private' || (!!point && (acting.partnerScope ?? []).includes(point));
+  const point = pointOf ?? KIND_POINT[kind] ?? def.point;
+  return def.always === true || (!!point && (acting.partnerScope ?? []).includes(point));
 }
 
 /** A couple's action applied at once (trust mode): a line in the partner's couple history (notify.mjs `pair.acted`; the
@@ -84,7 +85,9 @@ const COLUMNS = `a.id, a.profile_id, a.kind, a.target_type, a.target_id, a.chang
  * @param {Q} q @param {Acting} acting
  * @param {{kind: string, targetType: string, targetId: string | null, change: Record<string, unknown>, summary: unknown[]}} req */
 export async function requestApproval(q, acting, req) {
-  if (!needsPartner(acting, req.kind)) fail(500, 'approval_not_needed');
+  // A visibility change has the point of its setting.
+  const point = req.kind === 'profile.setVisibility' ? SETTING_POINT[/** @type {string} */ (req.change.setting)] : undefined;
+  if (!needsPartner(acting, req.kind, point)) fail(500, 'approval_not_needed');
   // Expired or voided pendings of the couple are closed first (the job may not have run yet).
   await closePending(q, `a.profile_id = $1 and a.expires_at <= now()`, [acting.profileId], 'expired');
   await closePending(q, `a.profile_id = $1 and a.safety_epoch <> (select safety_epoch from feture.profile where id = a.profile_id)`, [acting.profileId], 'cancelled', { hooks: false });

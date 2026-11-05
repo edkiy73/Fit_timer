@@ -55,7 +55,7 @@ test('couple photos: adding waits for the partner when they asked; removing appl
     const pair = await coupleOf([a, b]);
     const p1 = await asset(db, pair), p2 = await asset(db, pair);
     await call('ua', pair, { action: 'profile.photosSet', opId: op(), assetIds: [p1] });
-    await db.query(`update feture.profile_member set approves_partner = true where profile_id = $1`, [pair]);
+    await db.query(`update feture.profile_member set approves_scope = array['private','profile','posts','links','communities','events','chats'], approves_partner = true where profile_id = $1`, [pair]);
     const r = await call('ua', pair, { action: 'profile.photosSet', opId: op(), assetIds: [p1, p2] });
     assert.ok(r.pending);
     assert.equal((await call('ua', pair, { action: 'profile.get', profileId: pair })).profile.photos.length, 1);

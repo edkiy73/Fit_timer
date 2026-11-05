@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Archive,ArchiveRestore,Ban,Bell,BellOff,Calendar,Camera,Check,ChevronDown,ChevronLeft,CircleAlert,Clock,Copy,Ellipsis,Eye,EyeOff,Film,Flag,Image as ImageIcon,Inbox,Info,Lock,LockOpen,MessageCircle,Search,SendHorizontal,Sparkles,Undo2,User,UserCheck,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {ActingAv,Actions,AddBtn,Alert,Av,Bar,Btn,Card,ChatList,ChatPane,ChatPick,ChatRequest,ChatRow,Check as CheckBox,Chip,Chips,CoupleTag,Empty,Field,FilePick,Group,IconBtn,Layer,NewMatch,NewMatches,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Spacer,Text,TextArea,ToggleRow,type Voice,Typing,useBack,VideoBadge,VideoPlayer,View,VoiceBubble,VoiceRecorder} from './kit';
+import {ActingAv,Actions,AddBtn,Alert,Av,Bar,Btn,Card,ChatList,ChatPane,ChatPick,ChatRequest,ChatRow,Check as CheckBox,Chip,Chips,CoupleTag,Empty,Field,FilePick,Group,IconBtn,Layer,NewMatch,NewMatches,Note,PersonBar,Pill,RadioList,Row,SearchInput,SectionLabel,SelectRow,Sheet,Skel,Spacer,Text,TextArea,ToggleRow,type Voice,Typing,useBack,VideoBadge,VideoPlayer,View,VoiceBubble,VoiceRecorder,ProfileAv} from './kit';
 import {VIDEO_TYPES} from './kit/media';
 import {Uploader,type SendPhoto,type SendVideo,type Uploaded} from './kit/Uploader';
 import {useSendPhoto,useSendVideo,useSendVoice} from './media-upload';
@@ -13,10 +13,15 @@ import {useWide} from './wide';
 import {useFe,useLive,useTypingSignal} from './session';
 import {readDraft,useDraftKey,writeDraft} from './drafts';
 import {ReportSheet} from './report';
+import {faceFields} from './faces';
 import {useToast} from './toast';
 import {PhotoBadge} from './photo-check';
 import {limitCounter,overMax,softMax,textError} from './kit/validate';
 import {BellButton,SegN} from './inbox';
+
+/** The other side's avatar in a chat row or header: a couple without a photo is the two halves of its partners (never one letter). */
+const OtherAv=({o,size}:{o:{id:string,kind?:string|undefined,name?:string|null|undefined,handle?:string|null|undefined,avatar?:{src?:{thumb?:string|undefined}|null|undefined}|null|undefined,halves?:{name:string|null,avatar:string|null}[]|undefined},size:''|'sm'|'lg'})=>
+ <ProfileAv p={{...o,avatar:o.avatar?.src?.thumb??null}} size={size}/>;
 
 /** Slice G (V21 H01, H02, H05) with the prototype's markup. A conversation comes with a mutual like or, since the owner's
  * decision of 29.10.2026, with a message request: «Написать» without a chat opens this screen as a request composer
@@ -30,7 +35,7 @@ type Ctx=z.infer<typeof ctxItem>;
 const reqView=z.object({role:z.enum(['sender','recipient']),renewAt:z.string().optional(),context:z.array(ctxItem).optional(),at:z.string().nullable().optional()}).nullable().optional();
 type Req=NonNullable<z.infer<typeof reqView>>;
 const chat=z.object({request:reqView,origin:z.string().optional(),id:z.uuid(),state:z.string(),side:z.object({id:z.uuid(),kind:z.enum(['person','couple'])}),newMatch:z.boolean(),
- other:z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:media.nullable(),ages:z.array(z.number()).optional(),photoVerified:z.boolean().optional(),paused:z.boolean().optional()}),
+ other:z.object({id:z.uuid(),kind:z.enum(['person','couple']),handle:z.string().nullable(),name:z.string().nullable(),avatar:media.nullable(),halves:faceFields.halves,ages:z.array(z.number()).optional(),photoVerified:z.boolean().optional(),paused:z.boolean().optional()}),
  unread:z.number(),muted:z.boolean(),archived:z.boolean().optional(),last:z.object({body:z.string(),media:z.boolean(),mode:z.string(),mine:z.boolean(),kind:z.string().nullable().optional()}).nullable(),at:z.string()});
 type Chat=z.infer<typeof chat>;
 const list=z.object({ok:z.literal(true),items:z.array(chat),requests:z.array(chat).optional()});
@@ -127,7 +132,7 @@ function ChatsSide({current,archived:inArchive}:{current:string,/** The open cha
   {searching&&!archived&&<ChatsSearch value={q} onChange={setQ} onClose={toggleSearch}/>}
   {data===null?<Skel kind="list" rows={6}/>:<>
    {!archived&&!needle&&data.requests.length>0&&<Card list><Row icon={Inbox} tone="v" title={t('fe.rq.folder')} badge={data.requests.length} onClick={()=>navigate('/n/chats/requests')}/></Card>}
-   {rows.length?<ChatList>{rows.map(c=><ChatRow key={c.id} on={c.id===current} av={<Av name={nameOf(c.other)} seed={c.other.id} size="lg" src={c.other.avatar?.src?.thumb}/>} name={nameOf(c.other)}
+   {rows.length?<ChatList>{rows.map(c=><ChatRow key={c.id} on={c.id===current} av={<OtherAv o={c.other} size="lg"/>} name={nameOf(c.other)}
     tag={c.side.kind==='couple'&&<CoupleTag>{t('fe.chx.coupleChat')}</CoupleTag>} line={previewOf(c,t)} time={ago(c.at,locale)} unread={c.id===current?0:c.unread} ended={c.state==='ended'||!!c.other.paused}
     onClick={()=>navigate('/n/chats/'+c.id,{replace:true})}/>)}</ChatList>
     :needle?<Empty compact icon={Search} title={t('fe.chx.notFound',{q:q.trim()})}/>
@@ -160,7 +165,7 @@ export function ChatsTab(){
  const fresh=archived?[]:mine.filter(c=>c.newMatch&&c.state==='active');const rows=mine.filter(c=>!fresh.includes(c));
  const unreadFor=(s:'me'|'couple')=>(items??[]).filter(c=>side(c)===s&&c.unread>0).length;
  const preview=(c:Chat)=>previewOf(c,t);const wide=useWide();
- const row=(c:Chat)=><ChatRow key={c.id} av={<Av name={nameOf(c.other)} seed={c.other.id} size="lg" src={c.other.avatar?.src?.thumb}/>} name={nameOf(c.other)}
+ const row=(c:Chat)=><ChatRow key={c.id} av={<OtherAv o={c.other} size="lg"/>} name={nameOf(c.other)}
   tag={c.side.kind==='couple'&&<CoupleTag>{t('fe.chx.coupleChat')}</CoupleTag>} line={preview(c)} time={ago(c.at,locale)} unread={c.unread} ended={c.state==='ended'||!!c.other.paused} onClick={()=>navigate('/n/chats/'+c.id)}/>;
  const toggleSearch=()=>{setSearching(s=>!s);setQ('');};
 
@@ -188,7 +193,7 @@ export function ChatsTab(){
     :items===null?<Skel kind="list" rows={4}/>
     :<>
      {fresh.length>0&&<div><SectionLabel>{t('fe.chats.newMatches')}</SectionLabel>
-      <NewMatches>{fresh.map(c=><NewMatch key={c.id} av={<Av name={nameOf(c.other)} seed={c.other.id} src={c.other.avatar?.src?.thumb}/>} name={nameOf(c.other)}
+      <NewMatches>{fresh.map(c=><NewMatch key={c.id} av={<OtherAv o={c.other} size=""/>} name={nameOf(c.other)}
        us={c.side.kind==='couple'?t('fe.chx.coupleChatSr'):undefined} onClick={()=>navigate('/n/chats/'+c.id)}/>)}</NewMatches></div>}
      {rows.length>0&&<ChatList>{rows.map(row)}</ChatList>}
      {!rows.length&&!fresh.length&&(needle?<Empty icon={Search} title={t('fe.chx.notFound',{q:q.trim()})}><Btn kind="text" auto onClick={()=>setQ('')}>{t('fe.chx.clear')}</Btn></Empty>
@@ -215,7 +220,7 @@ export function RequestsScreen(){
   <View className="nodock" refresh={load}>
    {error&&!items?<Empty icon={X} role="alert" title={t('fe.error.title')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :items===null?<Skel kind="list" rows={3}/>
-    :items.length?<ChatList>{items.map(c=><ChatRow key={c.id} av={<Av name={nameOf(c.other)} seed={c.other.id} size="lg" src={c.other.avatar?.src?.thumb}/>} name={senderName(c.other,t)}
+    :items.length?<ChatList>{items.map(c=><ChatRow key={c.id} av={<OtherAv o={c.other} size="lg"/>} name={senderName(c.other,t)}
       tag={c.side.kind==='couple'&&<CoupleTag>{t('fe.chx.coupleChat')}</CoupleTag>} line={preview(c)} note={contextLine(c.request?.context,t,locale,c.side.kind==='couple')}
       time={ago(c.at,locale)} onClick={()=>navigate('/n/chats/'+c.id)}/>)}</ChatList>
     :<Empty icon={Inbox} title={t('fe.rq.empty')} text={t('fe.rq.emptyText')}/>}
@@ -643,7 +648,7 @@ function ChatView({id,to}:{id:string,to:string}){
  let lastDay='';
  const sep=(iso:string)=>{const d=day(iso);if(d===lastDay)return null;lastDay=d;return <div className="daysep">{d}</div>;};
  return <>
-  <PersonBar onBack={wide?undefined:back} {...(meta?{name:otherName,onOpen:()=>navigate('/n/people/'+meta.other.id),av:<Av name={otherName} seed={meta.other.id} size="sm" src={meta.other.avatar?.src?.thumb}/>}:{})}
+  <PersonBar onBack={wide?undefined:back} {...(meta?{name:otherName,onOpen:()=>navigate('/n/people/'+meta.other.id),av:<OtherAv o={meta.other} size="sm"/>}:{})}
    mark={meta?<>{meta.other.ages&&meta.other.ages.length>0&&<span className="cw-age">{meta.other.ages.join(' · ')}</span>}{meta.other.photoVerified&&<PhotoBadge/>}
     {state==='active'&&(grants.byMe||grants.withMe)&&<span className="cw-ic" role="img" aria-label={grants.byMe&&grants.withMe?t('fe.chx.pillBoth'):grants.withMe?t('fe.chx.pillTheirs'):t('fe.chx.pillMine')}>{grants.withMe?<LockOpen/>:<Eye/>}</span>}</>:undefined}
    sub={couple?<><CoupleTag>{t('fe.chx.coupleChat')}</CoupleTag>{t('fe.chx.coupleSees')}</>:undefined}>
@@ -663,7 +668,7 @@ function ChatView({id,to}:{id:string,to:string}){
         <div className="st">{time(m.at)}{m.mine&&<span aria-label={t('fe.chx.stDelivered')}><Check/></span>}</div>
        </div>
        {m.id===lastRead&&meta&&<button type="button" className="msg-readers" aria-label={t('fe.chx.readByAria',{names:otherName})} onClick={()=>{setMsgFor(m);setSheet('readers');}}>
-        <span title={otherName}><Av name={otherName} seed={meta.other.id} size="sm" src={meta.other.avatar?.src?.thumb}/></span></button>}
+        <span title={otherName}><OtherAv o={meta.other} size="sm"/></span></button>}
       </Fragment>;})}
      {pend.map(p=><Fragment key={p.key}>
       {sep(p.at)}
@@ -729,7 +734,7 @@ function ChatView({id,to}:{id:string,to:string}){
   {sheet==='readers'&&meta&&<Sheet title={t('fe.chx.readBy')} sub={msgFor?t('fe.w7.read.sentAt',{time:time(msgFor.at)}):undefined} onClose={closeSheet}>
    {/* Who read it and when (V21 chatReadInfo): one line per member of the other side — a couple has two, never named. */}
    <Card list>{(msgFor?.readBy?.length?msgFor.readBy:[{read:true,readAt:null,reader:null}]).map((r,i,l)=>{const who=r.reader?nameOf(r.reader):l.length>1?t('fe.w7.read.member',{name:otherName,n:String(i+1)}):otherName;
-    return <Row key={i} av={r.reader?<Av name={who} seed={r.reader.id} size="sm" src={r.reader.avatar}/>:<Av name={otherName} seed={meta.other.id} size="sm" src={meta.other.avatar?.src?.thumb}/>}
+    return <Row key={i} av={r.reader?<Av name={who} seed={r.reader.id} size="sm" src={r.reader.avatar}/>:<OtherAv o={meta.other} size="sm"/>}
     title={who}
     sub={r.read?(r.readAt?t('fe.w7.read.at',{when:day(r.readAt)+', '+time(r.readAt)}):t('fe.chx.readState')):t('fe.w7.read.notYet')}/>;})}</Card>
   </Sheet>}
@@ -754,7 +759,7 @@ function ChatView({id,to}:{id:string,to:string}){
    {sheetAlert}
   </Uploader>}
 
-  {sheet==='menu'&&meta&&<Sheet title={otherName} lead={<Av name={otherName} seed={meta.other.id} size="sm" src={meta.other.avatar?.src?.thumb}/>} onClose={closeSheet}>
+  {sheet==='menu'&&meta&&<Sheet title={otherName} lead={<OtherAv o={meta.other} size="sm"/>} onClose={closeSheet}>
    <Card list>
     <Row icon={User} title={t('fe.chx.profile')} onClick={()=>navigate('/n/people/'+meta.other.id)}/>
     <Row icon={Sparkles} tone="l" title={t('fe.chx.shared')} onClick={()=>navigate('/n/people/'+meta.other.id+'/compat')}/>

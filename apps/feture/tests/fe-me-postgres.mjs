@@ -230,7 +230,7 @@ test('interests: scale or mark, direction rules, visibility for others, remove',
     const direct = await call('ua', pc, { action: 'interests.set', opId: op(), topicId: 'bondage', value: 5, vis: 'public' });
     assert.deepEqual([direct.status, direct.value], [200, 5]);
     const [{ id: kiraAccount }] = await db.query('select id from feture.account where person_profile_id = $1', [b]);
-    await db.query('update feture.profile_member set approves_partner = true where profile_id = $1 and account_id = $2', [pc, kiraAccount]);
+    await db.query('update feture.profile_member set approves_scope = $3, approves_partner = true where profile_id = $1 and account_id = $2', [pc, kiraAccount, ['profile', 'private', 'discover']]);
     const waits = await call('ua', pc, { action: 'interests.set', opId: op(), topicId: 'shibari', value: 7, vis: 'public' });
     assert.ok(waits.pending?.approvalId);
     assert.equal((await call('ub', pc, { action: 'interests.list', profileId: pc })).items.length, 1);

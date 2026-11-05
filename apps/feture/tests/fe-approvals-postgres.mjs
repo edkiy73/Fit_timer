@@ -541,7 +541,7 @@ test('pause: one «Пара на паузе» per side; restore brings back the 
     await w.openPrivate();
     await w.db.query(`update feture.profile_settings set discover_mode = 'visible' where profile_id = $1`, [w.pair]);
     const req = await w.call('um', w.mia, { action: 'access.request', opId: op(), profileId: w.pair, scopes: ['info'] });
-    await w.call('ua', w.pair, { action: 'couple.setApproval', opId: op(), approvesPartner: false });
+    await w.call('ua', w.pair, { action: 'couple.setApproval', opId: op(), scope: ['private'] });
     // Kira approves Alex; a grant needs both anyway (two consents even in trust mode).
     const g = pendingId(await w.call('ub', w.pair, { action: 'access.grant', opId: op(), requestId: req.id ?? req.requestId, scopes: ['info'], term: 'none' }));
     assert.equal((await w.call('ua', w.pair, { action: 'decide.approval', opId: op(), approvalId: g, choice: 'approve' })).state, 'approved');
@@ -562,10 +562,10 @@ test('pause: one «Пара на паузе» per side; restore brings back the 
     const rq = (await w.call('ua', null, { action: 'notifications.list' })).items.find((/** @type {any} */ x) => x.type === 'pair.restoreRequested');
     assert.ok(rq);
     const paused = (await w.call('ua', w.pair, { action: 'couple.get' })).couple;
-    assert.deepEqual(paused.members.map((/** @type {any} */ m) => [m.me, m.approvesPartner, m.restoreAgreed]), [[true, false, false], [false, true, true]]);
+    assert.deepEqual(paused.members.map((/** @type {any} */ m) => [m.me, m.approvesPartner, m.restoreAgreed]), [[true, true, false], [false, true, true]]);
     assert.equal((await w.call('ua', w.pair, { action: 'couple.restore', opId: op() })).state, 'active');
     const back = (await w.call('ua', w.pair, { action: 'couple.get' })).couple;
-    assert.deepEqual(back.members.map((/** @type {any} */ m) => [m.me, m.approvesPartner]), [[true, false], [false, true]]);
+    assert.deepEqual(back.members.map((/** @type {any} */ m) => [m.me, m.approvesPartner]), [[true, true], [false, true]]);
     // Kira approves Alex again: his widening waits for her.
     pendingId(await KIND['profile.update'].make(w, {}, 2));
     const s = await w.one(`select discover_mode from feture.profile_settings where profile_id = $1`, [w.pair]);
@@ -611,7 +611,7 @@ test('stage 4: a couple’s request to a closed club reaches every host once —
 test('stage 4: trust mode — the partner gets a history row for what matters, a push only for an event, access or a link; follow opens that person', async () => {
   const w = await world();
   try {
-    await w.call('ub', w.pair, { action: 'couple.setApproval', opId: op(), approvesPartner: false });
+    await w.call('ub', w.pair, { action: 'couple.setApproval', opId: op(), scope: ['private'] });
     const ub = await accountOf(w, w.b), ua = await accountOf(w, w.a);
     const e = await w.call('um', w.mia, { action: 'event.submit', opId: op(), event: w.ev() });
     const e2 = await w.call('um', w.mia, { action: 'event.submit', opId: op(), event: w.ev({ requiresApplication: true, questions: ['Почему хотите прийти?'] }) });

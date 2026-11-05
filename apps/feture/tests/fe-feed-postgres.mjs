@@ -252,7 +252,7 @@ test('review fixes: approval bound to the version, disputes need photos and surv
   try {
     const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), c = await person('uc', 'Noa');
     const pair = await coupleOf([a, b]);
-    await db.query(`update feture.profile_member set approves_partner = true where profile_id = $1`, [pair]);
+    await db.query(`update feture.profile_member set approves_scope = array['private','profile','posts','links','communities','events','chats'], approves_partner = true where profile_id = $1`, [pair]);
     // Approval is for the version the partner saw.
     const d = await call('ua', pair, { action: 'post.saveDraft', opId: op(), post: draft('Версия 1') });
     const pend = await call('ua', pair, { action: 'post.publish', opId: op(), postId: d.id });

@@ -378,7 +378,7 @@ test('couples: send as the couple (with and without partner approval), both part
     assert.equal((await db.query(`select actor_profile_id from feture.notification where type = 'chatRequest'`))[0].actor_profile_id, us);
 
     // With approval: Ben asked to approve Ann's widening changes — the request waits for him.
-    await db.query(`update feture.profile_member set approves_partner = true where profile_id = $1 and account_id = (select id from feture.account where person_profile_id = $2)`, [us, ben]);
+    await db.query(`update feture.profile_member set approves_scope = array['private','profile','posts','links','communities','events','chats'], approves_partner = true where profile_id = $1 and account_id = (select id from feture.account where person_profile_id = $2)`, [us, ben]);
     const p = await request('ua', us, them, 'Привет, пара!');
     assert.ok(p.pending?.approvalId, JSON.stringify(p));
     assert.equal((await lists('uc')).requests.length, 0);

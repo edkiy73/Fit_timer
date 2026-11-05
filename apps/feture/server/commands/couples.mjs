@@ -1,7 +1,7 @@
 // @ts-check
 import { couplesCommands } from '../../contracts/couples.mjs';
-import { OLD_MODE } from '../../contracts/_approve.mjs';
-import { endConversations } from './chats.mjs';
+import { DEFAULT_SCOPE, OLD_MODE } from '../../contracts/_approve.mjs';
+import { endConversations, openConversation } from './chats.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { closePending, narrowCouple } from '../approvals.mjs';
@@ -95,7 +95,7 @@ async function formCouple(q, fromAccount, toAccount) {
     throw error;
   }
   for (const acc of [fromAccount, toAccount]) {
-    await q.query(`insert into feture.profile_member (profile_id, profile_kind, account_id, joined_at) values ($1, 'couple', $2, now())`, [couple.id, acc]);
+    await q.query(`insert into feture.profile_member (profile_id, profile_kind, account_id, joined_at, approves_scope, approves_partner) values ($1, 'couple', $2, now(), $3, true)`, [couple.id, acc, [...DEFAULT_SCOPE]]);
   }
   // The new couple keeps the partners' blocks (В4): what either blocked from the personal profile is blocked from it too
   // (lifted together when unblocked there).
@@ -105,8 +105,8 @@ async function formCouple(q, fromAccount, toAccount) {
      where b.blocker_profile_id in (select person_profile_id from feture.account where id = any($2)) and b.blocked_profile_id <> $1
      on conflict do nothing`, [couple.id, [fromAccount, toAccount]]);
   // A new couple starts empty and outside Discover (owner 28.10.2026: switched on with a photo), nobody's content copied (CPL-003).
-  // Accepting is the whole set-up (owner 04.11.2026): no approval by either partner (profile_member default), anyone may
-  // ask for access; both change it later in the pair settings.
+  // Accepting is the whole set-up (owner 04.11.2026): each partner asks for the private part and its access only
+  // (DEFAULT_SCOPE), anyone may ask for access; both change it later in the pair settings.
   await q.query(`insert into feture.profile_settings (profile_id, discover_mode, requests_from) values ($1, 'off', 'all')`, [couple.id]);
   await q.query(`insert into feture.profile_details (profile_id) values ($1)`, [couple.id]);
   // Other pending invitations and live links of either partner are void now.
@@ -114,8 +114,30 @@ async function formCouple(q, fromAccount, toAccount) {
     `update feture.couple_invite set state = 'withdrawn', answered_at = now() where state = 'pending' and (from_account = any($1) or to_account = any($1))`,
     [[fromAccount, toAccount]]);
   await q.query(`update feture.couple_link set revoked_at = now() where from_account = any($1) and used_at is null and revoked_at is null`, [[fromAccount, toAccount]]);
+  await befriendPartners(q, [fromAccount, toAccount]);
   for (const acc of [fromAccount, toAccount]) await enqueue(q, 'couple.created', couple.id, { for: acc });
   return /** @type {string} */ (couple.id);
+}
+
+/** The partners' own profiles start as a match (owner 05.11.2026): a like each way, a match with its chat, and they follow
+ * each other. Whatever they already had between them is kept, nothing is doubled. @param {Q} q @param {string[]} accounts */
+async function befriendPartners(q, accounts) {
+  const people = await q.query(`select id account_id, person_profile_id profile_id from feture.account where id = any($1) order by person_profile_id`, [accounts]);
+  if (people.length !== 2) return;
+  const [a, b] = people;
+  for (const [x, y] of [[a, b], [b, a]]) {
+    await q.query(`update feture.profile_like set state = 'matched', updated_at = now() where from_profile_id = $1 and to_profile_id = $2 and state in ('active', 'dismissed')`, [x.profile_id, y.profile_id]);
+    await q.query(
+      `insert into feture.profile_like (from_profile_id, to_profile_id, source, initiator_account_id, state)
+       select $1, $2, 'profile', $3, 'matched' where not exists (select 1 from feture.profile_like where from_profile_id = $1 and to_profile_id = $2 and state in ('active', 'matched'))`,
+      [x.profile_id, y.profile_id, x.account_id]);
+    await q.query(`insert into feture.follow (follower_profile_id, target_profile_id, acted_by) values ($1, $2, $3) on conflict do nothing`, [x.profile_id, y.profile_id, x.account_id]);
+  }
+  let [match] = await q.query(`select id from feture.profile_match where profile_a = least($1::uuid, $2::uuid) and profile_b = greatest($1::uuid, $2::uuid) and ended_at is null`, [a.profile_id, b.profile_id]);
+  if (!match) [match] = await q.query(`insert into feture.profile_match (profile_a, profile_b) values (least($1::uuid, $2::uuid), greatest($1::uuid, $2::uuid)) returning id`, [a.profile_id, b.profile_id]);
+  const [chat] = await q.query(
+    `select 1 from feture.conversation where state = 'active' and profile_a = least($1::uuid, $2::uuid) and profile_b = greatest($1::uuid, $2::uuid) and origin <> 'request'`, [a.profile_id, b.profile_id]);
+  if (!chat) await openConversation(q, match.id, a.profile_id, b.profile_id);
 }
 
 /** Couple invitations nobody answered in time are closed as expired and the inviter is told (owner decision 7): the job

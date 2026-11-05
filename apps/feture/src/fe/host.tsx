@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,Bell,ChevronRight,CircleCheck,Clock,Copy,Crown,Ellipsis,FileText,Flag,Info,Link as LinkIcon,Lock,MessageCircle,Pencil,Pin,PinOff,Send,Settings,ShieldAlert,Trash2,TrendingDown,TrendingUp,User,UserMinus,UserPlus,Users,X,type LucideIcon} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Alert,Announcement,Answer,Ask,Av,Btn,Card,IconBtn,Empty,Group,LoadMore,Note,PersonLine,Pill,RequestCard,Row,SectionLabel,Seg,Sheet,Skel,Stack,StatTiles,SubBar,nickShown,useLeaveGuard} from './kit';
+import {Alert,Announcement,Answer,Ask,Av,Btn,Card,IconBtn,Empty,Group,LoadMore,Note,PersonLine,Pill,RequestCard,Row,SectionLabel,Seg,Sheet,Skel,Stack,StatTiles,SubBar,nickShown,useLeaveGuard,ProfileAv} from './kit';
 import {useFe,usePartnerApproves} from './session';
 import {WriteBtn,useWriteTo} from './write-to';
 import {useToast} from './toast';
@@ -20,7 +20,7 @@ import {useCopyLink} from './share';
  * E03 «Участие», E06 apply, E15 organiser panel, E16 applications, E17/E18 attendees). The server decides who may do
  * what; the screens only offer what the role allows. Results are told in toasts, confirmations are ask() dialogs. */
 
-const prof=z.object({id:z.uuid(),kind:z.string(),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).passthrough();
+const prof=z.object({id:z.uuid(),handle:z.string().nullable(),name:z.string().nullable(),...faceFields}).passthrough();
 type Prof=z.infer<typeof prof>;
 const pname=(p:{name?:string|null,handle?:string|null})=>p.name||(p.handle?'@'+p.handle:'?');
 
@@ -310,7 +310,7 @@ export function CommunityRequestsScreen(){
    {!items?<Loading error={error} retry={load} kind="card"/>
     :!items.filter(r=>!held.has(r.id)).length?<Empty icon={FileText} title={tab==='history'?t('fe.host.req.noHistory'):t('fe.host.req.none')} text={t('fe.host.req.privacy')}/>
     :items.filter(r=>!held.has(r.id)).map(r=><RequestCard key={r.id} className="application-card"
-     person={<PersonLine av={<Av name={pname(r.profile)} seed={r.profile.id} src={r.profile.avatar}/>} label={pname(r.profile)} onOpen={()=>navigate('/n/people/'+r.profile.id)}
+     person={<PersonLine av={<ProfileAv p={r.profile} size=""/>} label={pname(r.profile)} onOpen={()=>navigate('/n/people/'+r.profile.id)}
       name={<>{withAge(pname(r.profile),r.profile)}<NameBadges p={r.profile}/></>}
       sub={<>{when(r.decided_at??r.created_at,locale)}{r.state!=='pending'?' · '+t('fe.host.req.state.'+r.state):''}</>}/>}
      actions={r.state==='pending'?<><Btn size="md" onClick={()=>void decide(r,true)} disabled={!!busy} busy={busy===r.id}>{t('fe.host.approve')}</Btn><Btn kind="soft" size="md" onClick={()=>void decide(r,false)} disabled={!!busy}>{t('fe.host.decline')}</Btn></>:undefined}>
@@ -498,7 +498,7 @@ export function EventApplicationsScreen(){
    {!items?<Loading error={error} retry={load} kind="card"/>
     :!items.length?<Empty icon={FileText} title={t('fe.host.apps.empty')} {...(k==='pending'?{text:t('fe.host.apps.emptyText')}:{})}/>
     :items.map(a=><RequestCard key={a.id} className="application-card"
-     person={<PersonLine av={<Av name={pname(a.profile)} seed={a.profile.id} src={a.profile.avatar}/>} label={pname(a.profile)} onOpen={()=>navigate('/n/people/'+a.profile.id)}
+     person={<PersonLine av={<ProfileAv p={a.profile} size=""/>} label={pname(a.profile)} onOpen={()=>navigate('/n/people/'+a.profile.id)}
       name={<>{pname(a.profile)}{a.people.length===1&&a.people[0]!.age?`, ${a.people[0]!.age}`:''}<NameBadges p={a.profile}/></>}
       sub={<>{a.people.length>1?a.people.map(p=>[p.handle?'@'+p.handle:'',p.age?String(p.age):''].filter(Boolean).join(', ')).join(' · ')+' · ':''}{when(a.created_at,locale)}</>}/>}
      actions={k==='pending'?<><Btn size="md" onClick={()=>void decide(a,true)} disabled={!!busy||full} busy={busy===a.id}>{t('fe.host.approve')}</Btn><Btn kind="soft" size="md" onClick={()=>void decide(a,false)} disabled={!!busy}>{t('fe.host.decline')}</Btn></>
