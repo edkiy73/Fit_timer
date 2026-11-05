@@ -4,6 +4,7 @@ import {Capacitor} from '@capacitor/core';
 import {App} from '@capacitor/app';
 import product from '../../config/product.json';
 import {rememberPairLink} from './pair-link';
+import {rememberRefLink} from './referral-link';
 
 /** Android App Links: a FetUre link (https://app.kinhaze.com/#/n/...) tapped in a messenger or browser opens the
  * app (intent filter with autoVerify in AndroidManifest.xml, proof in public/.well-known/assetlinks.json). The app
@@ -37,6 +38,7 @@ export function AppLinks(){
    last=link;lastAt=Date.now();
    // A partner link opened signed out is remembered before the welcome screen takes over (pair-link.ts).
    rememberPairLink(route);
+   rememberRefLink(route);
    navigate(route);
   };
   void App.getLaunchUrl().then(r=>open(r?.url)).catch(()=>undefined);

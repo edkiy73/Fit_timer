@@ -420,6 +420,8 @@ const run = {
       premium, until: own ? a.premium_until : null, viaPartner: premium && !own, source: src?.source ?? null,
       partner: partner ? { name: partner.name || (partner.handle ? '@' + partner.handle : null), until: partner.until } : null,
       prices: { currency: PRICE_CURRENCY, ...(await pricesOf(q)), pairFactor: PAIR_FACTOR },
+      // The invitation program (personal links) is on: screens show «Пригласить друзей» only then.
+      referralOn: !!(await q.query('select enabled from feture.referral_settings where id'))[0]?.enabled,
       subscription: sub ? { plan: sub.plan, autoRenew: sub.auto_renew, renewsAt: sub.renews_at } : null,
       payments: providersOf(cfg).length > 0, plans: PLANS, giftPlans: GIFT_PLANS,
       giftsSent: gifts.map(g => ({ handle: g.handle ?? null, days: g.days, anonymous: g.anonymous, at: g.paid_at })),

@@ -2,7 +2,7 @@ import {useCallback,useEffect,useState} from 'react';
 import {useNavigate,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Ban,Bell,Bookmark,Calendar,CircleHelp,Crown,Download,Globe,Heart,Images,Inbox,Info,KeyRound,Link2,ListChecks,Lock,LogOut,Newspaper,Settings,ShieldCheck,Smartphone,Sparkles,UserCog,UserRound,Users} from 'lucide-react';
+import {Ban,Bell,Bookmark,UserPlus,Calendar,CircleHelp,Crown,Download,Globe,Heart,Images,Inbox,Info,KeyRound,Link2,ListChecks,Lock,LogOut,Newspaper,Settings,ShieldCheck,Smartphone,Sparkles,UserCog,UserRound,Users} from 'lucide-react';
 import {ActingAv,Bar,Card,Group,IconBtn,Row,Seg,View} from './kit';
 import {useFe,useLive,useShown} from './session';
 import {BellButton,countsRes} from './inbox';
@@ -184,12 +184,13 @@ function AccountZone(){
 /** «Моё» / «Наше» — the third tab: one list of what this profile has done (no tabs inside, no counters: they counted
  * one page only). */
 function MineZone({cp}:{cp:boolean}){
- const {t}=useI18n();const navigate=useNavigate();const go=(to:string)=>()=>navigate(to);
+ const {t}=useI18n();const navigate=useNavigate();const go=(to:string)=>()=>navigate(to);const {status}=usePremiumStatus();
  return <Group><Card list>
   <Row icon={Newspaper} title={t(cp?'fe.v3.us.posts':'fe.mx.mine.posts')} onClick={go('/n/me/posts')}/>
   <Row icon={Calendar} title={t(cp?'fe.v3.us.events':'fe.mx.mine.events')} onClick={go('/n/me/events')}/>
   <Row icon={Globe} title={t(cp?'fe.v3.us.communities':'fe.m2.communities')} onClick={go('/n/me/communities')}/>
   <Row icon={Users} title={t('fe.mx.mine.follows')} onClick={go('/n/me/follows?tab=followers')}/>
   <Row icon={Bookmark} title={t('fe.mx.mine.saved')} onClick={go('/n/me/saved')}/>
+  {status?.referralOn&&<Row icon={UserPlus} title={t('fe.inv.title')} sub={t('fe.inv.rowSub')} onClick={go('/n/me/invite')}/>}
  </Card></Group>;
 }
