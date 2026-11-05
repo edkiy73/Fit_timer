@@ -744,7 +744,8 @@ registerApprovalKind('reply.create', {
 const run = {
   async 'post.saveDraft'(q, { acting: a, input }) {
     const acting = need(a);
-    let f = input.post;
+    // A draft is saved in any state: tags and an album need pictures, so without them they are simply left out of the draft.
+    let f = input.post.mediaIds.length ? input.post : { ...input.post, tags: [], albumId: undefined };
     let postId = input.postId;
     if (postId) {
       const [p] = await q.query(`select state, created_by, community_id from feture.post where id = $1 and owner_profile_id = $2 for update`, [postId, acting.profileId]);
@@ -777,6 +778,11 @@ const run = {
     if (p.state === 'archived') await checkRestore(q, acting, input.postId, p);
     else if (p.created_by !== acting.accountId) fail(404, 'not_found');
     else if (p.state !== 'draft') fail(409, 'conflict', { state: p.state });
+    // A draft is saved in any state; publishing asks for the full rules (an article's title and text, something to say).
+    if (p.state === 'draft') {
+      const ready = postFields.safeParse(await postFieldsOf(q, input.postId));
+      if (!ready.success) fail(400, 'invalid_input', { fields: [...new Set(ready.error.issues.map(i => String(i.path[0] ?? 'body')))] });
+    }
     await requireCommunityWriter(q, p.community_id, acting);
     if (needsPartner(acting, 'post.publish')) {
       const change = { postId: input.postId, rev: p.rev, type: p.type, title: p.title, body: p.body, audience: p.audience };

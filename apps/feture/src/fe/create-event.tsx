@@ -2,7 +2,7 @@ import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {useNavigate,useParams,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {Calendar,Check,ChevronLeft,CircleAlert,Clock,Link as LinkIcon,Lock,MapPin,RefreshCw,Ticket,Video} from 'lucide-react';
+import {Calendar,Check,ChevronLeft,CircleAlert,Clock,Link as LinkIcon,Lock,MapPin,Ticket,Video} from 'lucide-react';
 import {FeError,feErrorMessage} from '../feture/fe-api';
 import {ActingAv,Alert,Bar,Btn,Card,Chip,Chips,Counter,Empty,EventHero,Fact,Group,Note,RichEditor,Row,Seg,Select,Skel,Stack,Steps,ToggleRow,useLeaveGuard,View,useBack} from './kit';
 import {NamedPlate} from './comm-kit';
@@ -12,6 +12,7 @@ import {useFe} from './session';
 import {ONLINE_ZONES,placeZone,zoneLabel} from './event-time';
 import {FIELD,lineRule,serverFields,textError,textErrorMessage,type FieldName} from './kit/validate';
 import {ChipGroup,CoverField,FErr,Field,PLATE_KEYS,SelectRow,placeName,reviewNotice,shakeFirstErr,useCatalog,useOp,type Cover,type PlateKey} from './create-community';
+import {useFail,useToast} from './toast';
 
 /** V21 E11 «Новое событие»: four steps (basics, time and place, admission, review), the draft saved on the server at
  * every step and on «В черновик», then `event.submit` (staff review). The client checks the limits of `eventFields`;
@@ -210,9 +211,11 @@ export function EditEventScreen(){
 function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void,resume?:Resume,community?:string|null}){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const catalog=useCatalog();
  const draftOp=useOp(),submitOp=useOp(),deleteOp=useOp(),updateOp=useOp();
- const [f,setF]=useState<Form>(()=>edit?.form??resume?.form??{...fresh(),communityId:community??''});const [stale,setStale]=useState(false);const [step,setStep]=useState(resume?.step??1);const [cityOpen,setCityOpen]=useState(false);const [err,setErr]=useState<Errors>({});
+ const [f,setF]=useState<Form>(()=>edit?.form??resume?.form??{...fresh(),communityId:community??''});const [step,setStep]=useState(resume?.step??1);const [cityOpen,setCityOpen]=useState(false);const [err,setErr]=useState<Errors>({});
  const [draftId,setDraftId]=useState<string|null>(resume?.id??null);const [busy,setBusy]=useState(false);const [kept,setKept]=useState(false);
- const [notice,setNotice]=useState<{kind:'ok'|'warn'|'err',text:string}|null>(null);const [pv,setPv]=useState<'all'|'ok'>('all');const [asking,setAsking]=useState(false);
+ const toast=useToast();const fail=useFail();
+ // The result of an action is a toast (owner 05.11.2026), never a banner in the form; clearing (null) shows nothing.
+ const setNotice=(n:{kind:'ok'|'warn'|'err',text:string}|null)=>{if(n)toast(n.text,{type:n.kind});};const [pv,setPv]=useState<'all'|'ok'>('all');const [asking,setAsking]=useState(false);
  const [hosting,setHosting]=useState<{id:string,name:string}[]>([]);
  const couple=acting?.kind==='couple';
  // What the server has (or the form was opened with): leaving with more than that asks first.
@@ -235,7 +238,7 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
  };
  const toDraft=async():Promise<boolean>=>{
   if(busy)return false;setNotice(null);
-  const dt=f.title.trim()?textError(t,lineRule(80),f.title):t('fe.ce.err.draftTitle');
+  const dt=f.title.trim()?textError(t,lineRule(80),f.title):'';
   if(dt){setErr(e=>({...e,title:dt}));if(step!==1)setStep(1);shakeFirstErr();return false;}
   setBusy(true);
   try{await saveDraft(step);savedAs.current=JSON.stringify(f);setKept(true);setNotice({kind:'ok',text:couple?t('fe.ce.draftSavedCouple'):t('fe.ce.draftSaved')});return true;}
@@ -259,7 +262,6 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
  const back=()=>{if(step>1){setErr({});setNotice(null);setStep(step-1);}else goBack();};
  const submit=async()=>{
   if(busy)return;setNotice(null);
-  setStale(false);
   for(const s of [1,2,3]){const e=validate(f,s,t,edit?.orig);if(Object.keys(e).length){setErr(e);setStep(s);shakeFirstErr();return;}}
   const payload=edit
    // The community link and, once published, the admission rules and questions go back exactly as they were.
@@ -278,7 +280,7 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
    const r=await call('event.submit',{opId:submitOp.opFor(payload),...payload},submitted);submitOp.done();
    guard.pass(()=>navigate('/n/me/events',{replace:true,state:{notice:r.state==='pending_partner'?t('fe.ce.donePending'):t('fe.ce.done')}}));
   }catch(x){
-   if(edit&&x instanceof FeError&&x.code==='conflict'){setStale(true);setNotice({kind:'err',text:feErrorMessage(x,t)});}
+   if(edit&&x instanceof FeError&&x.code==='conflict'){fail(feErrorMessage(x,t),reload?{label:t('fe.ece.reload'),fn:reload}:undefined);}
    else if(x instanceof FeError&&x.code==='invalid_input'&&x.fields?.length){
     const map:Record<string,Key>={title:'title',kind:'kind',description:'description',communityId:'communityId',coverAssetId:'cover',startsAt:'date',endsAt:'t2',tz:'tz',placeId:'placeId',
      area:'area',exactAddress:'exactAddress',joinUrl:'joinUrl',price:'amount',questions:'question',requirements:'requirements',seats:'seats',format:'t2'};
@@ -290,9 +292,6 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
    }else setNotice({kind:'err',text:feErrorMessage(x,t)});
   }finally{setBusy(false);}
  };
- // A refusal shows under the long step-4 preview: bring it into view, never leave it below the fold.
- const noticeRef=useRef<HTMLDivElement>(null);
- useEffect(()=>{if(notice?.kind==='err')noticeRef.current?.scrollIntoView({block:'center',behavior:'smooth'});},[notice]);
  const removeDraft=async()=>{
   if(!draftId||busy)return;setBusy(true);setNotice(null);
   const payload={draftId};
@@ -395,7 +394,6 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
    <Steps step={step} total={4} name={names[step-1]!}/>
    {edit&&edit.pendingChange!=null&&step===1&&<Alert kind="warn" role="none" icon={Clock}>{t('fe.ece.e.pendingChange')}</Alert>}
    {step<4?<Group><Card form><div className="k-form">{body}</div></Card></Group>:body}
-   {notice&&<Alert ref={noticeRef} kind={notice.kind} noIcon action={stale&&reload?<Btn kind="text" auto icon={RefreshCw} onClick={reload}>{t('fe.ece.reload')}</Btn>:undefined}>{notice.text}</Alert>}
    {(resume||kept)&&draftId&&(asking
     ?<Alert kind="warn" noIcon role="alertdialog" action={<><Btn kind="danger" size="sm" auto onClick={removeDraft} disabled={busy}>{t('fe.ce.draftDeleteOk')}</Btn><Btn kind="text" size="sm" auto onClick={()=>setAsking(false)}>{t('fe.ce.cancel')}</Btn></>}>{t('fe.ce.draftDeleteAsk')}</Alert>
     :<div className="row"><Btn kind="text" size="sm" auto onClick={()=>setAsking(true)} disabled={busy}>{t('fe.ce.draftDelete')}</Btn></div>)}

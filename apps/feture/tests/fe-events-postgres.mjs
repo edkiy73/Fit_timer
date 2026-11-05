@@ -47,7 +47,11 @@ async function world() {
 test('drafts, submit, staff review on the seen version, withdraw back to a draft, catalog', async () => {
   const { pg, call, a, b, ev, decide } = await world();
   try {
-    assert.equal((await call('ua', a, { action: 'event.draftSave', opId: op(), form: { title: ' ' } })).status, 400);
+    // A draft is saved in any state (owner 05.11.2026): no title needed; only a title that breaks the rules is refused.
+    assert.equal((await call('ua', a, { action: 'event.draftSave', opId: op(), form: { title: 'x'.repeat(81) } })).status, 400);
+    const blank = await call('ua', a, { action: 'event.draftSave', opId: op(), form: { title: ' ', description: 'только описание' } });
+    assert.ok(blank.id, JSON.stringify(blank));
+    assert.equal((await call('ua', a, { action: 'event.draftDelete', opId: op(), draftId: blank.id })).status, 200);
     const d = await call('ua', a, { action: 'event.draftSave', opId: op(), form: { title: 'Черновик вечера' }, step: 2 });
     assert.deepEqual((await call('ua', a, { action: 'event.mine' })).drafts.map((/** @type {any} */ x) => x.title), ['Черновик вечера']);
     assert.equal((await call('ub', b, { action: 'event.draftDelete', opId: op(), draftId: d.id })).status, 404);

@@ -431,7 +431,7 @@
 /* safe-t: ok — the layer fills the stage; the sheets / dialogs inside handle --safe-t */.v21 .layer{position:absolute;inset:0;z-index:60;pointer-events:none}
 /* safe-t: ok — a dim veil, no content */.v21 .scrim{position:absolute;inset:0;background:var(--scrim);opacity:0;transition:opacity .22s;pointer-events:none}
 .v21 .scrim.on{opacity:1;pointer-events:auto}
-.v21 #scrim{z-index:1}.v21 #sheet{z-index:2}.v21 #dscrim{z-index:3!important}.v21 #dialog{z-index:4}.v21 #matchLayer{z-index:5!important}.v21 .toasts{z-index:6}
+.v21 #scrim{z-index:1}.v21 #sheet{z-index:2}.v21 #dscrim{z-index:3!important}.v21 #dialog{z-index:4}.v21 #matchLayer{z-index:5!important}.v21 .toasts{z-index:80}
 .v21 .sheet{position:absolute;left:0;right:0;bottom:0;max-height:min(92%,calc(100% - var(--safe-t) - 16px));display:flex;flex-direction:column;border-radius:var(--r-xl) var(--r-xl) 0 0;background:var(--bg);transform:translateY(104%);transition:transform .32s var(--ease);box-shadow:0 -12px 40px -20px rgba(0,0,0,.4)}
 .v21 .sheet:empty{visibility:hidden}
 .v21 .sheet:focus,
@@ -3445,7 +3445,7 @@
 .v21 .main>.bar .seg.scroll button.on{background:var(--raise);box-shadow:none}
 
 /* V21 (VIS-010) */
-.v21 #toasts.over-modal{top:calc(12px + var(--safe-t));bottom:auto;z-index:60}
+.v21 #toasts.over-modal{top:calc(12px + var(--safe-t));bottom:auto;z-index:80}
 
 /* V21 (VIS-013) */
 .v21 .sheet .grab,

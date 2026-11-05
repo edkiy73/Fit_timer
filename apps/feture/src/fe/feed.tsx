@@ -803,6 +803,11 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
   :{type:'post' as const,body:body.trim(),audience,inFeed,topics,mediaIds:media.map(m=>m.id),
   ...(poll?{poll:{question:poll.question.trim(),options:poll.options.map(o=>o.trim())}}:{}),interests:interests??[],tags:audience==='all'&&media.length?people.map(p=>p.id):[],...(communityId&&!edit?{communityId}:{}),
   ...(album&&media.length&&!communityId&&(audience==='all'||audience==='followers')?{albumId:album}:{})};
+ // A draft keeps whatever is filled in (owner 05.11.2026): a half-made poll (no question, fewer than two different
+ // options) is left out of it; the rest is checked when the post is published.
+ const draftFields=()=>{const f=fields();if(!('poll' in f)||!f.poll)return f;
+  const options=f.poll.options.filter((o,i,a)=>!!o&&a.findIndex(x=>x.toLowerCase()===o.toLowerCase())===i);
+  const {poll:_p,...rest}=f;return f.poll.question&&options.length>=2?{...rest,poll:{question:f.poll.question,options}}:rest;};
  const validate=()=>{const e:Record<string,string>={};
   if(note&&title.trim().length<3)e.title=t('fe.fd.err.title');
   if(note&&BAD_CHARS.test(title))e.title=t('fe.fd.err.chars');
@@ -857,9 +862,9 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
  };
  const saveDraft=async():Promise<boolean>=>{
   if(busy||uploading)return false;
-  if(!body.trim()&&!media.length&&!poll&&!title.trim()){setErrs({body:t('fe.fd.err.emptyDraft')});return false;}
+  if(!body.trim()&&!media.length&&!poll&&!title.trim()&&!interests?.length){setErrs({body:t('fe.fd.err.emptyDraft')});return false;}
   setBusy('draft');setFailure('');
-  try{const d=await call('post.saveDraft',{opId:ops.current.draft,...(postId?{postId}:{}),post:fields()},saved);setPostId(d.id);ops.current.draft=newOpId();clean.current=snap;
+  try{const d=await call('post.saveDraft',{opId:ops.current.draft,...(postId?{postId}:{}),post:draftFields()},saved);setPostId(d.id);ops.current.draft=newOpId();clean.current=snap;
    toast(couple?t('fe.fd.draftSavedUs'):t('fe.fd.draftSavedMe'),{type:'ok',action:{label:t('fe.fd.open'),fn:()=>navigate('/n/me/posts')}});return true;}
   catch(e){setFailure(feErrorMessage(e,t));ops.current.draft=newOpId();return false;}finally{setBusy('');}
  };
