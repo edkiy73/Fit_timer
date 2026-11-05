@@ -929,10 +929,10 @@ const GRAVE=new Set<string>(['minors','illegal']);
 
 /** «Принять меры» on a report about a person or a chat: a restriction or a suspension, for a set time or until lifted
  * (staff.restrict / staff.sanction). Moderators: timed measures and restrictions; until lifted suspension — leads. */
-function Measures({profileId,name,onClose,onApplied}:{profileId:string,name:string,onClose:()=>void,onApplied:()=>void}){
+export function Measures({profileId,name,onClose,onApplied,startKind='restrict'}:{profileId:string,name:string,onClose:()=>void,onApplied:()=>void,/** Which measure the sheet opens on (the moderator's menu names it: «Ограничить…» / «Заблокировать…»). */ startKind?:'restrict'|'suspend'}){
  const {t,locale}=useI18n();const roles=useStaffRoles();const lead=(roles??[]).some(r=>r==='owner'||r==='lead');
  const d=useDecide(onApplied);
- const [rule,setRule]=useState<typeof RULES[number]|''>('');const [kind,setKind]=useState<'restrict'|'suspend'>('restrict');
+ const [rule,setRule]=useState<typeof RULES[number]|''>('');const [kind,setKind]=useState<'restrict'|'suspend'>(startKind);
  const [days,setDays]=useState<string>('7');const [note,setNote]=useState('');const [ask,setAsk]=useState(false);
  // What a restriction limits (audit item 6): a preset, then the points themselves.
  const [scope,setScope]=useState<RestrictScope[]>([...RESTRICT_PRESETS.standard]);const [own,setOwn]=useState(false);

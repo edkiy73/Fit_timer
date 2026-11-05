@@ -105,7 +105,9 @@ const handler = createFeHandler({
 async function staffRoles() {
   await db.query(
     `insert into feture.staff_role (account_id, role) select a.id, x.r from feture.account a join feture.profile p on p.id = a.person_profile_id,
-       (values ('qa_mod1', 'moderator'), ('qa_mod1', 'verifier'), ('qa_mod1', 'lead'), ('qa_mod2', 'moderator')) x(h, r)
+       (values ('qa_mod1', 'moderator'), ('qa_mod1', 'verifier'), ('qa_mod1', 'lead'), ('qa_mod2', 'moderator'),
+         ('qa_mod_lead', 'lead'), ('qa_mod_mdr', 'moderator'), ('qa_mod_verifier', 'verifier'), ('qa_mod_auditor', 'auditor'), ('qa_mod_sup', 'support'),
+         ('qa_mod_multi', 'moderator'), ('qa_mod_multi', 'support')) x(h, r)
      where p.handle = x.h and not exists (select 1 from feture.staff_role s where s.account_id = a.id and s.role = x.r and s.revoked_at is null)`).catch(e => console.error('staff role', e.message));
 }
 
@@ -198,7 +200,7 @@ http.createServer(async (req, res) => {
       const out = { statusCode: 0, headers: {}, setHeader(k, v) { this.headers[k] = v; }, end(s) { this.text = s; } };
       try { await handler(fake, out); }
       catch (e) { if (e?.status === 401) return json(res, 401, { ok: false, error: 'auth_required' }); throw e; }
-      if ([STAFF, STAFF2].includes(String(req.headers['x-fit-email']).toLowerCase())) await staffRoles();
+      if ([STAFF, STAFF2].includes(String(req.headers['x-fit-email']).toLowerCase()) || /^qa-mod-[a-z]+@feture\.test$/.test(String(req.headers['x-fit-email']).toLowerCase())) await staffRoles();
       res.statusCode = out.statusCode || 200; res.setHeader('content-type', 'application/json');
       return res.end(out.text ?? '{}');
     }
