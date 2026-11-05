@@ -139,13 +139,14 @@ export function ChatsTab(){
  const {call}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const couple=useCouple();
  const [params]=useSearchParams();const archived=params.get('archived')==='1';
  useScreenTag(archived?'H05':'H01');
- const [kind,setKind]=useKept<'all'|'me'|'couple'>('kind','all');const [items,setItems]=useState<Chat[]|null>(null);const [error,setError]=useState<unknown>(null);
+ const [kind,setKind]=useKept<'all'|'me'|'couple'>('kind','all');const [items,setItems]=useState<Chat[]|null>(()=>archived?null:lastList?.items??null);const [error,setError]=useState<unknown>(null);
  // «Запросы» (message requests to my profiles, not answered yet): a folder at the top with their count.
- const [requests,setRequests]=useState<Chat[]>([]);
+ const [requests,setRequests]=useState<Chat[]>(()=>archived?[]:lastList?.requests??[]);
  const [searching,setSearching]=useState(false);const [q,setQ]=useState('');const qRef=useRef<HTMLInputElement>(null);
  // One list for every split: the counters on «Личные» / «Чаты пары» come from the same rows.
  const load=useCallback(()=>{setError(null);call('chats.list',{filter:'all',archived},list,{asAccount:true}).then(r=>{setItems(r.items);setRequests(r.requests??[]);if(!archived)lastList={items:r.items,requests:r.requests??[]};}).catch(setError);},[call,archived]);
- useEffect(()=>{setItems(null);},[archived]);
+ const shownArchived=useRef(archived);
+ useEffect(()=>{if(shownArchived.current!==archived){shownArchived.current=archived;setItems(null);}},[archived]);
  useEffect(()=>{load();const id=setInterval(load,30000);return ()=>clearInterval(id);},[load]);
  useLive(['chat','notify'],load);
  // «Отменить» on the archive toast runs after the chat closed: the list asks again.

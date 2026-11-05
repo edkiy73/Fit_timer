@@ -6,7 +6,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Search,Ban,Bell,CalendarDays,Check,ChevronDown,ChevronLeft,ChevronRight,EyeOff,Heart,Ellipsis,History,Info,KeyRound,LocateFixed,Lock,MapPin,MessageCircle,SlidersHorizontal,Sparkles,Undo2,Users,X} from 'lucide-react';
 import {CityField} from './kit/Place';
-import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,IconBtn,LikeTile,Note,PairArt,PersonName,PhotoBars,Pill,Radar,Range,RangeDual,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Soon,Stack,Text,View,plate,useScrollTo} from './kit';
+import {Alert,Av,Bar,Btn,Card,Chip,Chips,ChoiceChips,Empty,IconBtn,LikeTile,Note,PairArt,PersonName,PhotoBars,Pill,Radar,Range,RangeDual,Row,SearchInput,SectionLabel,Seg,Sheet,Skel,Soon,Stack,Text,View,plate,useScrollTo,useKept} from './kit';
 import {useFe,useShown} from './session';
 import {useToast} from './toast';
 import {DiscoverPhotoAsk} from './discover-photo';
@@ -539,7 +539,7 @@ function DeckEmpty({byFilter,filterOn,openFilter}:{byFilter:number|null,filterOn
 /* ---------- D06 likes ---------- */
 function Likes({onCount,toDiscover}:{onCount:(n:number)=>void,toDiscover:()=>void}){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();
- const [k,setK]=useState<'in'|'out'>('in');const us=acting?.kind==='couple';
+ const [k,setK]=useKept<'in'|'out'>('k','in');const us=acting?.kind==='couple';
  // What was seen last time is shown at once and read again quietly (no loading in between).
  const [inc,setInc]=useShown<z.infer<typeof incoming>['items']|null>('px.likes.in',()=>null);const [out,setOut]=useShown<z.infer<typeof outgoing>['items']|null>('px.likes.out',()=>null);
  const [error,setError]=useState<unknown>(null);const [busy,setBusy]=useState('');const [match,setMatch]=useState<{card:Card,conversationId?:string}|null>(null);
