@@ -5,7 +5,7 @@ import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {KeyRound,LogOut,RefreshCw,ShieldCheck,ShieldOff} from 'lucide-react';
 import {feErrorMessage,feRequest} from '../feture/fe-api';
 import {Actions,Alert,Btn,Card,CodeInput,Empty,Field,Group,H,Input,Note,Pill,QrCode,RecoveryCodes,Row,SecretKey,Sheet,Skel,Spacer,Stack} from './kit';
-import {useFe} from './session';
+import {useFe,useSeen} from './session';
 import {copyLink} from './share';
 import {useToast} from './toast';
 import {AuthBar,AuthFrame,AuthLogo} from './start';
@@ -118,7 +118,7 @@ export function SigninFactor(){
  * (each asks for a current code). Staff keep it on (required for them). */
 export function FactorSettings(){
  const {call}=useFe();const {t}=useI18n();const toast=useToast();
- const [f,setF]=useState<z.infer<typeof factorRes>|null>(null);const [failed,setFailed]=useState(false);
+ const [f,setF]=useSeen<z.infer<typeof factorRes>|null>('FactorSettings.f',()=>null);const [failed,setFailed]=useState(false);
  const [sheet,setSheet]=useState<null|'on'|'off'|'codes'>(null);const [codes,setCodes]=useState<string[]|null>(null);
  const load=useCallback(()=>{setFailed(false);call('account.factor',{},factorRes,{asAccount:true,fresh:true}).then(setF).catch(()=>setFailed(true));},[call]);
  useEffect(()=>{load();},[load]);
