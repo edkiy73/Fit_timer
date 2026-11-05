@@ -48,7 +48,7 @@ export async function settleReferral(q, accountId) {
   if (u.kind === 'personal' && !s.enabled) return;
   const newcomerDays = u.kind === 'personal' ? s.reward_days : u.promo_days;
   await q.query(`update feture.referral_use set state = 'rewarded', rewarded_at = now() where id = $1`, [u.id]);
-  if (newcomerDays > 0) await grantPeriod(q, accountId, 'referral', newcomerDays, { reason: u.kind === 'personal' ? 'invited' : 'promo' });
+  if (newcomerDays > 0) await grantPeriod(q, accountId, 'referral', newcomerDays, { reason: u.kind === 'personal' ? 'invited' : 'promo', why: u.kind === 'personal' ? 'invited' : 'promo' });
   if (u.kind !== 'personal' || !s.inviter_days) return;
   // The inviter: up to `cap_count` rewarded invitations in the last `cap_days` days (this one included).
   const [{ n }] = await q.query(

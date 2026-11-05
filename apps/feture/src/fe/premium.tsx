@@ -6,7 +6,7 @@ import {AtSign,Check,Crown,Gift,History,RotateCcw,Ticket,Undo2,UserPlus,X} from 
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Actions,Alert,Ask,Av,Bar,Btn,Card,Empty,Field,Group,Input,KeyValues,Note,PlanCards,PremiumFeats,PremiumHero,Row,SectionLabel,Sheet,Skel,Spacer,Stack,ToggleRow,View,Who} from './kit';
 import {useToast,useFail} from './toast';
-import {useFe,useShown} from './session';
+import {useFe,useLive,useShown} from './session';
 import {CodeSheet} from './invite';
 
 /** V21 B01 Premium (wave 8): what Premium gives, plans, the purchase confirmation, auto-renewal, «Восстановить
@@ -39,6 +39,8 @@ export function usePremiumStatus(){
  const {call,peek}=useFe();const [status,setStatus]=useShown<Status|null>('premium.status',()=>peek('premium.status',{},statusRes));const [error,setError]=useState<unknown>(null);
  const load=useCallback((fresh=false)=>{setError(null);call('premium.status',{},statusRes,{fresh}).then(setStatus).catch(setError);},[call]);
  useEffect(()=>{load();},[load]);
+ // A grant, a reward, an end: the screens that show Premium follow without a reload.
+ useLive('profile',()=>load(true));
  return {status,error,load};
 }
 
@@ -197,7 +199,7 @@ export function PremiumScreen(){
     :!status?<Skel kind="list"/>:<>
     {premium&&<Alert kind="ok" icon={Check}>{status.viaPartner
      ?(status.partner?<><b>{t('fe.ax.prem.viaPartner')}</b>{t('fe.w8.prem.viaPartnerNamed',{name:status.partner.name??'',date:date(status.partner.until)})}</>:<><b>{t('fe.ax.prem.viaPartner')}</b>{t('fe.ax.prem.viaPartnerText')}</>)
-     :<><b>{status.source==='gift'?t('fe.w8.prem.gift'):t('fe.ax.prem.active')}</b>{until?t(sub?'fe.ax.prem.untilOnly':'fe.ax.prem.until',{date:until}):''}</>}</Alert>}
+     :<><b>{status.source==='gift'||status.source==='promo'||status.source==='referral'?t('fe.w8.prem.gift'):t('fe.ax.prem.active')}</b>{until?t(sub?'fe.ax.prem.untilOnly':'fe.ax.prem.until',{date:until}):''}</>}</Alert>}
     {premium&&!status.viaPartner&&<Group title={t('fe.w8.prem.manage')}>
      <Card list>
       {sub?<ToggleRow icon={RotateCcw} title={t('fe.w8.prem.renew')} disabled={busy==='renew'}

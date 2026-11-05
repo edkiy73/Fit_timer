@@ -19,6 +19,12 @@ describe('what staff decided, in plain words',()=>{
  it('a city, Premium and a role',()=>{
   expect(text('ru','premiumGranted',{until:SOON})).toBe('Тебе открыт Premium до 3 ноября');
   expect(text('en','premiumGranted',{until:SOON})).toBe('Premium is on for you until 3 November');
+  expect(text('ru','premiumGranted',{until:SOON,why:'invited'})).toBe('Бонус за приглашение: Premium до 3 ноября');
+  expect(text('ru','premiumGrantedBulk',{until:SOON})).toBe('Тебе открыт Premium до 3 ноября');
+  expect(text('ru','premiumEnding',{kind:'week',until:SOON})).toBe('Premium закончится 3 ноября');
+  expect(text('ru','premiumEnding',{kind:'day',until:SOON})).toBe('Premium закончится завтра');
+  expect(text('ru','premiumPair',{kind:'started',until:SOON})).toBe('Партнёр открыл вашей паре Premium до 3 ноября');
+  expect(text('en','premiumPair',{kind:'ended'})).toBe('Your couple’s Premium has ended');
   expect(text('ru','staffRole',{role:'moderator',grant:true})).toMatch(/^Тебе выдана роль: /);
   expect(text('ru','staffRole',{role:'moderator',grant:false})).toMatch(/^Роль снята: /);
  });
