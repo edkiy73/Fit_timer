@@ -47,6 +47,7 @@ const memList=z.object({ok:z.literal(true),count:z.number(),hidden:z.number().op
 const priceSchema=z.object({kind:z.string(),amount:z.number().optional(),currency:z.string().optional(),ticketUrl:z.string().optional()}).passthrough();
 const ev=z.object({id:z.uuid(),title:z.string(),kind:z.string(),format:z.enum(['online','offline']),area:z.string().nullable(),place_id:z.string().nullable().optional(),tz:z.string().nullable().optional(),starts_at:z.string(),ends_at:z.string(),
  price:priceSchema,requires_application:z.boolean(),state:z.string(),plate:z.string().nullable().optional(),community_id:z.string().nullable().optional(),
+ /** The cover photo (a list gives the picture links too); none — the colour plate stands in. */ cover:media.nullable().optional(),
  /** Only on a cancelled event: the organizer's reason. */ cancel_reason:z.string().nullable().optional()});
 type Ev=z.infer<typeof ev>;
 /** An event in a list (catalog, «Скоро» in the feed). */
@@ -57,7 +58,7 @@ const announcement=z.object({id:z.uuid(),body:z.string(),automatic:z.boolean(),c
 const event=z.object({id:z.uuid(),title:z.string(),kind:z.string(),description:z.string(),format:z.enum(['online','offline']),area:z.string().nullable(),tz:z.string(),placeId:z.string().nullable().optional(),
  startsAt:z.string(),endsAt:z.string(),price:priceSchema,requiresApplication:z.boolean(),questions:z.array(z.string()).nullable().optional(),
  requirements:z.string().nullable(),state:z.string(),past:z.boolean(),going:z.number(),interested:z.number(),seats:z.number().nullable().optional(),full:z.boolean().optional(),taken:z.number().optional(),exactAddress:z.string().nullable(),joinUrl:z.string().nullable(),locked:z.boolean(),
- plate:z.string().nullable().optional(),communityId:z.string().nullable().optional(),cancelReason:z.string().nullable().optional(),
+ plate:z.string().nullable().optional(),cover:media.nullable().optional(),communityId:z.string().nullable().optional(),cancelReason:z.string().nullable().optional(),
  organizer:prof.nullable().optional(),announcements:z.array(announcement).optional(),
  me:z.object({rsvp:rsvpObj.nullable().optional(),application:z.object({id:z.uuid(),state:z.string(),rev:z.number()}).nullable().optional(),waiting:z.object({id:z.uuid(),kind:z.string()}).passthrough().nullable().optional()}).passthrough()}).passthrough();
 export type EventFull=z.infer<typeof event>;
@@ -153,6 +154,12 @@ function Catalog(){
  </>;
 }
 
+/** The event picture: its cover photo, or the colour plate when it has none (the cover is required for a new event). */
+function EventCover({cover,k,size}:{cover?:z.infer<typeof media>|null|undefined,k:string|null|undefined,size?:'card'|'full'}){
+ const src=coverSrc(cover,size);
+ return src?<img className="evimg" src={src} alt="" draggable={false} loading="lazy"/>:<NamedPlate k={k} icon={Calendar}/>;
+}
+
 /** The community picture: its cover photo, or the plate with the group icon (V21 commAv / evCover). */
 function CommCover({cover,k,size,hero}:{cover?:z.infer<typeof media>|null|undefined,k:string|null|undefined,size?:'card'|'full',hero?:boolean}){
  const src=coverSrc(cover,size);
@@ -245,7 +252,7 @@ export function EventCard({e,row,brief,status,org,pill:own}:{e:EventRowLike,row?
  const cancelled=e.state==='cancelled';
  const pill=own??(cancelled?<Pill tone="bad">{t('fe.cm.st.cancelled')}</Pill>:<StatusPill s={status}/>);
  const place=evWhere(brief?{...e,area:null}:e,places,locale,t('fe.ev.online'),t('fe.ev.offline'));
- return <EventTile row={row} cover={<NamedPlate k={e.plate} icon={Calendar}/>} day={pt.day} month={pt.month} place={place} placeIcon={e.format==='online'?Video:MapPin}
+ return <EventTile row={row} cover={<EventCover cover={e.cover} k={e.plate}/>} day={pt.day} month={pt.month} place={place} placeIcon={e.format==='online'?Video:MapPin}
   status={row||own?pill:cancelled||status?pill:undefined} kicker={e.kind?t('fe.ev.kind.'+e.kind):undefined} title={e.title} time={brief?undefined:pt.time+' · '+pt.zone} {...(row?{org:org??(cancelled&&e.cancel_reason||undefined)}:e.price?{price:priceText(e.price,t,locale)}:{})}
   onClick={()=>navigate('/n/events/'+e.id)}/>;
 }
@@ -537,7 +544,7 @@ export function EventScreen(){
    {error?<Empty icon={Lock} title={t('fe.cm.evUnavailable')} text={feErrorMessage(error,t)}><Btn kind="soft" onClick={load}>{t('fe.retry')}</Btn></Empty>
     :!e?<><EventHero/><Skel kind="list" rows={4}/></>
     :<>
-     <EventHero cover={<NamedPlate k={e.plate} icon={Calendar}/>} title={e.title}
+     <EventHero cover={<EventCover cover={e.cover} k={e.plate} size="full"/>} title={e.title}
       tags={[<>{e.format==='online'?<Video/>:<MapPin/>}{where}</>,t('fe.ev.kind.'+e.kind)]}/>
      {/* Who: the organiser and the community. */}
      {(e.organizer||comm)&&<Card list>

@@ -46,6 +46,21 @@ const same = (a, b) => {
 };
 const RANK = { not_going: 0, interested: 1, going: 2 };
 
+/** Gives event rows their `cover`: the public picture of the cover asset (a link set as in `event.get`), or null; the
+ * asset id leaves the row. Lists show the photo, not only the colour plate (owner 06.11.2026). Changes the rows in place.
+ * @param {Q} q @param {any} cfg @param {{profileId: string}} viewer @param {any[]} rows */
+async function attachCovers(q, cfg, viewer, rows) {
+  const ids = [...new Set(rows.map(r => r.cover_asset_id).filter(Boolean))];
+  const dtos = new Map();
+  if (ids.length) {
+    for (const asset of await q.query('select * from feture.media_asset where id = any($1)', [ids])) {
+      dtos.set(asset.id, await mediaDto(cfg.media, asset, { viewerProfileId: viewer.profileId, place: 'public', showExplicit: false, staff: false }).catch(() => null));
+    }
+  }
+  for (const r of rows) { r.cover = dtos.get(r.cover_asset_id) ?? null; delete r.cover_asset_id; }
+  return rows;
+}
+
 /** The form of an event row (for drafts made from a withdrawn event). @param {any} e */
 function formOf(e) {
   return {
@@ -644,7 +659,7 @@ const run = {
     };
   },
 
-  async 'event.catalog'(q, { acting: a, input }) {
+  async 'event.catalog'(q, { acting: a, input, cfg }) {
     const viewer = need(a);
     let cur = null;
     if (input.cursor) {
@@ -660,7 +675,7 @@ const run = {
       placeId = d?.city_id ?? null;
     }
     const rows = await q.query(
-      `select e.id, e.title, e.kind, e.format, e.place_id, e.area, e.tz, e.starts_at, e.ends_at, e.price, e.requires_application, e.plate, e.state, e.community_id,
+      `select e.id, e.title, e.kind, e.format, e.place_id, e.area, e.tz, e.starts_at, e.ends_at, e.price, e.requires_application, e.plate, e.state, e.community_id, e.cover_asset_id,
               case when e.state = 'cancelled' then e.cancel_reason end cancel_reason
        from feture.event e
        where ${listedEvent('e', '$1')} and feture.event_visible(e, $1, $2)
@@ -675,7 +690,7 @@ const run = {
        order by e.starts_at, e.id limit 21`,
       [viewer.profileId, viewer.accountId, input.format, placeId, input.when, input.kinds?.length ? input.kinds : null, input.price, input.openOnly,
         input.communityId ?? null, cur?.[0] ?? null, cur?.[1] ?? null, likePattern(input.q), input.from ?? null, input.to ?? null]);
-    const page = rows.slice(0, 20);
+    const page = await attachCovers(q, cfg, viewer, rows.slice(0, 20));
     const last = page[page.length - 1];
     return {
       items: page.map(r => ({ ...r, starts_at: iso(r.starts_at), ends_at: iso(r.ends_at) })),
@@ -683,9 +698,9 @@ const run = {
     };
   },
 
-  async 'event.mine'(q, { acting: a }) {
+  async 'event.mine'(q, { acting: a, cfg }) {
     const viewer = need(a);
-    const pick = `e.id, e.title, e.format, e.tz, e.area, e.place_id, e.starts_at, e.ends_at, e.state, e.plate`;
+    const pick = `e.id, e.title, e.format, e.tz, e.area, e.place_id, e.starts_at, e.ends_at, e.state, e.plate, e.cover_asset_id`;
     const organizing = await q.query(`select ${pick} from feture.event e where e.organizer_profile_id = $1 order by e.starts_at desc limit 100`, [viewer.profileId]);
     const answered = await q.query(
       `select ${pick}, r.status, e.ends_at <= now() past from feture.event_rsvp r join feture.event e on e.id = r.event_id
@@ -701,6 +716,8 @@ const run = {
       `select ${pick}, e.cancel_reason from feture.event e
        where e.state = 'cancelled' and e.starts_at > now() and e.organizer_profile_id <> $1 and ${cancelledFor('e', '$1')} and feture.event_visible(e, $1, $2)
        order by e.starts_at limit 100`, [viewer.profileId, viewer.accountId]);
+    // The rows of one event appear in several lists as separate objects: cover them all.
+    await attachCovers(q, cfg, viewer, [...organizing, ...answered, ...applications, ...waiting, ...cancelled]);
     const drafts = await q.query(`select id, form->>'title' title, step, updated_at from feture.event_draft where owner_profile_id = $1 order by updated_at desc`, [viewer.profileId]);
     const going = [...applications.filter(r => r.application_state === 'approved' && r.state === 'published'), ...answered.filter(r => r.status === 'going' && !r.past && r.state === 'published')];
     return {

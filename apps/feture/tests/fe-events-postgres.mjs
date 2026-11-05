@@ -420,3 +420,16 @@ test('a cover photo is required: an event cannot be submitted or edited without 
     assert.deepEqual(off.fields, ['coverAssetId']);
   } finally { await pg.close(); }
 });
+
+test('lists carry the cover photo: the catalog and «my events» show the picture, not only the colour plate', async () => {
+  const { pg, call, a, b, publish } = await world();
+  try {
+    const id = await publish('ua', a);
+    const cat = (await call('ub', b, { action: 'event.catalog', format: 'all', when: 'any', price: 'any', openOnly: false })).items;
+    const row = cat.find((/** @type {any} */ x) => x.id === id);
+    assert.ok(row?.cover?.src?.card, 'the catalog row has the picture links');
+    assert.equal('cover_asset_id' in row, false, 'the asset id does not leave the server');
+    const mine = (await call('ua', a, { action: 'event.mine' })).organizing.find((/** @type {any} */ x) => x.id === id);
+    assert.ok(mine?.cover?.src?.card, '«my events» rows have it too');
+  } finally { await pg.close(); }
+});
