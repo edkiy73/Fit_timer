@@ -315,7 +315,7 @@ button.pill{cursor:pointer}
 .v21 .act-line>span{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .v21 .act-line>span::after{content:" ·"}
 .v21 .act-line>button{flex:none;padding:0;border:0;background:none;font:inherit;color:var(--accent);cursor:pointer}
-.v21 .act-line>button:hover{text-decoration:underline}
+@media (hover:hover){.v21 .act-line>button:hover{text-decoration:underline}}
 
 /* The photo viewer is a layer of its own above the bars, the dock, the bottom buttons and the toasts. */
 .v21 .layer:has(>.viewer){z-index:70}
@@ -649,7 +649,7 @@ html:has(.fe-v21),html:has(.fe-v21) body{overscroll-behavior-y:none}
 .v21 .ctx .empty.k-empty-compact>h3{margin:0;font:400 var(--fs-sm)/1.35 var(--font);color:var(--mute)}
 .v21 .ctx .empty.k-empty-compact>.btns{grid-column:1/-1;margin:0;max-width:none}
 .v21 .ctx .k-ctx-link{color:var(--mute);font:inherit;padding:0}
-.v21 .ctx .k-ctx-link:hover{color:var(--ink)}
+@media (hover:hover){.v21 .ctx .k-ctx-link:hover{color:var(--ink)}}
 .v21 .ctx.k-ctx-always{display:block;width:320px;padding:22px 18px 40px;border-left:1px solid var(--line)}
 /* A Seg in place of a header title (Bar `seg`, «Как видят» on the photo): on a 360 phone three full labels
    («С доступом», «Знакомства») fit in the smaller caption size instead of being cut. */
