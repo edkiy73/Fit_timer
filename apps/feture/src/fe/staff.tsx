@@ -89,7 +89,7 @@ const QUEUE_IDS=Object.keys(QUEUES) as QueueId[];
 /** Who may open what (the server's requireStaff lists); the screen only asks for what the roles allow. Queues not
  * listed are open to every staff role that has a queue. */
 const QUEUE_ROLES:Partial<Record<QueueId,string[]>>={appeal:['owner','lead']};
-const SECTION_ROLES={queues:['owner','lead','moderator','verifier'],support:['owner','lead','moderator','support'],measures:['owner','lead','moderator'],premium:['owner','lead'],maintenance:['owner','lead'],cities:['owner','lead'],journal:['owner','lead','auditor'],access:['owner','lead'],team:['owner'],topics:['owner','lead'],documents:['owner','lead'],transparency:['owner','lead','auditor'],words:['owner','lead']} as const;
+const SECTION_ROLES={queues:['owner','lead','moderator','verifier'],support:['owner','lead','moderator','support'],measures:['owner','lead','moderator'],premium:['owner','lead','support'],maintenance:['owner','lead'],cities:['owner','lead'],journal:['owner','lead','auditor'],access:['owner','lead'],team:['owner'],topics:['owner','lead'],documents:['owner','lead'],transparency:['owner','lead','auditor'],words:['owner','lead']} as const;
 const SECTIONS=['queues','measures','journal','support','team','topics','documents','words','transparency','premium','maintenance','cities','access'] as const;
 type Section=typeof SECTIONS[number];
 const can=(roles:readonly string[],need:readonly string[]|undefined)=>!need||roles.some(r=>need.includes(r));
@@ -1412,24 +1412,43 @@ function WaiverSheet({member,onClose,onDone}:{member:Waived|null,onClose:()=>voi
  </Sheet>;
 }
 
-// ——— Premium for dogfooding ———
+// ——— Premium: give, look, take back, prices ———
+
+const listRes=z.object({ok:z.literal(true),kind:z.enum(['person','couple']),accounts:z.array(z.object({handle:z.string().nullable(),name:z.string().nullable(),until:z.string().nullable(),
+ items:z.array(z.object({id:z.string(),source:z.enum(['purchase','gift','staff']),startsAt:z.string(),endsAt:z.string(),revokedAt:z.string().nullable(),reason:z.string().nullable()}))}))});
+type PremList=z.infer<typeof listRes>;
+const pricesRes=z.object({ok:z.literal(true),currency:z.string(),prices:z.record(z.string(),z.number()),defaults:z.record(z.string(),z.number()).optional()});
+const PRICE_KEYS=['month','year','m1','m3','m12'] as const;
+const euros=(c:number)=>(c/100).toFixed(2).replace('.',',');
+const toCents=(v:string)=>{const n=Number(v.trim().replace(',','.'));return Number.isFinite(n)&&n>=1&&n<=10000?Math.round(n*100):null;};
 
 function Premium(){
  const {call}=useFe();const {t}=useI18n();const when=useWhen();
  const [handle,setHandle]=useState('');const [days,setDays]=useState('30');const [reason,setReason]=useState('');
- const [busy,setBusy]=useState(false);const setFailure=useFail();const [granted,setGranted]=useState<{id:string,until:string,pair:boolean}|null>(null);
- const [entitlement,setEntitlement]=useState('');const [revokeReason,setRevokeReason]=useState('');const [ask,setAsk]=useState(false);const [revoked,setRevoked]=useState('');
+ const [busy,setBusy]=useState(false);const setFailure=useFail();const [granted,setGranted]=useState<{until:string,pair:boolean}|null>(null);
+ const [look,setLook]=useState('');const [list,setList]=useState<PremList|null>(null);const [revoking,setRevoking]=useState<{id:string,paid:boolean}|null>(null);
+ const [revokeReason,setRevokeReason]=useState('');const [revoked,setRevoked]=useState('');
+ const [prices,setPrices]=useState<Record<string,string>|null>(null);const [cur,setCur]=useState('EUR');const [priceSaved,setPriceSaved]=useState(false);
  const err=(e:unknown)=>setFailure(forbidden(e)?t((e as FeError).rule==='self'?'fe.staff.premium.self':'fe.staff.premium.forbidden'):feErrorMessage(e,t));
  const n=Number(days);const h=handle.trim().replace(/^@/,'');
  const canGrant=h.length>=3&&Number.isInteger(n)&&n>=1&&n<=400&&reason.trim().length>=3;
+ const showList=async(nick:string)=>{setBusy(true);setFailure('');
+  try{setList(await call('staff.premiumList',{handle:nick.trim().replace(/^@/,'')},listRes,{asAccount:true,fresh:true}));}
+  catch(e){setList(null);err(e);}finally{setBusy(false);}};
  const grant=async()=>{setBusy(true);setFailure('');setRevoked('');
-  try{const r=await call('staff.premiumGrant',{opId:newOpId(),handle:h,days:n,reason:reason.trim()},grantRes,{asAccount:true});setGranted({id:r.id,until:r.until,pair:(r.accounts??1)>1});setEntitlement(r.id);}
+  try{const r=await call('staff.premiumGrant',{opId:newOpId(),handle:h,days:n,reason:reason.trim()},grantRes,{asAccount:true});setGranted({until:r.until,pair:(r.accounts??1)>1});setLook(h);void showList(h);}
   catch(e){err(e);}finally{setBusy(false);}};
- const revoke=async()=>{setBusy(true);setFailure('');
-  try{const r=await call('staff.premiumRevoke',{opId:newOpId(),entitlementId:entitlement.trim(),reason:revokeReason.trim()},revokeRes,{asAccount:true});
-   setRevoked(t(r.premium?'fe.staff.premium.revokedStill':'fe.staff.premium.revoked'));setAsk(false);if(granted?.id===entitlement.trim())setGranted(null);setEntitlement('');setRevokeReason('');}
+ const revoke=async()=>{if(!revoking)return;setBusy(true);setFailure('');
+  try{const r=await call('staff.premiumRevoke',{opId:newOpId(),entitlementId:revoking.id,reason:revokeReason.trim(),...(revoking.paid?{confirmPaid:true}:{})},revokeRes,{asAccount:true});
+   setRevoked(t(r.premium?'fe.staff.premium.revokedStill':'fe.staff.premium.revoked'));setRevoking(null);setRevokeReason('');void showList(look);}
   catch(e){err(e);}finally{setBusy(false);}};
- const uuid=/^[0-9a-f-]{36}$/i.test(entitlement.trim());
+ useEffect(()=>{call('staff.premiumPrices',{},pricesRes,{asAccount:true,fresh:true}).then(r=>{setCur(r.currency);setPrices(Object.fromEntries(PRICE_KEYS.map(k=>[k,euros(r.prices[k]??0)])));}).catch(()=>{});},[call]);
+ const newPrices=prices?Object.fromEntries(PRICE_KEYS.map(k=>[k,toCents(prices[k]??'')])):null;
+ const pricesOk=!!newPrices&&PRICE_KEYS.every(k=>newPrices[k]!==null);
+ const savePrices=async()=>{if(!newPrices||!pricesOk)return;setBusy(true);setFailure('');setPriceSaved(false);
+  try{await call('staff.premiumPricesSet',{opId:newOpId(),prices:newPrices},pricesRes,{asAccount:true});setPriceSaved(true);}
+  catch(e){err(e);}finally{setBusy(false);}};
+ const label=(k:string)=>t('fe.staff.premium.price.'+k);
  return <>
   <Group title={t('fe.staff.premium.grantTitle')} foot={t('fe.staff.premium.grantNote')}>
    <Form>
@@ -1437,27 +1456,41 @@ function Premium(){
     <LineField label={t('fe.staff.premium.days')} inputMode="numeric" value={days} max={3} onChange={v=>setDays(v.replace(/\D/g,''))}/>
     <TextField label={t('fe.staff.premium.reason')} value={reason} onChange={setReason} max={300}/>
     <Btn icon={Check} disabled={busy||!canGrant} onClick={grant} busy={busy}>{t('fe.staff.premium.grant')}</Btn>
-    {granted&&<Alert kind="ok" icon={Check} action={<Actions><Btn kind="soft" size="sm" onClick={()=>setEntitlement(granted.id)}>{t('fe.staff.premium.revokeThis')}</Btn></Actions>}>{t(granted.pair?'fe.staff.premium.grantedPair':'fe.staff.premium.granted',{until:when(granted.until)})}</Alert>}
-    {granted&&<Details data={granted.id}/>}
+    {granted&&<Alert kind="ok" icon={Check}>{t(granted.pair?'fe.staff.premium.grantedPair':'fe.staff.premium.granted',{until:when(granted.until)})}</Alert>}
    </Form>
   </Group>
-  <Group title={t('fe.staff.premium.revokeTitle')} foot={t('fe.staff.premium.revokeNote')}>
+  <Group title={t('fe.staff.premium.lookTitle')} foot={t('fe.staff.premium.lookNote')}>
    <Form>
-    <LineField label={t('fe.staff.premium.entitlement')} value={entitlement} max={36} autoCapitalize="none" spellCheck={false} onChange={setEntitlement}/>
-    <TextField label={t('fe.staff.premium.reason')} value={revokeReason} onChange={setRevokeReason} max={300}/>
-    {ask?<Confirm text={t('fe.staff.premium.confirmRevoke')} busy={busy} onNo={()=>setAsk(false)} onYes={revoke}/>
-     :<Btn kind="danger" disabled={busy||!uuid||revokeReason.trim().length<3} onClick={()=>setAsk(true)}>{t('fe.staff.premium.revoke')}</Btn>}
+    <LineField label={t('fe.staff.premium.handle')} value={look} max={21} autoCapitalize="none" onChange={setLook}/>
+    <Btn kind="soft" disabled={busy||look.trim().replace(/^@/,'').length<3} onClick={()=>void showList(look)}>{t('fe.staff.premium.look')}</Btn>
     {revoked&&<Alert kind="ok" icon={Check}>{revoked}</Alert>}
    </Form>
+   {list&&list.accounts.map((a,i)=><Card list key={i}>
+    <Row noChev title={a.name||(a.handle?'@'+a.handle:'—')} sub={a.until?t('fe.staff.premium.until',{until:when(a.until)}):t('fe.staff.premium.none')}/>
+    {a.items.map(e=><Row key={e.id} noChev title={t('fe.staff.premium.src.'+e.source)+' · '+when(e.startsAt)+' → '+when(e.endsAt)}
+     sub={e.revokedAt?t('fe.staff.premium.revokedAt',{at:when(e.revokedAt)}):e.reason||undefined}
+     end={!e.revokedAt&&new Date(e.endsAt).getTime()>Date.now()?<Btn kind="danger" size="sm" auto onClick={()=>{setRevoking({id:e.id,paid:e.source!=='staff'});setRevokeReason('');}}>{t('fe.staff.premium.revoke')}</Btn>:undefined}/>)}
+   </Card>)}
+   {revoking&&<Form>
+    {revoking.paid&&<Alert kind="warn">{t('fe.staff.premium.paidWarn')}</Alert>}
+    <TextField label={t('fe.staff.premium.reason')} value={revokeReason} onChange={setRevokeReason} max={300}/>
+    <Confirm text={t('fe.staff.premium.confirmRevoke')} busy={busy} onNo={()=>setRevoking(null)} onYes={()=>{if(revokeReason.trim().length>=3)void revoke();}}/>
+   </Form>}
   </Group>
-  
+  <Group title={t('fe.staff.premium.pricesTitle',{cur})} foot={t('fe.staff.premium.pricesNote')}>
+   {prices?<Form>
+    {PRICE_KEYS.map(k=><LineField key={k} label={label(k)} inputMode="decimal" value={prices[k]??''} max={8} onChange={v=>{setPriceSaved(false);setPrices(p=>({...(p??{}),[k]:v.replace(/[^0-9.,]/g,'')}));}}/>)}
+    <Btn icon={Check} disabled={busy||!pricesOk} onClick={savePrices} busy={busy}>{t('fe.staff.premium.pricesSave')}</Btn>
+    {priceSaved&&<Alert kind="ok" icon={Check}>{t('fe.staff.premium.pricesSaved')}</Alert>}
+   </Form>:<Skel kind="list" rows={2}/>}
+  </Group>
  </>;
 }
 
 // ——— journal ———
 
 const JOURNAL_ACTIONS=['words.add','words.remove','person.watch','person.unwatch','topic.create','topic.save','document.save','document.publish','age.view','age.approve','age.reject','photo.view','photo.approve','photo.reject','community.approve','community.reject','event.approve','event.reject','event.hide',
- 'media.view','media.approve','media.reject','notice.removed','notice.kept','notice.not_actionable','place.approve','place.reject','premium.grant','premium.revoke','report.keep','report.remove',
+ 'media.view','media.approve','media.reject','notice.removed','notice.kept','notice.not_actionable','place.approve','place.reject','premium.grant','premium.revoke','premium.prices','report.keep','report.remove',
  'revision.approve','revision.reject','sanction.suspend','sanction.lift','sanction.expired','restrict.on','restrict.off','restrict.expired','staff.grant','staff.revoke','staff.factorOn','staff.factorLocked',
  'staff.factorReset','staff.recoveryUsed','support.reply','support.close','appeal.grant','appeal.deny','dating.on','dating.off','maintenance.on','maintenance.off','place.limit',
  'dispute.restore','dispute.remove','dispute.claimantReviewed','dispute.claimantRestricted'] as const;

@@ -5,6 +5,7 @@ import { enqueue } from '../outbox.mjs';
 import { closeAppeals, closeDisputes, closeReports } from '../reports.mjs';
 import { closePending } from '../approvals.mjs';
 import { deleteCouple } from './couples.mjs';
+import { cancelSubscriptions } from './premium.mjs';
 import { closeOwned } from './communities.mjs';
 import { endConversations } from './chats.mjs';
 import { checkCode, confirmEnrol, factorState, newRecoveryCodes, removeFactor, startEnrol } from '../second-factor.mjs';
@@ -97,6 +98,8 @@ const run = {
     // Deleting is always possible, under a sanction too (audit item 28): the sanction in force is remembered for this
     // login (sanction_carry, keyed like the under-18 marker) and a new account of it gets it until the same end.
     await carrySanction(q, String(cfg.pepper), coreAccountHash, a.id, a.person_profile_id);
+    // A subscription is ended at its provider first: nothing is deleted if that fails, so nobody is charged after leaving.
+    await cancelSubscriptions(q, cfg, a.id);
     // Out of reach first: a like, an invitation answer or a request racing this deletion waits for it and then fails.
     await q.query(`update feture.profile set state = 'deleted', updated_at = now() where id = $1`, [a.person_profile_id]);
     await q.query(`update feture.couple_invite set state = 'withdrawn', answered_at = now() where (from_account = $1 or to_account = $1) and state = 'pending'`, [a.id]);
@@ -248,8 +251,13 @@ const run = {
           support: await many(
             `select t.id, t.topic, t.state, t.created_at, (select jsonb_agg(jsonb_build_object('fromStaff', m.from_staff, 'body', m.body, 'at', m.created_at) order by m.created_at)
                from feture.support_message m where m.ticket_id = t.id) messages from feture.support_ticket t where t.account_id = $1 order by t.created_at`),
-          purchases: await many(`select kind, plan, days, provider, state, anonymous, created_at, paid_at from feture.purchase where account_id = $1 order by created_at`),
-        } : { support: [], purchases: [] }),
+          purchases: await many(`select kind, plan, days, provider, state, anonymous, amount_cents, currency, created_at, paid_at from feture.purchase where account_id = $1 order by created_at`),
+          // Premium: every period the account had (the staff's internal reason is not part of it), its subscriptions and the gifts it got.
+          premiumPeriods: await many(`select source, starts_at, ends_at, revoked_at, created_at from feture.entitlement where account_id = $1 order by starts_at`),
+          subscriptions: await many(`select provider, plan, auto_renew, renews_at, state, created_at from feture.subscription where account_id = $1 order by created_at`),
+          giftsReceived: await many(`select days, paid_at, case when anonymous then null else (select handle from feture.profile where id = (select person_profile_id from feture.account where id = pu.account_id)) end from_handle
+            from feture.purchase pu where kind = 'gift' and state = 'paid' and (recipient_account_id = $1 or recipient_profile_id in (${mine})) order by paid_at`),
+        } : { support: [], purchases: [], premiumPeriods: [], subscriptions: [], giftsReceived: [] }),
       },
     };
   },

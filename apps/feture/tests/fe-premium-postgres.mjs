@@ -13,6 +13,9 @@ import { mediaDto } from '../server/media/assets.mjs';
 import { tokenDelivery } from '../server/media/delivery.mjs';
 import { drain } from '../server/outbox.mjs';
 import { notifyHandlers } from '../server/notify.mjs';
+import { takePayEvents } from '../server/pay-events.mjs';
+import { robokassa } from '../server/billing/robokassa.mjs';
+import { createHash } from 'node:crypto';
 import { setup as baseSetup, op } from './fe-helpers.mjs';
 
 const setup = () => baseSetup({ commands: { ...platform, ...me, ...staff, ...discover, ...premium, ...photos, ...verification } });
@@ -516,4 +519,152 @@ test('Premium notices: a week and a day ahead, over, once each; the partner is t
     const rows = await db.query(`select type, data from feture.notification where type in ('premiumEnding', 'premiumEnded', 'premiumPair') order by created_at`);
     assert.deepEqual([...new Set(rows.map(r => r.type))].sort(), ['premiumEnded', 'premiumEnding', 'premiumPair']);
   } finally { await pg.close(); }
+});
+
+test('payments: the provider’s webhook grants once, closes a failed one, takes a refund back (a gift to a couple made two), and prices come from the cabinet', async () => {
+  let pending = 0;
+  const fake = {
+    id: 'fakepay', store: 'web', recurring: false,
+    async checkout({ purchase }) { calls.push([purchase.amountCents, purchase.currency, purchase.invId > 0]); return { url: 'https://pay.example/' + purchase.id + '?back=' + encodeURIComponent(purchase.id) }; },
+    async webhook({ rawBody }) {
+      const e = JSON.parse(rawBody);
+      if (e.sig !== 'ok') throw new Error('bad_signature');
+      return { events: e.events, reply: { status: 200, body: 'OK' + ++pending } };
+    },
+  };
+  const calls = [];
+  const env = await baseSetup({ commands: { ...platform, ...me, ...staff, ...premium }, billing: { providers: [fake] } });
+  const { db, call, person, coupleOf } = env;
+  const cfg = { billing: { providers: [fake] } };
+  const hook = (events, sig = 'ok', provider = 'fakepay') => takePayEvents(db, cfg, provider, { headers: {}, rawBody: JSON.stringify({ sig, events }), query: new URLSearchParams() });
+  try {
+    const boss = await person('uo', 'Boss');
+    await db.query(`insert into feture.staff_role (account_id, role) select id, 'owner' from feture.account where person_profile_id = $1`, [boss]);
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), g = await person('ug', 'Giver');
+    const pair = await coupleOf([a, b]);
+    await db.query(`update feture.profile set handle = 'alexkira' where id = $1`, [pair]);
+
+    // Prices: the defaults until the cabinet sets one; a purchase keeps the price it was made at.
+    assert.equal((await call('ua', a, { action: 'premium.status' })).prices.month, 1199);
+    assert.equal((await call('ua', null, { action: 'staff.premiumPrices' })).status, 403);
+    await call('uo', null, { action: 'staff.premiumPricesSet', opId: op(), prices: { month: 699, year: 4900 } });
+    const st = await call('ua', a, { action: 'premium.status' });
+    assert.deepEqual([st.prices.month, st.prices.year, st.prices.m1], [699, 4900, 1199]);
+    const buy = await call('ua', null, { action: 'premium.purchase', opId: op(), plan: 'month' });
+    assert.equal(buy.state, 'pending');
+    assert.deepEqual(calls[0], [699, 'EUR', true]);
+    await call('uo', null, { action: 'staff.premiumPricesSet', opId: op(), prices: { month: 799 } });
+    assert.equal((await db.query('select amount_cents from feture.purchase where id = $1', [buy.purchaseId]))[0].amount_cents, 699, 'kept');
+    assert.equal((await call('ua', null, { action: 'premium.purchaseStatus', purchaseId: buy.purchaseId })).state, 'pending');
+
+    // The webhook: a wrong signature and an unknown provider are refused; a right one grants once.
+    assert.equal((await hook([], 'no')).status, 400);
+    assert.equal((await hook([], 'ok', 'other')).status, 404);
+    const ev = [{ type: 'paid', purchaseId: buy.purchaseId, storeRef: 'pay-1' }];
+    assert.equal((await hook(ev)).status, 200);
+    assert.equal((await call('ua', a, { action: 'premium.status' })).premium, true);
+    const until1 = (await db.query('select premium_until from feture.account where person_profile_id = $1', [a]))[0].premium_until;
+    await hook(ev);
+    assert.equal(new Date((await db.query('select premium_until from feture.account where person_profile_id = $1', [a]))[0].premium_until).getTime(), new Date(until1).getTime(), 'the same call twice changes nothing');
+    assert.equal((await call('ua', null, { action: 'premium.purchaseStatus', purchaseId: buy.purchaseId })).state, 'paid');
+    assert.equal((await db.query('select count(*)::int n from feture.subscription'))[0].n, 0, 'one paid term: no subscription');
+    assert.equal((await db.query(`select count(*)::int n from feture.outbox where topic = 'premium.receipt'`))[0].n, 1);
+
+    // A failed checkout is closed; an old unfinished one is closed by the sweep.
+    const second = await call('ua', null, { action: 'premium.purchase', opId: op(), plan: 'year' });
+    await hook([{ type: 'failed', purchaseId: second.purchaseId }]);
+    assert.equal((await call('ua', null, { action: 'premium.purchaseStatus', purchaseId: second.purchaseId })).state, 'failed');
+    const old = await call('ua', null, { action: 'premium.purchase', opId: op(), plan: 'year' });
+    await db.query(`update feture.purchase set created_at = now() - interval '3 days' where id = $1`, [old.purchaseId]);
+    await sweepPremium(db);
+    assert.equal((await call('ua', null, { action: 'premium.purchaseStatus', purchaseId: old.purchaseId })).state, 'canceled');
+
+    // A gift to a couple costs twice, makes two periods; its refund takes both back and tells the payer.
+    const gift = await call('ug', null, { action: 'premium.gift', opId: op(), handle: 'alexkira', plan: 'm1' });
+    assert.deepEqual(calls.at(-1).slice(0, 2), [2398, 'EUR'], 'x2 for a couple');
+    await hook([{ type: 'paid', purchaseId: gift.purchaseId, storeRef: 'pay-2' }]);
+    assert.equal((await db.query('select count(*)::int n from feture.entitlement where purchase_id = $1', [gift.purchaseId]))[0].n, 2);
+    assert.equal((await call('ub', b, { action: 'premium.status' })).premium, true);
+    await hook([{ type: 'refunded', storeRef: 'pay-2' }]);
+    assert.equal((await db.query('select count(*)::int n from feture.entitlement where purchase_id = $1 and revoked_at is null', [gift.purchaseId]))[0].n, 0);
+    assert.equal((await call('ub', b, { action: 'premium.status' })).premium, false, 'Kira had nothing else');
+    assert.equal((await call('ua', a, { action: 'premium.status' })).premium, true, 'Alex still has his own purchase');
+    assert.equal((await db.query(`select count(*)::int n from feture.outbox where topic = 'premium.refunded'`))[0].n, 1);
+    assert.equal((await db.query(`select state from feture.purchase where id = $1`, [gift.purchaseId]))[0].state, 'refunded');
+  } finally { await env.pg.close(); }
+});
+
+test('payments: renewals of a recurring subscription, a failed renewal, an ended one; deletion stops the subscription first', async () => {
+  const cancelled = [];
+  const rec = { id: 'recur', store: 'web', recurring: true,
+    async checkout() { return { paid: { storeRef: 'sub-1' } }; },
+    async cancel({ subscription }) { cancelled.push(subscription.storeRef); },
+    async webhook({ rawBody }) { return { events: JSON.parse(rawBody) }; } };
+  const env = await baseSetup({ commands: { ...platform, ...me, ...premium }, billing: { providers: [rec] } });
+  const { db, call, person } = env;
+  const cfg = { billing: { providers: [rec] } };
+  const hook = events => takePayEvents(db, cfg, 'recur', { headers: {}, rawBody: JSON.stringify(events), query: new URLSearchParams() });
+  try {
+    const a = await person('ua', 'Alex');
+    await call('ua', null, { action: 'premium.purchase', opId: op(), plan: 'month' });
+    const until = async () => new Date((await db.query('select premium_until from feture.account where person_profile_id = $1', [a]))[0].premium_until).getTime();
+    const u1 = await until();
+    await hook([{ type: 'renewed', subscriptionRef: 'sub-1', paymentRef: 'pay-r1' }]);
+    await hook([{ type: 'renewed', subscriptionRef: 'sub-1', paymentRef: 'pay-r1' }]);
+    assert.ok(Math.abs(await until() - (u1 + 30 * 86400000)) < 60000, 'one more month, once');
+    await hook([{ type: 'renewalFailed', subscriptionRef: 'sub-1' }]);
+    assert.equal((await db.query(`select count(*)::int n from feture.outbox where topic = 'premium.renewalFailed'`))[0].n, 1);
+    await hook([{ type: 'subscriptionEnded', subscriptionRef: 'sub-1', state: 'canceled' }]);
+    assert.equal((await db.query('select state from feture.subscription'))[0].state, 'canceled');
+    // Deletion ends an active subscription at the provider first (and nothing is left charging).
+    await db.query(`update feture.subscription set state = 'active'`);
+    const [{ id: accountId }] = await db.query('select id from feture.account where person_profile_id = $1', [a]);
+    const { cancelSubscriptions } = await import('../server/commands/premium.mjs');
+    await db.tx(q => cancelSubscriptions(q, cfg, accountId));
+    assert.deepEqual(cancelled, ['sub-1']);
+    assert.equal((await db.query('select state from feture.subscription'))[0].state, 'canceled');
+  } finally { await env.pg.close(); }
+});
+
+test('Premium by hand: support gives and reads it, lists every period, and a paid one is revoked only on purpose', async () => {
+  const fake = { id: 'fakepay', store: 'web', async checkout({ purchase }) { return { paid: { storeRef: 'tx-' + purchase.id } }; } };
+  const env = await baseSetup({ commands: { ...platform, ...me, ...staff, ...premium }, billing: { providers: [fake] } });
+  const { db, call, person } = env;
+  try {
+    const boss = await person('uo', 'Boss'), sup = await person('us', 'Sven'), mod = await person('um', 'Mira');
+    await person('ua', 'Alex');
+    await db.query(`insert into feture.staff_role (account_id, role) select id, 'owner' from feture.account where person_profile_id = $1`, [boss]);
+    await call('uo', null, { action: 'staff.grant', opId: op(), handle: 'Sven', role: 'support', grant: true });
+    await call('uo', null, { action: 'staff.grant', opId: op(), handle: 'Mira', role: 'moderator', grant: true });
+    assert.equal((await call('um', null, { action: 'staff.premiumList', handle: 'Alex' })).status, 403, 'a moderator does not');
+    const g = await call('us', null, { action: 'staff.premiumGrant', opId: op(), handle: 'Alex', days: 10, reason: 'поддержка' });
+    assert.ok(g.id);
+    await call('uo', null, { action: 'premium.purchase', opId: op(), plan: 'month' }); // the owner buys one for themselves
+    const list = await call('us', null, { action: 'staff.premiumList', handle: 'Alex' });
+    assert.equal(list.accounts[0].items.length, 1);
+    assert.equal(list.accounts[0].items[0].source, 'staff');
+    // Support never gives itself Premium.
+    assert.equal((await call('us', null, { action: 'staff.premiumGrant', opId: op(), handle: 'Sven', days: 5, reason: 'себе' })).status, 403);
+    // A paid or gifted period needs the confirmation.
+    await db.query(`insert into feture.entitlement (account_id, source, starts_at, ends_at, store, store_ref) select id, 'purchase', now(), now() + interval '30 days', 'web', 'x-1' from feture.account where person_profile_id = $1`, [await db.query(`select id from feture.profile where lower(handle) = 'alex'`).then(r => r[0].id)]);
+    const paid = (await call('us', null, { action: 'staff.premiumList', handle: 'Alex' })).accounts[0].items.find(i => i.source === 'purchase');
+    assert.equal((await call('us', null, { action: 'staff.premiumRevoke', opId: op(), entitlementId: paid.id, reason: 'ошибка' })).rule, 'paid_confirm');
+    assert.equal((await call('us', null, { action: 'staff.premiumRevoke', opId: op(), entitlementId: paid.id, reason: 'ошибка', confirmPaid: true })).revoked, true);
+  } finally { await env.pg.close(); }
+});
+
+test('Robokassa: the pay link and the Result URL notification are signed as the shop’s docs say', async () => {
+  assert.equal(robokassa({}), null, 'no keys, no provider');
+  const p = robokassa({ ROBOKASSA_LOGIN: 'shop', ROBOKASSA_PASSWORD1: 'p1', ROBOKASSA_PASSWORD2: 'p2', ROBOKASSA_RATE_EUR_RUB: '100', ROBOKASSA_TEST: '1' });
+  const md5 = s => createHash('md5').update(s).digest('hex');
+  const out = await p.checkout({ purchase: { id: 'abc', invId: 7, kind: 'subscription', plan: 'month', days: 30, amountCents: 1199, currency: 'EUR' }, returnUrl: 'https://x' });
+  const u = new URL(out.url);
+  assert.equal(u.searchParams.get('OutSum'), '1199.00');
+  assert.equal(u.searchParams.get('SignatureValue'), md5('shop:1199.00:7:p1:Shp_p=abc'));
+  assert.equal(u.searchParams.get('IsTest'), '1');
+  const body = `OutSum=1199.00&InvId=7&SignatureValue=${md5('1199.00:7:p2:Shp_p=abc').toUpperCase()}&Shp_p=abc`;
+  const ok = await p.webhook({ headers: {}, rawBody: body, query: new URLSearchParams() });
+  assert.deepEqual(ok.events, [{ type: 'paid', purchaseId: 'abc', storeRef: '7' }]);
+  assert.equal(ok.reply.body, 'OK7');
+  await assert.rejects(p.webhook({ headers: {}, rawBody: body.replace('1199.00', '1.00'), query: new URLSearchParams() }), /bad_signature/);
 });
