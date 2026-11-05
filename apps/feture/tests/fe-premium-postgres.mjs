@@ -418,3 +418,62 @@ test('payments: unavailable without a provider; purchase, restore, renewal and g
     assert.equal((await call('ua', null, { action: 'premium.giftCheck', handle: 'Kira' })).status, 404);
   } finally { await env.pg.close(); }
 });
+
+test('Premium: a revoked grant in a stack pulls the next one forward; the person is told «disabled» only when Premium really ends', async () => {
+  const { pg, db, call, person } = await world();
+  try {
+    const a = await person('ua', 'Alex');
+    const first = await call('uo', null, { action: 'staff.premiumGrant', opId: op(), handle: 'Alex', days: 30, reason: 'первая выдача' });
+    const second = await call('uo', null, { action: 'staff.premiumGrant', opId: op(), handle: 'Alex', days: 30, reason: 'вторая выдача' });
+    const until = async () => new Date((await db.query('select premium_until from feture.account where person_profile_id = $1', [a]))[0].premium_until).getTime();
+    const DAY = 86400000;
+    assert.ok(Math.abs(await until() - (Date.now() + 60 * DAY)) < 60000, 'two grants stack to 60 days');
+    // Revoking the one that runs now: the second moves forward and starts now, so 30 days are left, not 60.
+    const r1 = await call('uo', null, { action: 'staff.premiumRevoke', opId: op(), entitlementId: first.id, reason: 'ошибочная выдача' });
+    assert.equal(r1.premium, true);
+    assert.ok(Math.abs(await until() - (Date.now() + 30 * DAY)) < 60000, 'what is left is the second grant, starting now');
+    assert.equal((await call('ua', a, { action: 'premium.status' })).premium, true);
+    assert.equal((await db.query(`select count(*)::int n from feture.outbox where topic = 'premium.revoked'`))[0].n, 0, 'Premium goes on, nobody is told it is off');
+    const r2 = await call('uo', null, { action: 'staff.premiumRevoke', opId: op(), entitlementId: second.id, reason: 'конец' });
+    assert.equal(r2.premium, false);
+    assert.equal((await call('ua', a, { action: 'premium.status' })).premium, false);
+    assert.equal((await db.query(`select count(*)::int n from feture.outbox where topic = 'premium.revoked'`))[0].n, 1, 'told once, when it really ended');
+    // A grant that is already over does not come back.
+    assert.equal((await call('uo', null, { action: 'staff.premiumRevoke', opId: op(), entitlementId: second.id, reason: 'ещё раз' })).status, 404);
+  } finally { await pg.close(); }
+});
+
+test('Premium: staff grant and a gift to a couple’s nickname reach both partners; a partner who already has Premium gets it queued', async () => {
+  const calls = [];
+  const fake = { id: 'fakepay', store: 'web', async checkout({ purchase }) { calls.push(purchase.kind); return { paid: { storeRef: 'tx-' + purchase.id } }; } };
+  const env = await baseSetup({ commands: { ...platform, ...me, ...staff, ...premium }, billing: { providers: [fake] } });
+  const { db, call, person, coupleOf } = env;
+  try {
+    const boss = await person('uo', 'Boss');
+    await db.query(`insert into feture.staff_role (account_id, role) select id, 'owner' from feture.account where person_profile_id = $1`, [boss]);
+    const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), g = await person('ug', 'Giver');
+    const pair = await coupleOf([a, b]);
+    await db.query(`update feture.profile set handle = 'alexkira' where id = $1`, [pair]);
+    const untilOf = async p => (await db.query('select premium_until from feture.account where person_profile_id = $1', [p]))[0].premium_until;
+    const DAY = 86400000;
+    // Kira already has 30 days from staff.
+    await call('uo', null, { action: 'staff.premiumGrant', opId: op(), handle: 'Kira', days: 30, reason: 'Кире' });
+    const check = await call('ug', null, { action: 'premium.giftCheck', handle: 'alexkira' });
+    assert.equal(check.kind, 'couple', JSON.stringify(check));
+    assert.equal(check.queued, true, 'one partner has Premium');
+    const gift = await call('ug', null, { action: 'premium.gift', opId: op(), handle: 'alexkira', plan: 'm1' });
+    assert.equal(gift.state, 'paid', JSON.stringify(gift));
+    assert.ok(Math.abs(new Date(await untilOf(a)).getTime() - (Date.now() + 30 * DAY)) < 60000, 'Alex: 30 days from now');
+    assert.ok(Math.abs(new Date(await untilOf(b)).getTime() - (Date.now() + 60 * DAY)) < 60000, 'Kira: queued after her own 30');
+    assert.equal((await db.query(`select count(*)::int n from feture.outbox where topic = 'premium.gifted'`))[0].n, 2, 'both partners are told');
+    const sent = (await call('ug', g, { action: 'premium.status' })).giftsSent;
+    assert.equal(sent[0].handle, 'alexkira');
+    // A member of the couple cannot gift their own pair.
+    assert.equal((await call('ua', null, { action: 'premium.giftCheck', handle: 'alexkira' })).rule, 'gift_self');
+    // Staff grant by the couple's nickname: both get it, one journal line each.
+    const granted = await call('uo', null, { action: 'staff.premiumGrant', opId: op(), handle: 'alexkira', days: 7, reason: 'паре' });
+    assert.equal(granted.accounts, 2);
+    assert.equal((await db.query(`select count(*)::int n from feture.staff_action where action = 'premium.grant'`))[0].n, 3);
+    assert.equal((await call('uo', null, { action: 'staff.premiumGrant', opId: op(), handle: 'nobody1', days: 7, reason: 'нет' })).status, 404);
+  } finally { await env.pg.close(); }
+});

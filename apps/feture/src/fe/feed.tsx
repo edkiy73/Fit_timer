@@ -662,7 +662,7 @@ function ReplyTree({list,sort,open,setOpen,liked,delta,onLike,onReply,onMore,lim
    <div className="cm-l">{hidden?<span className="av cm-ghost" aria-hidden="true">{c.deleted?<Trash2/>:<Lock/>}</span>
     :<button type="button" className="plink" aria-label={t('fe.fd.profileOf',{name:nameOf(c.author)})} onClick={()=>go(c.author)}><ProfileAv p={c.author??{id:c.id,name:'?'}} size={child?'xs':'sm'}/></button>}</div>
    <div className="cm-b">{hidden?<Note>{c.deleted?t('fe.feed.replyDeleted'):c.unavailable?t('fe.fd.replyUnavailable'):t('fe.fd.replyBlocked')}</Note>:<>
-    <div className="cm-h"><button type="button" className="plink pnm" onClick={()=>go(c.author)}><span className="nmt">{nameOf(c.author)}</span></button><time>{when(c.createdAt,locale)}{c.editedAt?' · '+t('fe.fd.edited'):''}</time></div>
+    <div className="cm-h"><button type="button" className="plink pnm" onClick={()=>go(c.author)}><span className="nmt">{nameOf(c.author)}</span><NameBadges p={c.author}/></button><time>{when(c.createdAt,locale)}{c.editedAt?' · '+t('fe.fd.edited'):''}</time></div>
     {to&&<small className="cm-to">{t('fe.fd.replyingTo')} <button type="button" className="plink" onClick={()=>go(parent!.author)}>{nameOf(parent!.author)}</button></small>}
     <p className="reply-text"><MentionText text={c.body??''} mentions={c.mentions}/></p>
     <div className="r-acts">

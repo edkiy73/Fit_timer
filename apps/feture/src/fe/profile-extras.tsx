@@ -707,7 +707,7 @@ function EndConnection({profileId,name,mutual,onClose,onDone}:{profileId:string,
 
 /** The ⋯ menu of another person's profile (ACT.profileMenu) and its sheets. `blocked` is kept by the screen: a
  * blocked profile no longer loads, so the screen shows its own blocked state with «Разблокировать». */
-export function PersonMenu({profileId,name,handle,partner,step,setStep,blocked,setBlocked,rel,onRel}:{profileId:string,name:string,partner?:boolean|undefined,/** A person's nick: «Подарить Premium» (couples have none to gift to). */ handle?:string|null|undefined,step:MenuStep,setStep:(s:MenuStep)=>void,
+export function PersonMenu({profileId,name,handle,partner,step,setStep,blocked,setBlocked,rel,onRel}:{profileId:string,name:string,partner?:boolean|undefined,/** The profile's nick: «Подарить Premium» (a couple's nick gifts both partners). */ handle?:string|null|undefined,step:MenuStep,setStep:(s:MenuStep)=>void,
  blocked:boolean,setBlocked:(b:boolean)=>void,rel?:Relation|null|undefined,onRel?:(()=>void)|undefined}){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();const [busy,setBusy]=useState(false);
  const own=useOwnProfiles().has(profileId);
