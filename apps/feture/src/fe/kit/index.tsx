@@ -319,9 +319,11 @@ export function MultiChips<T extends string>({value,options,onChange,label,all,d
 }
 /** Several values from a list as rows with a box (what to open, what to keep). A row may say more under its title
  * («не запрошено», «уже открыто»); `value` keeps the order of `options`. */
-export function CheckList<T extends string>({value,options,onChange,label}:{value:readonly T[],options:readonly (readonly [T,ReactNode,ReactNode?])[],onChange:(v:T[])=>void,label:string,/** Kept for old calls; the rows never have a second frame. */ bare?:boolean}){
+export function CheckList<T extends string>({value,options,onChange,label,fixed}:{value:readonly T[],options:readonly (readonly [T,ReactNode,ReactNode?])[],onChange:(v:T[])=>void,label:string,/** Kept for old calls; the rows never have a second frame. */ bare?:boolean,
+ /** Rows that are always on and cannot be switched off (shown first, ticked, without a tap): «Взаимная симпатия». */ fixed?:readonly (readonly [ReactNode,ReactNode?])[]|undefined}){
  const flip=(k:T)=>onChange(options.map(o=>o[0]).filter(x=>x===k?!value.includes(k):value.includes(x)));
  return <div className="k-radios" role="group" aria-label={label}>
+  {fixed?.map(([title,sub],i)=><div key={'f'+i} className="radio k-chk on fixed" role="checkbox" aria-checked="true" aria-disabled="true"><i><Check2/></i><span className="tx">{title}{sub&&<small>{sub}</small>}</span></div>)}
   {options.map(([k,title,sub])=>{const on=value.includes(k);return <button key={k} type="button" className={'radio k-chk'+(on?' on':'')} role="checkbox" aria-checked={on} onClick={()=>flip(k)}>
   <i><Check2/></i><span className="tx">{title}{sub&&<small>{sub}</small>}</span></button>;})}</div>;
 }
