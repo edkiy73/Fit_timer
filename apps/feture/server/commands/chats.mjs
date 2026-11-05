@@ -246,7 +246,7 @@ async function sendMediaInto(q, c, acting, input) {
   if (input.mode !== 'normal') {
     // Ephemeral media: everyone on both sides confirmed an adult.
     const [{ ok }] = await q.query(
-      `select coalesce(bool_and(coalesce(a.age_verified_until > now(), false)), false) ok from feture.conversation_member cm join feture.account a on a.id = cm.account_id
+      `select coalesce(bool_and(feture.age_ok(a.id)), false) ok from feture.conversation_member cm join feture.account a on a.id = cm.account_id
        where cm.conversation_id = $1`, [c.id]);
     if (!ok) fail(422, 'rule_violation', { rule: 'age_required' });
   }

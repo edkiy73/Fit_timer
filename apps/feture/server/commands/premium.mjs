@@ -343,23 +343,23 @@ const run = {
   },
 
   async 'verification.ageStatus'(q, { account }) {
-    const [a] = await q.query('select age_verified_until from feture.account where id = $1', [account.id]);
+    const [a] = await q.query('select age_verified_until, feture.age_ok(id) ok from feture.account where id = $1', [account.id]);
     const [c] = await q.query(`select id, state, reason, gesture, method from feture.age_check where account_id = $1 order by created_at desc limit 1`, [account.id]);
     return {
-      verified: !!a.age_verified_until && new Date(a.age_verified_until).getTime() > Date.now(), until: a.age_verified_until,
+      verified: !!a.ok, until: a.age_verified_until,
       check: c ? { id: c.id, method: c.method, state: c.state, reason: c.reason, gesture: c.state === 'started' && c.method === 'selfie' ? c.gesture : null } : null,
     };
   },
 
   async 'staff.ageCheckQueue'(q, { account, input }) {
-    const roles = await requireStaff(q, account, ['owner', 'lead', 'moderator', 'verifier']);
+    await requireStaff(q, account, ['owner', 'lead', 'moderator', 'verifier']);
     // The queue lists who is waiting, never the pictures: a document or a selfie opens by itself (staff.ageCheckOpen),
     // so loading the staff area journals nothing. `locked`: no code from the last 10 minutes, opening will ask for one.
     const locked = !(await staffCheck(q, account)).fresh;
     const { sql, params } = queuePageSql(input, SUBMITTED_KEYS,
       `select c.id, c.method, c.gesture, c.submitted_at, p.id profile_id, p.handle
        from feture.age_check c join feture.account a on a.id = c.account_id join feture.profile p on p.id = a.person_profile_id
-       where c.state = 'submitted' and a.state <> 'deleted' and not coalesce(${staffOwnAccount('c.account_id', '$1::uuid')}, false)`, [ownerSelf(roles) ? null : account.id]); // the owner sees their own too
+       where c.state = 'submitted' and a.state <> 'deleted' and not coalesce(${staffOwnAccount('c.account_id', '$1::uuid')}, false)`, [account.id]);
     const rows = await q.query(sql, params);
     const page = pageInfo(rows, SUBMITTED_KEYS, input.limit);
     const items = rows.map(r => ({
@@ -371,12 +371,12 @@ const run = {
 
   async 'staff.ageCheckOpen'(q, { account, input, cfg }) {
     // A look at a selfie or an identity document: a code from the last 10 minutes, and every look is journaled (S4 §3).
-    const roles = await requireStaff(q, account, ['owner', 'lead', 'moderator', 'verifier'], { fresh: true });
+    await requireStaff(q, account, ['owner', 'lead', 'moderator', 'verifier'], { fresh: true });
     const [c] = await q.query(
       `select c.id, c.state, c.method, c.asset_id, c.account_id, p.avatar_asset_id avatar_id from feture.age_check c
        join feture.account a on a.id = c.account_id join feture.profile p on p.id = a.person_profile_id where c.id = $1`, [input.checkId]);
     if (!c) fail(404, 'not_found');
-    if (!ownerSelf(roles) && (await q.query(`select ${staffOwnAccount('$1::uuid', '$2::uuid')} own`, [c.account_id, account.id]))[0].own) fail(403, 'forbidden');
+    if ((await q.query(`select ${staffOwnAccount('$1::uuid', '$2::uuid')} own`, [c.account_id, account.id]))[0].own) fail(403, 'forbidden');
     if (c.state !== 'submitted') fail(409, 'conflict', { state: c.state });
     const doc = c.method === 'document';
     const [shot] = c.asset_id ? await q.query(`select * from feture.media_asset where id = $1 and purpose = 'verification'`, [c.asset_id]) : [null];
@@ -392,10 +392,10 @@ const run = {
   },
 
   async 'staff.ageCheckDecide'(q, { account, input }) {
-    const roles = await requireStaff(q, account, ['owner', 'lead', 'moderator', 'verifier']);
+    await requireStaff(q, account, ['owner', 'lead', 'moderator', 'verifier']);
     const [c] = await q.query('select * from feture.age_check where id = $1 for update', [input.checkId]);
     if (!c) fail(404, 'not_found');
-    if (!ownerSelf(roles) && (await q.query(`select ${staffOwnAccount('$1::uuid', '$2::uuid')} own`, [c.account_id, account.id]))[0].own) fail(403, 'forbidden');
+    if ((await q.query(`select ${staffOwnAccount('$1::uuid', '$2::uuid')} own`, [c.account_id, account.id]))[0].own) fail(403, 'forbidden');
     if (c.state !== 'submitted') fail(409, 'conflict', { state: c.state });
     const doc = c.method === 'document';
     if (input.approve) {

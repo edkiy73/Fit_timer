@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Camera,ClipboardList,Clock,Eye,HeartOff,Newspaper,Settings,Star,Trash2} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {AddCard,Alert,Ask as KitAsk,Card,Group,MultiChips,PhotoAdd,PhotoSlot,PhotoSlots,Row,SelectRow,Sheet,Skel,ToggleRow} from './kit';
+import {AddCard,Alert,Ask as KitAsk,Card,CheckList,Group,PhotoAdd,PhotoSlot,PhotoSlots,Row,SelectRow,Sheet,Skel,ToggleRow} from './kit';
 import {MESSAGE_POINTS,MESSAGES_DEFAULT} from '../../contracts/_messages.mjs';
 import {AgeCheckLink,useAgeResume} from './age-check';
 import {dropReadCache,useFe} from './session';
@@ -116,10 +116,15 @@ export function PhotosBlock({p,settings,onChanged,action}:{p:Profile,settings:Se
 /** `meVisLayer()` — Discover, the profile card, likes, activity, mentions; the couple's own group comes after.
  * `part` draws one half (the «Знакомства» or the «Кто может…» section of the new settings); `who` adds the other
  * «кто может» choices kept elsewhere today (access requests, links). */
+/** The points of «Кто может написать первым» shown as boxes; «Все» is the header link, not a box. */
+const MSG_OPTIONS=['followers','following','mutual','community','event'] as const;
+
 export function Visibility({p,settings,onChanged,part}:{p:Profile,settings:Settings,onChanged:()=>void,part?:'discover'|'who'|undefined}){
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
  const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [ageIntent,setAgeIntent]=useState('');const [askOff,setAskOff]=useState(false);
  const cp=p.kind==='couple';
+ // «Кто может написать первым»: the boxes are the five points; «all» (anyone) is stored alone and lights every box.
+ const msgFrom:readonly (typeof MESSAGE_POINTS[number])[]=settings.messagesFrom??[...MESSAGES_DEFAULT];const everyone=msgFrom.includes('all');
  const set=async(setting:string,value:string|boolean|readonly string[],done?:string)=>{
   if(busy)return;setBusy(true);setFailure('');
   try{const r=await call(setting==='detailsVis'?'profile.update':'profile.setVisibility',setting==='detailsVis'?{opId:newOpId(),rev:p.rev,detailsVis:value}:{opId:newOpId(),setting,value},ok);
@@ -151,11 +156,14 @@ export function Visibility({p,settings,onChanged,part}:{p:Profile,settings:Setti
     options={(['all','follow','none'] as const).map(v=>[v,t('fe.mx.v.from.'+v+(v==='follow'&&cp?'Us':''))] as const)}/>
    {toggle('showLikes',cp?t('fe.mx.v.showLikesUs'):t('fe.mx.v.showLikes'),cp?t('fe.mx.v.showLikesSubUs'):t('fe.mx.v.showLikesSub'),settings.showLikes!==false)}
   </Card></Group>
-  {/* «Кто может мне писать» (owner 29.10.2026, message requests); the server enforces it. */}
-  <Group title={cp?t('fe.rq.set.titleUs'):t('fe.rq.set.title')} foot={t('fe.rq.set.foot')}>
-   {/* Chips (owner 05.11.2026): «Все» stands alone; nothing picked — only a like; a mutual like always opens a chat. */}
-   <MultiChips label={cp?t('fe.rq.set.titleUs'):t('fe.rq.set.title')} value={settings.messagesFrom??[...MESSAGES_DEFAULT]} only="all" onChange={v=>void set('messagesFrom',v)}
-    options={MESSAGE_POINTS.map(v=>[v,t('fe.rq.set.'+v+(cp&&(v==='followers'||v==='following')?'Us':''))] as const)}/>
+  {/* «Кто может мне писать» (owner 29.10.2026, message requests); the server enforces it. A list with boxes again
+      (owner 05.11.2026); «Все» is the link in the header: it lights every box (stored as «all») or clears them all;
+      nothing picked — only a like; a mutual like always opens a chat. */}
+  <Group title={cp?t('fe.rq.set.titleUs'):t('fe.rq.set.title')} foot={t('fe.rq.set.foot')}
+   action={<button type="button" onClick={()=>void set('messagesFrom',everyone?[]:['all'])}>{t(everyone?'fe.rq.set.clearAll':'fe.rq.set.selectAll')}</button>}>
+   <CheckList label={cp?t('fe.rq.set.titleUs'):t('fe.rq.set.title')} value={everyone?[...MSG_OPTIONS]:msgFrom.filter((x):x is typeof MSG_OPTIONS[number]=>x!=='all')}
+    onChange={v=>void set('messagesFrom',MSG_OPTIONS.every(o=>v.includes(o))?['all']:v)}
+    options={MSG_OPTIONS.map(v=>[v,t('fe.rq.set.'+v+(cp&&(v==='followers'||v==='following')?'Us':''))] as const)}/>
   </Group>
   {part==='who'&&<Group title={t('fe.m2.who.more')}><Card list>
    <SelectRow row label={t('fe.mx.pr.reqFrom')} value={settings.requestsFrom??'all'} onChange={v=>void set('requestsFrom',v)}

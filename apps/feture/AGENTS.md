@@ -70,6 +70,14 @@ keep real users' data. Until then do not mention «existing couples» as a risk 
 - **Discover starts off** (28.10.2026). New accounts and couples have `discover_mode = 'off'`. Turning Discover on
   without a profile photo asks for one and opens the uploader; the card appears after the photo is approved. Discovery
   stays reciprocal and server-enforced; 18+ and consent rules stay.
+- **Checks waiver** (05.11.2026). Nobody reviews their own checks or media, **no exception — the owner included** (no
+  `ownerSelf` in checks or the media queue). The owner is instead freed from the manual checks (age, photo, human media
+  review); for any other account the owner switches it on and off in the staff area «Команда → Без проверок»
+  (`staff.checksWaiver`, journalled). It belongs to the **account**, never to a couple: each partner counts by their own
+  account, so a freed partner covers nobody. Always on for everyone, waived or not: the automatic scan (CSAM), reports,
+  blocks, measures, and the rule that explicit media never goes to a public place. One place decides it:
+  `feture.checks_waived()` / `feture.age_ok()` / `feture.photo_verified()` (migration `20261105600000`) and
+  `server/media/scan.mjs`. Premium to oneself and the owner's own second-factor reset stay with the owner (`ownerSelf`).
 - **Personas are hidden** (28.10.2026). Whatever a persona account (`qa-…` login) creates never reaches people who are
   not personas (`feture.qa_hidden()`); personas see each other so scenarios keep working.
 - **APK updates are required before launch.** Every APK build is published in-app as a required update

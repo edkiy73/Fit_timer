@@ -5,7 +5,7 @@ import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
 import { mediaDto } from '../media/assets.mjs';
 import { GESTURES } from './premium.mjs';
-import { journal, ownerSelf, requireStaff, staffCheck } from './staff.mjs';
+import { journal, requireStaff, staffCheck } from './staff.mjs';
 import { staffOwnAccount } from '../sql-rules.mjs';
 import { pageInfo, queuePageSql, SUBMITTED_KEYS } from '../queue-page.mjs';
 
@@ -100,13 +100,13 @@ const run = {
   },
 
   async 'staff.photoCheckQueue'(q, { account, input, cfg }) {
-    const roles = await requireStaff(q, account, STAFF);
+    await requireStaff(q, account, STAFF);
     // Selfies open only with a code from the last 10 minutes (as in staff.ageCheckQueue): otherwise `locked`.
     const locked = !(await staffCheck(q, account)).fresh;
     const { sql, params } = queuePageSql(input, SUBMITTED_KEYS,
       `select c.id, c.gesture, c.submitted_at, c.asset_id, c.photo_asset_id, p.id profile_id, p.handle
        from feture.photo_check c join feture.profile p on p.id = c.profile_id
-       where c.state = 'submitted' and p.state <> 'deleted' and not coalesce(${staffOwnAccount('c.account_id', '$1::uuid')}, false)`, [ownerSelf(roles) ? null : account.id]); // the owner sees their own too
+       where c.state = 'submitted' and p.state <> 'deleted' and not coalesce(${staffOwnAccount('c.account_id', '$1::uuid')}, false)`, [account.id]);
     const rows = await q.query(sql, params);
     const page = pageInfo(rows, SUBMITTED_KEYS, input.limit);
     const ctx = { viewerProfileId: account.person_profile_id ?? account.id, place: /** @type {const} */ ('own'), showExplicit: true, staff: true };
@@ -136,10 +136,10 @@ const run = {
   },
 
   async 'staff.photoCheckDecide'(q, { account, input }) {
-    const roles = await requireStaff(q, account, STAFF);
+    await requireStaff(q, account, STAFF);
     const [c] = await q.query('select * from feture.photo_check where id = $1 for update', [input.checkId]);
     if (!c) fail(404, 'not_found');
-    if (!ownerSelf(roles) && (await q.query(`select ${staffOwnAccount('$1::uuid', '$2::uuid')} own`, [c.account_id, account.id]))[0].own) fail(403, 'forbidden');
+    if ((await q.query(`select ${staffOwnAccount('$1::uuid', '$2::uuid')} own`, [c.account_id, account.id]))[0].own) fail(403, 'forbidden');
     if (c.state !== 'submitted') fail(409, 'conflict', { state: c.state });
     if (input.approve) {
       // Never approved without the selfie in front of staff, nor against a photo that is no longer approved.

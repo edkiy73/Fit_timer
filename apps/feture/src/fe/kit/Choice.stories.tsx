@@ -1,7 +1,7 @@
 import type {Meta,StoryObj} from '@storybook/react-vite';
 import {useState} from 'react';
 import {ChipPick} from './ChipPick';
-import {Btn,Card,Check,CheckList,ChoiceCards,ChoiceChips,Chip,Chips,Field,MultiChips,RadioList,Range,Row,Stack,Switch,TimeSpan} from './index';
+import {Btn,Card,Check,CheckList,ChoiceCards,ChoiceChips,Chip,Chips,Field,Group,MultiChips,RadioList,Range,Row,Stack,Switch,TimeSpan} from './index';
 
 const meta={title:'Выбор/Чип',component:Chip,tags:['autodocs'],
  parameters:{docs:{description:{component:'Несколько значений из набора (темы, интересы) или фильтр. `more` — «Все · N», открывает полный список. Одно значение из набора — `ChoiceChips`.'}}},
@@ -19,10 +19,10 @@ export const НесколькоСоВсё:S={name:'Несколько из на�
   <MultiChips label="Что запросить" all="Всё" disabled value={['info']} onChange={()=>{}} options={[['info','Описание'],['media','Фото и видео']]}/></Stack>;}};
 export const ОдинИзНабора:S={name:'Один из набора (ChoiceChips)',render:()=>{const [v,setV]=useState('all');return <ChoiceChips label="Кто видит" value={v} onChange={setV} options={[['all','Все'],['fol','Подписчики'],['only','Только я']]}/>;}};
 export const Радиосписок:S={name:'Радиосписок',render:()=>{const [v,setV]=useState('spam');return <RadioList label="Причина" value={v} onChange={setV} options={[['spam','Спам или мошенничество'],['threat','Угрозы или шантаж','С подробностями'],['other','Другое']]}/>;}};
-export const КтоПишетПервым:S={name:'Несколько из набора: «Все» снимает остальное (MultiChips only)',parameters:{docs:{description:{story:'`only` — вариант, который снимает остальные, а выбор любого другого снимает его. Подсказка про закреплённое правило — в `foot` группы.'}}},
- render:()=>{const [v,setV]=useState<('all'|'followers'|'following'|'mutual'|'community'|'event')[]>(['mutual','community','event']);
- return <MultiChips label="Кто может написать первым" value={v} onChange={setV} only="all"
-  options={[['followers','Мои подписчики'],['following','Мои подписки'],['mutual','Взаимные подписки'],['community','Общее сообщество'],['event','Одно событие'],['all','Все']]}/>;}};
+export const КтоПишетПервым:S={name:'Несколько из списка: «Выбрать все» ссылкой в заголовке (CheckList)',parameters:{docs:{description:{story:'«Все» — не строка, а ссылка в заголовке группы: зажигает все пункты или снимает их; когда горят все, ссылка предлагает «Снять все».'}}},
+ render:()=>{const O=['followers','following','mutual','community','event'] as const;const [v,setV]=useState<(typeof O)[number][]>(['mutual','community','event']);const all=O.every(o=>v.includes(o));
+ return <Group title="Кто может написать первым" action={<button type="button" onClick={()=>setV(all?[]:[...O])}>{all?'Снять все':'Выбрать все'}</button>} foot="Взаимная симпатия всегда открывает чат.">
+  <CheckList label="Кто может написать первым" value={v} onChange={setV} options={[['followers','Мои подписчики'],['following','Мои подписки'],['mutual','Взаимные подписки'],['community','Общее сообщество'],['event','Одно событие']]}/></Group>;}};
 export const НесколькоСтроками:S={name:'Несколько из списка строками (CheckList)',render:()=>{const [v,setV]=useState<('info'|'photos'|'video')[]>(['info','photos']);
  return <CheckList label="Что открыть" value={v} onChange={setV} options={[['info','Описание','запрошено'],['photos','Фото','уже открыто'],['video','Видео','не запрошено']]}/>;}};
 export const Галочка:S={render:()=>{const [a,setA]=useState(false);return <Stack gap={2}><Check on={a} onChange={setA}>Принимаю условия и политику</Check><Check on={false} error onChange={()=>{}}>Ошибка — без отметки дальше нельзя</Check></Stack>;}};

@@ -21,6 +21,8 @@ import { VARIANTS } from './render.mjs';
  */
 
 const PUBLIC_ONLY = new Set(['avatar', 'community', 'event']);
+/** Reasons for a human look that a freed (waived) account does not need. */
+const WAIVABLE = new Set(['video', 'classifier_uncertain', 'classifier_not_configured']);
 
 /** Real type by signature; the declared MIME is only a claim. @param {Uint8Array} b @returns {string | null} */
 export function sniff(b) {
@@ -101,7 +103,7 @@ export async function scanAsset(db, deps, assetId) {
     `update feture.media_asset set scan_token = gen_random_uuid(), scan_lock_until = now() + interval '10 minutes',
        state = case when state = 'uploaded' then 'scanning' else state end
      where id = $1 and ${eligible} and (scan_lock_until is null or scan_lock_until < now())
-     returning id, state, scan_token::text, owner_profile_id, purpose, kind, mime, storage_key, explicitness, poster_mime`,
+     returning id, state, scan_token::text, owner_profile_id, uploaded_by, purpose, kind, mime, storage_key, explicitness, poster_mime`,
     [assetId]);
   if (!asset) {
     const [busy] = await db.query(`select 1 from feture.media_asset where id = $1 and ${eligible}`, [assetId]);
@@ -169,6 +171,13 @@ export async function scanAsset(db, deps, assetId) {
   // No classifier judges moving pictures: every clip goes to staff, like any media in a public place without one.
   else if (asset.kind === 'video') decision = { state: 'needs_review', reason: 'video' };
   else decision = await classify(deps, asset, bytes, log);
+  // A waived account's media skips the HUMAN review only (owner 05.11.2026): it already passed the CSAM scan above, and
+  // the rule that explicit media never goes to a public place still applies. Scanner errors never get here.
+  if (decision.state === 'needs_review' && csam === 'pass' && WAIVABLE.has(String(decision.reason)) && asset.uploaded_by
+    && (await db.query('select feture.checks_waived($1::uuid) ok', [asset.uploaded_by]))[0]?.ok) {
+    const explicit = asset.explicitness === 'explicit';
+    decision = explicit && PUBLIC_ONLY.has(asset.purpose) ? { state: 'rejected', reason: 'explicit_not_allowed', explicit } : { state: 'approved', explicit };
+  }
   const keepCopies = ['approved', 'needs_review'].includes(decision.state) && written.length > 0;
   const committed = await db.tx(async q => {
     const rows = await q.query(

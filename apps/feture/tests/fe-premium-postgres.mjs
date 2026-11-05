@@ -8,12 +8,13 @@ import { staff } from '../server/commands/staff.mjs';
 import { discover } from '../server/commands/discover.mjs';
 import { premium, sweepSelfies, verificationHandlers } from '../server/commands/premium.mjs';
 import { photos } from '../server/commands/photos.mjs';
+import { verification } from '../server/commands/verification.mjs';
 import { mediaDto } from '../server/media/assets.mjs';
 import { tokenDelivery } from '../server/media/delivery.mjs';
 import { drain } from '../server/outbox.mjs';
 import { setup as baseSetup, op } from './fe-helpers.mjs';
 
-const setup = () => baseSetup({ commands: { ...platform, ...me, ...staff, ...discover, ...premium, ...photos } });
+const setup = () => baseSetup({ commands: { ...platform, ...me, ...staff, ...discover, ...premium, ...photos, ...verification } });
 
 /** An asset of `profileId` in a given state. */
 async function asset(db, profileId, purpose, state = 'approved') {
@@ -96,7 +97,7 @@ test('review fixes: a selfie is used once and must be fresh; never approved with
   } finally { await pg.close(); }
 });
 
-test('the owner may act on themselves (Premium, own age check, own media), journaled; a lead or moderator never does', async () => {
+test('the owner may give Premium to themselves (journaled), a lead never; nobody reviews their own checks or media, the owner is freed from them instead', async () => {
   const { pg, db, call, person } = await world();
   try {
     const [{ id: bossAcc, person_profile_id: boss }] = await db.query(`select a.id, a.person_profile_id from feture.account a join feture.profile p on p.id = a.person_profile_id where p.handle = 'Boss'`);
@@ -114,33 +115,72 @@ test('the owner may act on themselves (Premium, own age check, own media), journ
     assert.deepEqual([self.status, self.rule], [403, 'self']);
     assert.equal((await call('ul', null, { action: 'staff.premiumGrant', opId: op(), handle: 'Mira', days: 30, reason: 'для теста' })).status, 200);
 
-    // The owner's own age check: in their queue, opened and decided by them, journaled. A moderator's own: refused.
+    // The owner is freed from the age check: an adult without a check or a date. Nobody decides their own check, not even
+    // the owner: it is not in their queue, cannot be opened or decided by them.
+    assert.equal((await call('uo', null, { action: 'verification.ageStatus' })).verified, true);
     await db.query('update feture.account set age_verified_until = null where id = $1', [bossAcc]);
+    assert.equal((await call('uo', null, { action: 'verification.ageStatus' })).verified, true);
     await db.query('update feture.profile set avatar_asset_id = $1 where id = $2', [await asset(db, boss, 'avatar'), boss]);
     const s = await call('uo', null, { action: 'verification.ageStart', opId: op() });
     await call('uo', null, { action: 'verification.ageSubmit', opId: op(), checkId: s.id, assetId: await asset(db, boss, 'verification', 'needs_review') });
-    assert.deepEqual((await call('uo', null, { action: 'staff.ageCheckQueue' })).items.map(i => i.id), [s.id]);
-    assert.ok((await call('uo', null, { action: 'staff.ageCheckOpen', checkId: s.id })).selfie);
-    assert.equal((await call('uo', null, { action: 'staff.ageCheckDecide', opId: op(), checkId: s.id, approve: true })).status, 200);
-    assert.equal((await call('uo', null, { action: 'verification.ageStatus' })).verified, true);
-    const [{ n }] = await db.query(`select count(*)::int n from feture.staff_action where action = 'age.approve' and staff_account_id = $1 and target_id = $1`, [bossAcc]);
-    assert.equal(n, 1);
+    assert.deepEqual((await call('uo', null, { action: 'staff.ageCheckQueue' })).items, []);
+    assert.equal((await call('uo', null, { action: 'staff.ageCheckOpen', checkId: s.id })).status, 403);
+    assert.equal((await call('uo', null, { action: 'staff.ageCheckDecide', opId: op(), checkId: s.id, approve: true })).status, 403);
+    // A moderator's own check is refused the same way (a check of another, a moderator may decide).
     const [{ person_profile_id: mira }] = await db.query(`select a.person_profile_id from feture.account a join feture.profile p on p.id = a.person_profile_id where p.handle = 'Mira'`);
     await db.query(`update feture.account set age_verified_until = null where person_profile_id = $1`, [mira]);
     await db.query('update feture.profile set avatar_asset_id = $1 where id = $2', [await asset(db, mira, 'avatar'), mira]);
     const m = await call('um', null, { action: 'verification.ageStart', opId: op() });
     await call('um', null, { action: 'verification.ageSubmit', opId: op(), checkId: m.id, assetId: await asset(db, mira, 'verification', 'needs_review') });
-    assert.deepEqual((await call('um', null, { action: 'staff.ageCheckQueue' })).items, []);
+    // Mira sees the owner's check (another reviewer decides it) but never her own.
+    assert.deepEqual((await call('um', null, { action: 'staff.ageCheckQueue' })).items.map(i => i.id), [s.id]);
     assert.equal((await call('um', null, { action: 'staff.ageCheckDecide', opId: op(), checkId: m.id, approve: true })).status, 403);
 
-    // Own media on review: the owner sees and decides it; a moderator never sees their own.
+    // Own media on review: nobody sees or decides their own (the owner's goes to another reviewer).
     const mine = await asset(db, boss, 'post', 'needs_review');
-    assert.ok((await call('uo', null, { action: 'staff.mediaQueue' })).items.some(i => i.id === mine));
-    const own = await call('uo', null, { action: 'staff.mediaDecide', opId: op(), assetId: mine, decision: 'approve', explicit: false });
-    assert.equal(own.state, 'approved', JSON.stringify(own));
+    assert.ok(!(await call('uo', null, { action: 'staff.mediaQueue' })).items.some(i => i.id === mine));
+    assert.equal((await call('uo', null, { action: 'staff.mediaDecide', opId: op(), assetId: mine, decision: 'approve', explicit: false })).status, 403);
+    assert.ok((await call('um', null, { action: 'staff.mediaQueue' })).items.some(i => i.id === mine)); // another reviewer sees it
     const hers = await asset(db, mira, 'post', 'needs_review');
     assert.ok(!(await call('um', null, { action: 'staff.mediaQueue' })).items.some(i => i.id === hers));
     assert.equal((await call('um', null, { action: 'staff.mediaDecide', opId: op(), assetId: hers, decision: 'approve', explicit: false })).status, 403);
+  } finally { await pg.close(); }
+});
+
+test('checks waiver: only the owner switches it (journaled); it frees that account only, never its partner in a couple', async () => {
+  const { pg, db, call, person, coupleOf } = await world();
+  try {
+    const [{ id: mira }] = await db.query(`select a.person_profile_id id from feture.account a join feture.profile p on p.id = a.person_profile_id where p.handle = 'Mira'`);
+    const z = await person('uz', 'Zed', { verified: false });
+    const age = u => call(u, null, { action: 'verification.ageStatus' });
+    const photo = u => call(u, null, { action: 'verification.photoStatus' });
+    // Mira (a moderator) is checked like anyone: not an adult yet, no photo badge.
+    await db.query(`update feture.account set age_verified_until = null where person_profile_id = $1`, [mira]);
+    assert.deepEqual([(await age('um')).verified, (await photo('um')).verified], [false, false], JSON.stringify([await age('um'), await photo('um')]));
+
+    // Only the owner switches it; a moderator is refused; an unknown nick is not found; the owner has nothing to switch.
+    assert.equal((await call('um', null, { action: 'staff.checksWaiver', opId: op(), handle: 'Mira', on: true })).status, 403);
+    assert.equal((await call('uo', null, { action: 'staff.checksWaiver', opId: op(), handle: 'Nobody', on: true })).status, 404);
+    assert.equal((await call('uo', null, { action: 'staff.checksWaiver', opId: op(), handle: 'Boss', on: true })).rule, 'owner_always_freed');
+    const on = await call('uo', null, { action: 'staff.checksWaiver', opId: op(), handle: 'Mira', on: true });
+    assert.deepEqual([on.changed, on.waived], [true, true]);
+    assert.equal((await call('uo', null, { action: 'staff.checksWaiver', opId: op(), handle: 'Mira', on: true })).changed, false); // already on: no new journal line
+    assert.deepEqual([(await age('um')).verified, (await photo('um')).verified, (await photo('um')).state], [true, true, 'approved']);
+    assert.deepEqual((await call('uo', null, { action: 'staff.team' })).waived.map(w => w.handle), ['Mira']);
+    const [{ n }] = await db.query(`select count(*)::int n from feture.staff_action where action = 'staff.checksWaiver'`);
+    assert.equal(n, 1);
+
+    // A couple counts each partner by their own account: Mira's waiver does not cover Zed.
+    const pair = await coupleOf([mira, z]);
+    const visible = u => call(u, pair, { action: 'profile.setVisibility', opId: op(), setting: 'discoverMode', value: 'visible' });
+    assert.equal((await visible('uz')).rule, 'age_not_verified');
+    await call('uo', null, { action: 'staff.checksWaiver', opId: op(), handle: 'Zed', on: true });
+    assert.notEqual((await visible('uz')).rule, 'age_not_verified'); // both partners count as adults now
+    // Switched off: the checks are back at once.
+    await call('uo', null, { action: 'staff.checksWaiver', opId: op(), handle: 'Mira', on: false });
+    await call('uo', null, { action: 'staff.checksWaiver', opId: op(), handle: 'Zed', on: false });
+    assert.deepEqual([(await age('um')).verified, (await photo('um')).verified], [false, false]);
+    assert.deepEqual((await call('uo', null, { action: 'staff.team' })).waived, []);
   } finally { await pg.close(); }
 });
 

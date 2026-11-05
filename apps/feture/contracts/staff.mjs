@@ -68,6 +68,12 @@ export const staffCommands = {
     profile: false, write: true,
     input: z.strictObject({ opId, handle: z.string().trim().max(40), role: z.enum(['lead', 'moderator', 'verifier', 'auditor', 'support']), grant: z.boolean() }),
   },
+  // «Без проверок» (owner 05.11.2026): frees one ACCOUNT from the manual checks before publication (age, photo, media
+  // review). The owner is always freed; this switches it for anyone else. Never for a couple, never for the scan.
+  'staff.checksWaiver': {
+    profile: false, write: true,
+    input: z.strictObject({ opId, handle: z.string().trim().max(40), on: z.boolean() }),
+  },
   'staff.mediaQueue': { profile: false, write: false, input: z.strictObject({ ...queuePaging }) },
   'staff.mediaView': { profile: false, write: true, ledger: false, input: z.strictObject({ assetId: id }) },
   'staff.mediaDecide': {
