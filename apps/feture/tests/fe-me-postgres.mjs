@@ -90,7 +90,7 @@ test('nick.check is rate limited per account', async () => {
 });
 
 test('onboarding and profile views: own vs others, details visibility, age, nickname hold, single-line names', async () => {
-  const { pg, call, person } = await setup();
+  const { pg, db, call, person } = await setup();
   try {
     const a = await person('ua', 'Alex'), b = await person('ub', 'Kira');
     // A05 not finished yet: the app keeps the person on «Расскажи о себе» after a reload.
@@ -103,6 +103,14 @@ test('onboarding and profile views: own vs others, details visibility, age, nick
     const c = await person('uc', 'Noa', { discover: null });
     const quiet = await call('uc', c, { action: 'onboarding.complete', opId: op(), detailsVis: 'only', genders: [], orients: [], roles: [], formats: [], seeks: [], status: null });
     assert.deepEqual([quiet.status, quiet.discoverVisible, quiet.photoNeeded], [200, false, false]);
+    // The city of the sign-up step: an unknown one is refused, a submitted one is kept; the catalog carries the cities' coordinates.
+    const d = await person('ud', 'Dina', { discover: null });
+    const myCity = await call('ud', null, { action: 'place.submit', opId: op(), country: 'DE', name: 'Jena' });
+    const base = { action: 'onboarding.complete', detailsVis: 'only', genders: [], orients: [], roles: [], formats: [], seeks: [], status: null };
+    assert.equal((await call('ud', d, { ...base, opId: op(), cityId: '00000000-0000-4000-8000-000000000000' })).status, 400);
+    assert.equal((await call('ud', d, { ...base, opId: op(), cityId: myCity.placeId })).status, 200);
+    assert.equal((await db.query('select city_id from feture.profile_details where profile_id = $1', [d]))[0].city_id, myCity.placeId);
+    assert.ok((await call('ud', null, { action: 'catalog.get' })).places.every((/** @type {any} */ x) => 'lat' in x && 'lon' in x));
     assert.equal((await call('uc', c, { action: 'profile.settings' })).settings.discoverMode, 'off');
     assert.equal((await call('ua', null, { action: 'session.bootstrap' })).account.onboarded, true);
 

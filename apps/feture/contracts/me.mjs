@@ -111,6 +111,8 @@ export const meCommands = {
       genders: codes(5), orients: codes(5), roles: codes(5), formats: codes(5), seeks: codes(9),
       status: code.nullable(),
       discover: z.enum(['visible', 'off']).default('off'),
+      // The city picked (or found by the phone's position, which never leaves the phone) on the sign-up step.
+      cityId: id.nullable().default(null),
     }),
   },
   'profile.get': { profile: true, write: false, input: z.strictObject({ profileId: id }) },
