@@ -7,6 +7,7 @@ import { me } from '../server/commands/me.mjs';
 import { staff } from '../server/commands/staff.mjs';
 import { discover } from '../server/commands/discover.mjs';
 import { premium, sweepPremium, sweepSelfies, verificationHandlers } from '../server/commands/premium.mjs';
+import { referral } from '../server/commands/referral.mjs';
 import { photos } from '../server/commands/photos.mjs';
 import { verification } from '../server/commands/verification.mjs';
 import { mediaDto } from '../server/media/assets.mjs';
@@ -706,4 +707,83 @@ test('Premium in bulk: a count first, one period each queued after their own, jo
     await db.tx(q => grantWelcome(q, accD));
     assert.equal((await db.query(`select count(*)::int n from feture.entitlement where account_id = $1`, [accD]))[0].n, 0, 'off: nothing');
   } finally { await pg.close(); }
+});
+
+test('invitations and promo codes: rewarded only after onboarding and the age check, once, with a cap; a promo code has its own days, limit and dates', async () => {
+  const env = await baseSetup({ commands: { ...platform, ...me, ...staff, ...premium, ...referral } });
+  const { db, call, person } = env;
+  try {
+    const boss = await person('uo', 'Boss');
+    await db.query(`insert into feture.staff_role (account_id, role) select id, 'owner' from feture.account where person_profile_id = $1`, [boss]);
+    const inviter = await person('ua', 'Alex');
+    const acc = async p => (await db.query('select id from feture.account where person_profile_id = $1', [p]))[0].id;
+    const until = async p => (await db.query('select premium_until from feture.account where person_profile_id = $1', [p]))[0].premium_until;
+    const DAY = 86400000;
+    const mine = await call('ua', inviter, { action: 'referral.mine', opId: op() });
+    assert.equal(mine.enabled, false);
+    assert.match(mine.code, /^[A-Z2-9]{8}$/);
+    assert.equal((await call('ua', inviter, { action: 'referral.mine', opId: op() })).code, mine.code, 'the same code every time');
+    // A newcomer cannot use it while the program is off; a staff switch turns it on.
+    const n1 = await person('ub', 'Newbie');
+    assert.equal((await call('ub', n1, { action: 'referral.apply', opId: op(), code: mine.code })).status, 404);
+    assert.equal((await call('um', null, { action: 'staff.referralSettings' })).status ?? 403, 403);
+    await call('uo', null, { action: 'staff.referralSettingsSet', opId: op(), enabled: true });
+    assert.equal((await call('ua', inviter, { action: 'referral.apply', opId: op(), code: mine.code })).rule, 'own_code');
+    const applied = await call('ub', n1, { action: 'referral.apply', opId: op(), code: mine.code.toLowerCase() });
+    assert.equal(applied.state, 'pending', 'not onboarded, not age-checked yet');
+    assert.equal((await call('ub', n1, { action: 'referral.apply', opId: op(), code: mine.code })).rule, 'already_invited');
+    assert.equal(await until(n1), null);
+    // Onboarding alone is not enough; the age check as well, and then both are rewarded, the inviter told without a name.
+    const { settleReferral } = await import('../server/commands/referral.mjs');
+    await db.query(`update feture.account set onboarded_at = now(), age_verified_until = null where person_profile_id = $1`, [n1]);
+    const a1 = await acc(n1);
+    await db.tx(q => settleReferral(q, a1));
+    assert.equal(await until(n1), null, 'age check missing');
+    await db.query(`update feture.account set age_verified_until = now() + interval '1 year' where id = $1`, [a1]);
+    await db.tx(q => settleReferral(q, a1));
+    await db.tx(q => settleReferral(q, a1));
+    assert.ok(Math.abs(new Date(await until(n1)).getTime() - (Date.now() + 7 * DAY)) < 60000, 'the newcomer: 7 days');
+    assert.ok(Math.abs(new Date(await until(inviter)).getTime() - (Date.now() + 7 * DAY)) < 60000, 'the inviter: 7 days, once');
+    assert.equal((await db.query(`select count(*)::int n from feture.outbox where topic = 'premium.referral'`))[0].n, 1);
+    const stats = await call('ua', inviter, { action: 'referral.mine', opId: op() });
+    assert.deepEqual([stats.invited, stats.rewarded], [1, 1]);
+
+    // The cap: with a cap of one in the window, a second rewarded friend gives the newcomer days but not the inviter.
+    await call('uo', null, { action: 'staff.referralSettingsSet', opId: op(), capCount: 1 });
+    const n2 = await person('uc', 'Cleo');
+    const a2 = await acc(n2);
+    await call('uc', n2, { action: 'referral.apply', opId: op(), code: mine.code });
+    await db.query(`update feture.account set onboarded_at = now(), age_verified_until = now() + interval '1 year' where id = $1`, [a2]);
+    const before = new Date(await until(inviter)).getTime();
+    await db.tx(q => settleReferral(q, a2));
+    assert.ok(await until(n2), 'the newcomer still gets theirs');
+    assert.equal(new Date(await until(inviter)).getTime(), before, 'the inviter is over the cap');
+
+    // A promo code: its own days (0 = only counted), a limit and an end date; staff only; counted in the statistics.
+    assert.equal((await call('ua', inviter, { action: 'staff.promoCreate', opId: op(), code: 'BLOG1', label: 'Блогер', days: 30 })).status, 403);
+    const made = await call('uo', null, { action: 'staff.promoCreate', opId: op(), code: 'blog1', label: 'Блогер Аня', days: 30, maxUses: 1 });
+    assert.equal(made.code, 'BLOG1');
+    assert.equal((await call('uo', null, { action: 'staff.promoCreate', opId: op(), code: 'BLOG1', label: 'ещё', days: 1 })).rule, 'code_taken');
+    await call('uo', null, { action: 'staff.promoCreate', opId: op(), code: 'COUNT0', label: 'Только учёт', days: 0 });
+    const n3 = await person('ud', 'Dan'), n4 = await person('ue', 'Eve');
+    assert.equal((await call('ud', n3, { action: 'referral.apply', opId: op(), code: 'Blog1' })).state, 'pending');
+    assert.equal((await call('ue', n4, { action: 'referral.apply', opId: op(), code: 'BLOG1' })).status, 404, 'used up');
+    const a3 = await acc(n3);
+    await db.query(`update feture.account set onboarded_at = now(), age_verified_until = now() + interval '1 year' where id = $1`, [a3]);
+    await db.tx(q => settleReferral(q, a3));
+    assert.ok(Math.abs(new Date(await until(n3)).getTime() - (Date.now() + 30 * DAY)) < 60000);
+    await call('ue', n4, { action: 'referral.apply', opId: op(), code: 'COUNT0' });
+    const a4 = await acc(n4);
+    await db.query(`update feture.account set onboarded_at = now(), age_verified_until = now() + interval '1 year' where id = $1`, [a4]);
+    await db.tx(q => settleReferral(q, a4));
+    assert.equal(await until(n4), null, 'days 0: counted, nothing given');
+    const list = await call('uo', null, { action: 'staff.promoList' });
+    assert.deepEqual(list.items.map(i => [i.code, i.used, i.rewarded]).sort(), [['BLOG1', 1, 1], ['COUNT0', 1, 1]]);
+    await call('uo', null, { action: 'staff.promoSet', opId: op(), codeId: made.id, active: false });
+    const n5 = await person('uf', 'Finn');
+    assert.equal((await call('uf', n5, { action: 'referral.apply', opId: op(), code: 'BLOG1' })).status, 404, 'switched off');
+    // An old account cannot collect a code.
+    await db.query(`update feture.account set created_at = now() - interval '30 days' where person_profile_id = $1`, [n5]);
+    assert.equal((await call('uf', n5, { action: 'referral.apply', opId: op(), code: 'COUNT0' })).rule, 'not_new');
+  } finally { await env.pg.close(); }
 });

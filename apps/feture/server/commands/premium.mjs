@@ -8,6 +8,7 @@ import { servedKeys } from '../media/scan.mjs';
 import { journal, ownerSelf, requireStaff, staffCheck } from './staff.mjs';
 import { staffOwnAccount } from '../sql-rules.mjs';
 import { pageInfo, queuePageSql, SUBMITTED_KEYS } from '../queue-page.mjs';
+import { settleReferral } from './referral.mjs';
 
 /** Sort keys of the check queues: when the check was submitted, then its id. */
 
@@ -198,18 +199,27 @@ async function bulkTargets(q, audience, before) {
 }
 const BULK_MAX = 20000;
 
+/** One more period of Premium for an account, queued after its current one: recomputes the end, tells the person (unless
+ * `notify: false`) and the partners of their couple. @param {Q} q @param {string} accountId @param {'staff' | 'promo' | 'referral'} source
+ * @param {number} days @param {{reason?: string | null, grantedBy?: string | null, notify?: boolean}} [opts] */
+export async function grantPeriod(q, accountId, source, days, { reason = null, grantedBy = null, notify = true } = {}) {
+  const [e] = await q.query(
+    `insert into feture.entitlement (account_id, source, starts_at, ends_at, granted_by, reason)
+     select $1, $2, s, s + make_interval(days => $3), $4, $5 from (select greatest(now(), coalesce((select premium_until from feture.account where id = $1), now())) s) x returning id, ends_at`,
+    [accountId, source, days, grantedBy, reason]);
+  await recompute(q, accountId);
+  if (notify) await enqueue(q, 'premium.granted', await accountProfile(q, accountId), { for: accountId, days, until: new Date(e.ends_at).toISOString() });
+  await tellPartners(q, [accountId], e.ends_at);
+  return e;
+}
+
 /** Gives every new account its welcome Premium when it finishes onboarding, if the switch is on (once per account).
  * @param {Q} q @param {string} accountId */
 export async function grantWelcome(q, accountId) {
   const [promo] = await q.query('select welcome_days from feture.premium_promo where id');
   if (!promo?.welcome_days) return;
   if ((await q.query(`select 1 from feture.entitlement where account_id = $1 and source = 'promo' and reason = 'welcome'`, [accountId])).length) return;
-  const [e] = await q.query(
-    `insert into feture.entitlement (account_id, source, starts_at, ends_at, reason)
-     select $1, 'promo', s, s + make_interval(days => $2), 'welcome' from (select greatest(now(), coalesce((select premium_until from feture.account where id = $1), now())) s) x returning id, ends_at`,
-    [accountId, promo.welcome_days]);
-  await recompute(q, accountId);
-  await enqueue(q, 'premium.granted', await accountProfile(q, accountId), { for: accountId, days: promo.welcome_days, until: new Date(e.ends_at).toISOString() });
+  await grantPeriod(q, accountId, 'promo', promo.welcome_days, { reason: 'welcome' });
 }
 
 /** Ends the account's subscriptions at their providers before the account is deleted: a deleted account must not go on
@@ -707,6 +717,7 @@ const run = {
       [c.id, input.approve ? 'approved' : 'rejected', input.approve ? null : input.reason, account.id]);
     if (input.approve) {
       await q.query(`update feture.account set age_verified_until = now() + make_interval(years => $2), updated_at = now() where id = $1`, [c.account_id, AGE_CHECK_YEARS]);
+      await settleReferral(q, c.account_id); // an invitation waits for this check
     }
     const [p] = await q.query('select person_profile_id from feture.account where id = $1', [c.account_id]);
     await enqueue(q, 'verification.decided', p.person_profile_id, { state: input.approve ? 'approved' : 'rejected', reason: input.reason ?? null });

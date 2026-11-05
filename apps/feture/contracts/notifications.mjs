@@ -325,6 +325,9 @@ const RAW = /** @type {Record<string, any>} */ ({
     normal: T('Партнёр открыл вашей паре Premium', 'Your partner opened Premium for your couple'), email: 'now', dest: 'premium' },
   'premiumPair.started': { text: T('Партнёр открыл вашей паре Premium до {date}', 'Your partner opened Premium for your couple until {date}') },
   'premiumPair.ended': { tone: '', text: T('У вашей пары закончился Premium', 'Your couple’s Premium has ended'), normal: T('У вашей пары закончился Premium', 'Your couple’s Premium has ended') },
+  // The person who invited somebody: the friend finished getting to know the app, so the days are theirs (nobody is named).
+  premiumReferral: { filter: 'other', icon: 'Crown', tone: 'g', text: T('Друг пришёл по твоему приглашению: тебе добавлен Premium', 'A friend joined by your invitation: Premium was added for you'),
+    normal: T('Друг пришёл по твоему приглашению', 'A friend joined by your invitation'), email: 'now', dest: 'premium' },
   // To the giver, once the gift is paid and given.
   premiumGiftSent: { filter: 'other', icon: 'Crown', tone: 'g', text: T('{name}: подарок Premium вручён', '{name}: your Premium gift was delivered'),
     alone: T('Подарок вручён', 'Your gift was delivered'), normal: T('Подарок вручён', 'Your gift was delivered'), named: true, dest: 'premium' },

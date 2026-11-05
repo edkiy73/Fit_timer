@@ -25,6 +25,7 @@ import { chats } from '../server/commands/chats.mjs';
 import { inbox } from '../server/commands/inbox.mjs';
 import { people } from '../server/commands/people.mjs';
 import { premium } from '../server/commands/premium.mjs';
+import { referral } from '../server/commands/referral.mjs';
 import { providersFromEnv } from '../server/billing/index.mjs';
 import { takePayEvents } from '../server/pay-events.mjs';
 import { verification } from '../server/commands/verification.mjs';
@@ -146,7 +147,7 @@ const handler = db && createFeHandler({
     push: webPush ? { webKey: webPush.publicKey } : null,
     billing },
   signals,
-  commands: { ...platform, ...me, ...access, ...couples, ...staff, ...staffCounts, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...gallery, ...discover, ...chats, ...inbox, ...people, ...premium, ...verification, ...accounts, ...dsa, ...support },
+  commands: { ...platform, ...me, ...access, ...couples, ...staff, ...staffCounts, ...social, ...posts, ...moderation, ...communities, ...events, ...photos, ...gallery, ...discover, ...chats, ...inbox, ...people, ...premium, ...referral, ...verification, ...accounts, ...dsa, ...support },
   authenticate: req => cachedAuth(req),
   quota: async (req, coreKey) => { // coreKey: Core account hash, only for the ephemeral rate-limit key
     // Same budget as /api/domain: per account across devices and IPs, plus a per-IP cap (the same keys

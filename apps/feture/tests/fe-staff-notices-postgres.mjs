@@ -220,6 +220,8 @@ test('every staff decision handler enqueues a user notification (or is named as 
     'staff.maintenanceSet': 'a banner everyone sees (support.public)',
     'staff.premiumPricesSet': 'the Premium prices: about no one in particular, they touch new purchases only (owner 06.11.2026)',
     'staff.premiumPromoSet': 'a switch for new accounts: nobody is told by it, each new account is told when it gets its days',
+    'staff.referralSettingsSet': 'switches and numbers of the invitations: about no one in particular, each reward tells its owner',
+    'staff.promoSet': 'switches a promo code on or off: about no one in particular',
     'staff.wordSet': 'the word filter list: about no one in particular (a match files a report, owner 05.11.2026)',
   };
   const missing = [];
