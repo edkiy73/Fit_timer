@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Camera,CameraOff,Clock,FileUp,Hand,IdCard,ImagePlus,Info,Lock,RefreshCw,ScanFace,ShieldCheck,TriangleAlert,UserCheck,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Actions,Alert,Bar,Btn,CaptureFrame,Card,Empty,FilePick,Group,RadioList,Row,Skel,Text,View} from './kit';
+import {Actions,Alert,Bar,Btn,CaptureFrame,Card,Empty,FilePick,Group,RadioList,Row,Skel,Text,View,useBack} from './kit';
 import {useSendPhoto} from './media-upload';
 import {useFe,useLive,useShown} from './session';
 
@@ -127,9 +127,10 @@ export function AgeCheckScreen(){
   }finally{setBusy(false);}
  };
  /** «Продолжить»: back to where the check was opened, resuming what the person was doing. */
+ const goBack=useBack();
  const proceed=()=>{
   const then=safeReturn(params.get('then'));const intent=params.get('do');
-  if(!then){navigate(-1);return;}
+  if(!then){goBack();return;}
   const u=new URL(then,window.location.origin);if(intent&&INTENT.test(intent))u.searchParams.set('resume',intent);
   navigate(u.pathname+u.search,{replace:true});
  };

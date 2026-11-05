@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Calendar,Check,ChevronLeft,CircleAlert,Clock,EyeOff,Link as LinkIcon,Lock,MapPin,RefreshCw,Ticket,Unlock,Video} from 'lucide-react';
 import {FeError,feErrorMessage} from '../feture/fe-api';
-import {ActingAv,Alert,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,EventHero,Fact,Group,Note,RichEditor,Row,Seg,Select,Skel,Stack,Steps,ToggleRow,useLeaveGuard,View} from './kit';
+import {ActingAv,Alert,Av,Bar,Btn,Card,Chip,Chips,Counter,Empty,EventHero,Fact,Group,Note,RichEditor,Row,Seg,Select,Skel,Stack,Steps,ToggleRow,useLeaveGuard,View,useBack} from './kit';
 import {NamedPlate} from './comm-kit';
 import {RichText} from './post-parts';
 import {CityField} from './kit/Place';
@@ -255,7 +255,8 @@ function EventEditor({edit,reload,resume,community}:{edit?:Edit,reload?:()=>void
   finally{setBusy(false);}
   setStep(step+1);
  };
- const back=()=>{if(step>1){setErr({});setNotice(null);setStep(step-1);}else navigate(-1);};
+ const goBack=useBack('/n/communities?sub=events');
+ const back=()=>{if(step>1){setErr({});setNotice(null);setStep(step-1);}else goBack();};
  const submit=async()=>{
   if(busy)return;setNotice(null);
   setStale(false);

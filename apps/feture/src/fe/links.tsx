@@ -5,7 +5,7 @@ import {useI18n} from '@appbase/ui-react/i18n.js';
 import {CircleAlert,Link2,Pencil,Trash2,User,Users,X} from 'lucide-react';
 import {useToast as useToastV21} from './toast';
 import {newOpId} from '../feture/fe-api';
-import {AddBtn,AddCard,Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,Note,PersonLine,RadioList,RequestCard,Row,SearchInput,SectionLabel,Seg,SelectRow,Skel,Spacer,useLeaveGuard,useScrollTo,View,Who,ProfileAv,useKept} from './kit';
+import {AddBtn,AddCard,Alert,Av,Bar,Btn,Card,Chip,Chips,Empty,Group,Note,PersonLine,RadioList,RequestCard,Row,SearchInput,SectionLabel,Seg,SelectRow,Skel,Spacer,useLeaveGuard,useScrollTo,View,Who,ProfileAv,useKept,useBack} from './kit';
 import {useFe,useKeyChange,useShown} from './session';
 import {NameBadges,faceFields,withAge} from './faces';
 import {KINDS,SIDES,Sheet,linkLabel,linksMineRes,mediaSrc,personName,personProfileRes,pxError,type Kind,type LinkView,type LinksMine,type PersonProfile} from './profile-extras';
@@ -228,8 +228,8 @@ export function LinkEditScreen(){
   try{await call('link.remove',{opId:newOpId(),linkId:ex.l.id},ok);setDone(t('fe.ln.t.cancelled'));}catch(e){setErr(pxError(e,t));}finally{setBusy(false);}};
  const city=p?.city?(locale==='en'?p.city.en:p.city.ru):null;
  const dirty=!done&&ex?.st!=='in'&&!!start.current&&(kind!==start.current.kind||mySide!==start.current.side||vis!==start.current.vis);
- const guard=useLeaveGuard(dirty);
- const cta=done?<Btn onClick={()=>navigate(-1)}>{t('fe.ln.p22.done')}</Btn>
+ const guard=useLeaveGuard(dirty);const goBack=useBack('/n/me/links');
+ const cta=done?<Btn onClick={()=>goBack()}>{t('fe.ln.p22.done')}</Btn>
   :ex?.st==='in'?<Btn onClick={()=>navigate('/n/me/links')}>{t('fe.ln.p22.toLinks')}</Btn>
   :ex?.st==='sent'?<div className="row g8"><Btn kind="soft" className="danger" onClick={cancel} disabled={busy}>{t('fe.ln.cancelReq')}</Btn>
    <Btn onClick={update} busy={busy} disabled={busy||!sentChanged}>{t('fe.w7.ln.update')}</Btn></div>
