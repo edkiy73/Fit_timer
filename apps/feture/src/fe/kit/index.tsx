@@ -198,8 +198,8 @@ export const Alert=forwardRef<HTMLDivElement,{kind?:'ok'|'err'|'warn'|'info'|'pl
 });
 
 /** `.grp` — a titled group: the title row (with an optional action on the right), the content, a footnote. */
-export const Group=forwardRef<HTMLElement,{title?:ReactNode,action?:ReactNode,foot?:ReactNode,children:ReactNode,className?:string,bare?:boolean,id?:string}>(function Group({title,action,foot,children,className,bare,id},ref){
- return <section ref={ref} id={id} className={['grp',bare?'bare':'',className].filter(Boolean).join(' ')}>
+export const Group=forwardRef<HTMLElement,{title?:ReactNode,action?:ReactNode,foot?:ReactNode,children:ReactNode,className?:string,bare?:boolean,tight?:boolean,id?:string}>(function Group({title,action,foot,children,className,bare,tight,id},ref){
+ return <section ref={ref} id={id} className={['grp',bare?'bare':'',tight?'tight':'',className].filter(Boolean).join(' ')}>
   {(title||action)&&<div className="grp-t"><span>{title}</span>{action}</div>}
   {children}
   {foot&&<p className="grp-n">{foot}</p>}

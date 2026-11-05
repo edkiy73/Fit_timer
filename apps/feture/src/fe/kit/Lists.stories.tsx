@@ -57,3 +57,8 @@ export const РазворотВСтроке:StoryObj={name:'Необязател
  render:()=>{const [a,setA]=useState(false);const [b,setB]=useState(false);return <>
   <ExpandRow icon={ChartColumn} title="Опрос" sub={a?undefined:'Вопрос и варианты'} open={a} onToggle={()=>setA(!a)} onRemove={()=>setA(false)} removeLabel="Убрать"><p>Поля опроса</p></ExpandRow>
   <ExpandRow icon={Sparkles} title="Интересы" open={b} onToggle={()=>setB(!b)}><p>Выбор интересов</p></ExpandRow></>;}};
+
+/** `tight`: 12 px above the block instead of 24 — for neighbours that belong together (a to-do card and the tabs under it). The header action is plain text, same size and weight as the title, flush with the content's right edge. */
+export const ТеснаяГруппа:S={name:'Group: tight + действие в заголовке',
+ render:()=><><Group><Card list><Row icon={Camera} title="Нужно решить" onClick={()=>{}}/></Card></Group>
+  <Group tight title="Фото профиля" action={<button type="button">Предпросмотр профиля</button>}><AddCard icon={Camera} title="Добавить фото" sub="Первое фото станет главным" onClick={()=>{}}/></Group></>};
