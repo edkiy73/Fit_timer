@@ -1,4 +1,4 @@
-import {Fragment,useEffect,useState,type ReactNode} from 'react';
+import {Fragment,useEffect,useRef,useState,type ReactNode} from 'react';
 import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
@@ -123,8 +123,36 @@ export function Visibility({p,settings,onChanged,part}:{p:Profile,settings:Setti
  const {call}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToast();
  const [busy,setBusy]=useState(false);const [failure,setFailure]=useState('');const [ageIntent,setAgeIntent]=useState('');const [askOff,setAskOff]=useState(false);
  const cp=p.kind==='couple';
+ // Quick settings (owner 05.11.2026): a box, a switch or a choice shows its new value at once and saves in the
+ // background — in order, one request at a time per setting, without freezing the rest of the screen, reloading it or
+ // a toast on every tap. A refusal (or a partner still to agree) puts the old value back.
+ const [mine,setMine]=useState<Record<string,unknown>>({});
+ const lanes=useRef(new Map<string,{sending:boolean,next?:{value:unknown}|undefined}>());
+ const shown=(k:string)=>k in mine?mine[k]:(settings as Record<string,unknown>)[k];
+ const drop=(k:string)=>setMine(m=>{const n={...m};delete n[k];return n;});
+ // What the server now says replaces the value shown here (only when they agree, so a newer tap never flickers back).
+ useEffect(()=>{setMine(m=>{let n=m;for(const [k,v] of Object.entries(m))if(JSON.stringify((settings as Record<string,unknown>)[k])===JSON.stringify(v)){if(n===m)n={...m};delete n[k];}return n;});},[settings]);
+ const quick=(setting:string,value:unknown)=>{
+  setMine(m=>({...m,[setting]:value}));
+  const lane=lanes.current.get(setting)??{sending:false};lanes.current.set(setting,lane);
+  if(lane.sending){lane.next={value};return;}
+  lane.sending=true;
+  void (async()=>{
+   let v=value;
+   for(;;){
+    try{
+     const r=await call('profile.setVisibility',{opId:newOpId(),setting,value:v},ok);
+     if(r.pending){drop(setting);lane.next=undefined;toast(t('fe.cw.waitPartner'),{type:'ok'});}
+    }catch(e){drop(setting);lane.next=undefined;toast(feErrorMessage(e,t),{type:'err'});}
+    if(!lane.next)break;
+    v=lane.next.value;lane.next=undefined;
+   }
+   lane.sending=false;
+   if([...lanes.current.values()].every(l=>!l.sending))onChanged();
+  })();
+ };
  // «Кто может написать первым»: the boxes are the five points; «all» (anyone) is stored alone and lights every box.
- const msgFrom:readonly (typeof MESSAGE_POINTS[number])[]=settings.messagesFrom??[...MESSAGES_DEFAULT];const everyone=msgFrom.includes('all');
+ const msgFrom=(shown('messagesFrom')??[...MESSAGES_DEFAULT]) as readonly (typeof MESSAGE_POINTS[number])[];const everyone=msgFrom.includes('all');
  const set=async(setting:string,value:string|boolean|readonly string[],done?:string)=>{
   if(busy)return;setBusy(true);setFailure('');
   try{const r=await call(setting==='detailsVis'?'profile.update':'profile.setVisibility',setting==='detailsVis'?{opId:newOpId(),rev:p.rev,detailsVis:value}:{opId:newOpId(),setting,value},ok);
@@ -140,35 +168,36 @@ export function Visibility({p,settings,onChanged,part}:{p:Profile,settings:Setti
  // Owner 28.10.2026: Discover is off for new accounts; «Показываюсь» without any photo asks for one first (DiscoverPhotoAsk).
  const [askPhoto,setAskPhoto]=useState(false);
  const mode=settings.discoverMode;
- const toggle=(k:string,title:string,sub:string,on:boolean)=><ToggleRow title={title} sub={sub} on={on} disabled={busy} onClick={()=>void set(k,!on)}/>;
+ const toggle=(k:string,title:string,sub:string,on:boolean)=><ToggleRow title={title} sub={sub} on={on} onClick={()=>quick(k,!on)}/>;
  const modeSub=mode==='visible'&&!hasPhoto?(p.photos.length?t(cp?'fe.mx.v.photoReviewUs':'fe.mx.v.photoReview'):cp?t('fe.mx.v.noPhotoCouple'):t('fe.mx.v.noPhoto')):mode==='off'&&cp?t('fe.mx.v.offCouple'):cp?t('fe.mx.v.offNow'):t('fe.mx.v.modeSub');
  return <>
   {part!=='who'&&<Group title={t('fe.reg.discover.title')}><Card list>
    <SelectRow row label={t('fe.mx.v.mode')} sub={modeSub} value={mode} onChange={v=>{if(v==='off'&&mode!=='off')setAskOff(true);else if(v==='visible'&&!p.photos.length)setAskPhoto(true);else void set('discoverMode',v);}}
     options={(['visible','hidden','off'] as const).map(v=>[v,t('fe.mx.v.mode.'+v+(cp?'Us':''))] as const)}/>
    <Row title={cp?t('fe.mx.v.cardUs'):t('fe.mx.v.card')} sub={cp?t('fe.mx.v.cardSubUs'):t('fe.mx.v.cardSub')} onClick={()=>navigate('/n/me/preview')}/>
-   {toggle('acceptProfileLikes',t('fe.mx.v.likes'),cp?t('fe.mx.v.likesSubUs'):t('fe.mx.v.likesSub'),settings.acceptProfileLikes!==false)}
+   {toggle('acceptProfileLikes',t('fe.mx.v.likes'),cp?t('fe.mx.v.likesSubUs'):t('fe.mx.v.likesSub'),shown('acceptProfileLikes')!==false)}
   </Card></Group>}
   {part!=='discover'&&<><Group title={t('fe.me.layer.profile')} foot={cp?t('fe.mx.v.footUs'):undefined}><Card list>
-   <SelectRow row label={t('fe.mx.v.activity')} sub={t('fe.mx.v.activitySub')} value={settings.activityVis??'all'} onChange={v=>void set('activityVis',v)}
+   <SelectRow row label={t('fe.mx.v.activity')} sub={t('fe.mx.v.activitySub')} value={(shown('activityVis')??'all') as 'all'|'followers'|'off'} onChange={v=>quick('activityVis',v)}
     options={(['all','followers','off'] as const).map(v=>[v,t('fe.mx.v.act.'+v)] as const)}/>
-   <SelectRow row label={cp?t('fe.mx.v.mentionUs'):t('fe.mx.v.mention')} sub={t('fe.mx.v.mentionSub')} value={settings.mentionsFrom??'all'} onChange={v=>void set('mentionsFrom',v)}
+   <SelectRow row label={cp?t('fe.mx.v.mentionUs'):t('fe.mx.v.mention')} sub={t('fe.mx.v.mentionSub')} value={(shown('mentionsFrom')??'all') as 'all'|'follow'|'none'} onChange={v=>quick('mentionsFrom',v)}
     options={(['all','follow','none'] as const).map(v=>[v,t('fe.mx.v.from.'+v+(v==='follow'&&cp?'Us':''))] as const)}/>
-   {toggle('showLikes',cp?t('fe.mx.v.showLikesUs'):t('fe.mx.v.showLikes'),cp?t('fe.mx.v.showLikesSubUs'):t('fe.mx.v.showLikesSub'),settings.showLikes!==false)}
+   {toggle('showLikes',cp?t('fe.mx.v.showLikesUs'):t('fe.mx.v.showLikes'),cp?t('fe.mx.v.showLikesSubUs'):t('fe.mx.v.showLikesSub'),shown('showLikes')!==false)}
   </Card></Group>
   {/* «Кто может мне писать» (owner 29.10.2026, message requests); the server enforces it. A list with boxes again
       (owner 05.11.2026); «Все» is the link in the header: it lights every box (stored as «all») or clears them all;
       nothing picked — only a like; a mutual like always opens a chat. */}
-  <Group title={cp?t('fe.rq.set.titleUs'):t('fe.rq.set.title')} foot={t('fe.rq.set.foot')}
-   action={<button type="button" onClick={()=>void set('messagesFrom',everyone?[]:['all'])}>{t(everyone?'fe.rq.set.clearAll':'fe.rq.set.selectAll')}</button>}>
+  <Group title={cp?t('fe.rq.set.titleUs'):t('fe.rq.set.title')}
+   action={<button type="button" onClick={()=>quick('messagesFrom',everyone?[]:['all'])}>{t(everyone?'fe.rq.set.clearAll':'fe.rq.set.selectAll')}</button>}>
    <CheckList label={cp?t('fe.rq.set.titleUs'):t('fe.rq.set.title')} value={everyone?[...MSG_OPTIONS]:msgFrom.filter((x):x is typeof MSG_OPTIONS[number]=>x!=='all')}
-    onChange={v=>void set('messagesFrom',MSG_OPTIONS.every(o=>v.includes(o))?['all']:v)}
+    onChange={v=>quick('messagesFrom',MSG_OPTIONS.every(o=>v.includes(o))?['all']:v)}
+    fixed={[[t('fe.rq.set.match'),t('fe.rq.set.matchSub')]]}
     options={MSG_OPTIONS.map(v=>[v,t('fe.rq.set.'+v+(cp&&(v==='followers'||v==='following')?'Us':''))] as const)}/>
   </Group>
   {part==='who'&&<Group title={t('fe.m2.who.more')}><Card list>
-   <SelectRow row label={t('fe.mx.pr.reqFrom')} value={settings.requestsFrom??'all'} onChange={v=>void set('requestsFrom',v)}
+   <SelectRow row label={t('fe.mx.pr.reqFrom')} value={(shown('requestsFrom')??'all') as 'all'|'matches'|'none'} onChange={v=>quick('requestsFrom',v)}
     options={(['all','matches','none'] as const).map(v=>[v,t('fe.mx.pr.from.'+v)] as const)}/>
-   <SelectRow row label={t('fe.ln.from')} value={(settings.linksFrom??'all') as 'all'|'follow'|'none'} onChange={v=>void set('linksFrom',v)}
+   <SelectRow row label={t('fe.ln.from')} value={(shown('linksFrom')??'all') as 'all'|'follow'|'none'} onChange={v=>quick('linksFrom',v)}
     options={(['all','follow','none'] as const).map(v=>[v,t('fe.ln.from.'+v)] as const)}/>
   </Card></Group>}</>}
   {failure&&<Alert kind="err" noIcon>{failure}{failure===t('fe.age.couple')&&<><br/><AgeCheckLink intent={ageIntent||undefined}/></>}</Alert>}
