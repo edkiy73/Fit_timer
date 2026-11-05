@@ -191,10 +191,12 @@ function DiscoverFilter({initial,onClose,onApplied}:{initial:Filter,onClose:()=>
   </>}>
    <>
     <section className="fin"><div className="fin-t"><b>{t('fe.df.where')}</b>{where!=='any'&&clr(()=>setWhereTo('any'))}</div>
+     <Stack gap={3}>
      <ChoiceChips label={t('fe.df.where')} value={where} options={(['any','city','nearby'] as const).map(v=>[v,v==='nearby'?t('fe.w7.df.nearby'):t('fe.df.where.'+v)] as const)}
       onChange={setWhereTo}/>
      {where==='city'&&<CityField label={t('fe.df.city')} placeholder={t('fe.df.pickCity')} places={cat?.places??[]} value={f.cityId}
       clear={t('fe.df.where.any')} onChange={id=>{if(id)setF(x=>({...x,placeMode:'city',cityId:id}));else setWhereTo('any');}}/>}
+     </Stack>
      {where==='nearby'&&<Stack gap={2} className="df-near">
       {noPlace&&loc===false&&<><div className="fld"><button type="button" className="fld-main" onClick={()=>void share()} disabled={geo==='busy'||geo==='wait'} aria-busy={geo==='busy'||undefined}>
         <LocateFixed/><span>{t('fe.w7.df.share')}</span></button><ChevronRight/></div>
