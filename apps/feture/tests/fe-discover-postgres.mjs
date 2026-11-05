@@ -258,3 +258,28 @@ test('discover.card: everything under a card in one read — each part as its ow
     assert.equal((await call('ua', a, { action: 'discover.card', profileId: '00000000-0000-4000-8000-000000000000' })).status, 404);
   } finally { await pg.close(); }
 });
+
+test('undo: one free a day for each profile — as oneself and as the couple', async () => {
+  const { pg, call, coupleOf, member, withPhoto } = await world();
+  try {
+    const b = await member('ub', 'Kira'), c = await member('uc', 'Noa'), x = await member('ux', 'Xan'), y = await member('uy', 'Yul');
+    const pair = await coupleOf([b, c]);
+    await withPhoto(pair);
+    const pass = (user, as, who) => call(user, as, { action: 'discover.decide', opId: op(), profileId: who, decision: 'pass' });
+    // Kira as herself: the first undo is free, the second is not.
+    await pass('ub', b, x);
+    assert.equal((await call('ub', b, { action: 'discover.undo', opId: op() })).decision, 'pass');
+    await pass('ub', b, x);
+    assert.equal((await call('ub', b, { action: 'discover.undo', opId: op() })).error, 'premium_required');
+    // The same person as the couple has an allowance of its own.
+    await pass('ub', pair, y);
+    assert.equal((await call('ub', pair, { action: 'discover.undo', opId: op() })).decision, 'pass');
+    await pass('ub', pair, y);
+    assert.equal((await call('ub', pair, { action: 'discover.undo', opId: op() })).error, 'premium_required');
+    // Her partner, acting as the couple, shares the couple's (already spent), but has their own as a person.
+    await pass('uc', pair, x);
+    assert.equal((await call('uc', pair, { action: 'discover.undo', opId: op() })).error, 'premium_required');
+    await pass('uc', c, x);
+    assert.equal((await call('uc', c, { action: 'discover.undo', opId: op() })).decision, 'pass');
+  } finally { await pg.close(); }
+});

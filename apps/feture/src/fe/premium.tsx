@@ -2,20 +2,22 @@ import {useCallback,useEffect,useState} from 'react';
 import {useNavigate,useSearchParams} from 'react-router';
 import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
-import {AtSign,Check,Crown,Gift,History,RotateCcw,Undo2,X} from 'lucide-react';
+import {AtSign,Check,Crown,Gift,History,RotateCcw,Ticket,Undo2,UserPlus,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
 import {Actions,Alert,Ask,Av,Bar,Btn,Card,Empty,Field,Group,Input,KeyValues,Note,PlanCards,PremiumFeats,PremiumHero,Row,SectionLabel,Sheet,Skel,Spacer,Stack,ToggleRow,View,Who} from './kit';
 import {useToast,useFail} from './toast';
 import {useFe,useShown} from './session';
+import {CodeSheet} from './invite';
 
 /** V21 B01 Premium (wave 8): what Premium gives, plans, the purchase confirmation, auto-renewal, «Восстановить
  * покупки», gifts — all on the provider-agnostic server layer (`premium.*`). No payment provider is connected yet:
  * the server says so (`payments: false`) and the pay buttons explain that payment comes later; nothing is faked. */
 
 const statusRes=z.object({ok:z.literal(true),premium:z.boolean(),until:z.string().nullable(),viaPartner:z.boolean(),
- source:z.enum(['purchase','gift','staff']).nullable().optional(),
+ source:z.enum(['purchase','gift','staff','promo','referral']).nullable().optional(),
  subscription:z.object({plan:z.string(),autoRenew:z.boolean(),renewsAt:z.string().nullable()}).nullable().optional(),
  payments:z.boolean().optional(),
+ referralOn:z.boolean().optional(),
  partner:z.object({name:z.string().nullable(),until:z.string()}).nullable().optional(),
  prices:z.object({currency:z.string(),month:z.number(),year:z.number(),m1:z.number(),m3:z.number(),m12:z.number(),pairFactor:z.number()}).optional(),
  giftsSent:z.array(z.object({handle:z.string().nullable(),days:z.number(),anonymous:z.boolean(),at:z.string().nullable()})).optional()}).passthrough();
@@ -166,7 +168,7 @@ export function PremiumScreen(){
  const {status,error,load}=usePremiumStatus();const plans=usePlans(status?.prices);const [plan,setPlan]=useState<Plan>('year');
  const planPrice=money(status?.prices?.[plan],status?.prices?.currency);
  const back=params.get('purchase');const navigate=useNavigate();
- const [sheet,setSheet]=useState<null|'buy'|'gift'|'cancel'>(null);const [busy,setBusy]=useState<null|'renew'|'restore'>(null);
+ const [sheet,setSheet]=useState<null|'buy'|'gift'|'cancel'|'code'>(null);const [busy,setBusy]=useState<null|'renew'|'restore'>(null);
  const premium=!!status?.premium;const sub=status?.subscription??null;
  const restore=async()=>{setBusy('restore');
   try{const r=await call('premium.restore',{opId:newOpId()},restoreRes,{asAccount:true});
@@ -213,6 +215,10 @@ export function PremiumScreen(){
      {status.payments?<Note>{t('fe.w8.prem.charge',{price:planPrice,period:t(plan==='year'?'fe.w8.prem.periodYear':'fe.w8.prem.periodMonth')})}</Note>
       :<div id="fe-ax-soon"><Note><b>{t('fe.w8.buy.soon')}.</b> {t('fe.w8.buy.soonText')}</Note></div>}</Stack>
     </>}
+    <Card list>
+     {status.referralOn&&<Row icon={UserPlus} title={t('fe.inv.title')} sub={t('fe.inv.premSub')} onClick={()=>navigate('/n/me/invite')}/>}
+     <Row icon={Ticket} title={t('fe.inv.haveCode')} sub={t('fe.inv.haveCodeSub')} onClick={()=>setSheet('code')}/>
+    </Card>
     <Card list><Row icon={RotateCcw} title={t('fe.w8.prem.restore')} sub={t('fe.w8.prem.restoreSub')} noChev disabled={busy==='restore'} onClick={()=>void restore()}/></Card>
     <Group title={t('fe.w8.prem.giftTitle')}>
      <Card list>
@@ -227,6 +233,7 @@ export function PremiumScreen(){
   </View>
   {status&&!premium&&<div className="ctabar"><div className="wrap"><Btn aria-describedby={status.payments?undefined:'fe-ax-soon'} onClick={()=>setSheet('buy')}>{t('fe.ax.prem.buy',{price:planPrice})}</Btn></div></div>}
   {sheet==='buy'&&status&&<BuySheet plan={plan} payments={!!status.payments} prices={status.prices} onClose={()=>setSheet(null)} onDone={()=>load(true)}/>}
+  {sheet==='code'&&<CodeSheet onClose={()=>setSheet(null)} onDone={()=>load(true)}/>}
   {sheet==='gift'&&<GiftSheet onClose={()=>setSheet(null)} onDone={()=>load(true)}/>}
   {sheet==='cancel'&&<Ask title={t('fe.w8.prem.cancelTitle')} text={t('fe.w8.prem.cancelText',{date:until})} ok={t('fe.w8.prem.cancelOk')} danger busy={busy==='renew'}
    onOk={()=>void renew(false)} onCancel={()=>setSheet(null)}/>}
