@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {AtSign,Cake,Camera,ChevronDown,ChevronRight,Clock,Lock,Plus,Sparkles,Star,Trash2,X} from 'lucide-react';
 import {FeError,dayMonth,feErrorMessage,newOpId} from '../feture/fe-api';
-import {AddCard,Alert,Bar,Btn,Card,Counter,Empty,Field,FilePick,Group,Input,Note,PhotoAdd,PhotoSlot,PhotoSlots,RadioList,Row,Sheet,Skel,TextArea,VaultHead,useLeaveGuard} from './kit';
+import {AddCard,Alert,Bar,Btn,Card,Counter,Empty,Field,FilePick,Group,Input,Note,PhotoAdd,PhotoSlot,PhotoSlots,RadioList,Row,Sheet,Skel,TextArea,VaultHead,useLeaveGuard,useBack} from './kit';
 import {useFe,usePartnerApproves} from './session';
 import {Uploader} from './kit/Uploader';
 import {CityField,PickField,type Place} from './kit/Place';
@@ -81,7 +81,7 @@ export function MeEditScreen(){
  // Opened by a link (no app history behind it), back and «Сохранить» return to «Я» instead of leaving the app.
  const home='/n/me'+(only==='priv'?'?layer=priv':'');const canBack=((history.state as {idx?:number}|null)?.idx??0)>0;
  const guard=useLeaveGuard(dirty&&!busy);
- const leave=()=>guard.pass(()=>{if(canBack)navigate(-1);else navigate(home,{replace:true});});
+ const goBack=useBack(home);const leave=()=>guard.pass(()=>goBack());
  const fields=DETAIL_ROWS.filter(([f])=>!cp||COUPLE_ROWS.includes(f));
  const title=only==='media'?t('fe.me.photos'):only==='basics'?t('fe.me.basics'):only==='details'?(cp?t('fe.mx.detailsCouple'):t('fe.me.details')):only==='priv'?t('fe.priv.title'):only==='about'?t('fe.ab.title'):(cp?t('fe.me.coupleProfile'):t('fe.mx.ed.myProfile'));
 

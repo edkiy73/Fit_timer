@@ -6,6 +6,7 @@ import {ChevronDown,ChevronLeft,type LucideIcon} from 'lucide-react';
 import {PLATE_KEYS,articlePlate,type PlateKey} from '../../contracts/_plates.mjs';
 import {linkExpiresAt} from './kit/media';
 import {PullRefresh} from './kit/pull';
+import {tabsBack} from './tabs';
 
 /** V21 building blocks with the prototype's own markup and class names (styles: kit/base.css, started from
  * docs/v21/prototype-v21.html). Icons come only from Lucide. */
@@ -64,6 +65,8 @@ export function canGoBack(){return ((typeof window!=='undefined'?(window.history
 export function useBack(fallback?:string){
  const navigate=useNavigate();const {pathname}=useLocation();
  return ()=>{
+  // The app keeps a stack of screens per dock tab (tabs.ts): «Назад» takes this screen off the tab's stack.
+  if(tabsBack(navigate,fallback,pathname))return;
   if(canGoBack()){navigate(-1);return;}
   const parts=pathname.split('/').filter(Boolean);
   const root=parts[1]==='events'?'/n/communities?sub=events':parts[1]==='topics'?'/n/feed':'/n/'+parts[1];

@@ -3,7 +3,7 @@ import {Suspense,useCallback,useEffect,useLayoutEffect,useRef,useState} from 're
 import {flushSync} from 'react-dom';
 import {MaintenanceGate} from './maintenance';
 import {PaywallHost} from './premium';
-import {Outlet,useLocation,useNavigate} from 'react-router';
+import {Outlet,useLocation,useNavigate,useNavigationType} from 'react-router';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {Ban,Bell,Calendar,Globe,Image as FeedIcon,LogOut,MessageCircle,Plus,User,Users,X,type LucideIcon} from 'lucide-react';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
@@ -20,6 +20,7 @@ import {SignedOut} from './start';
 import {SigninFactor} from './factor';
 import {ToastProvider,useToast} from './toast';
 import {PushOffer} from './push';
+import {tabsGo,tabsInit,tabsNote,tabsReset} from './tabs';
 import {rememberPushTaps} from './push-native';
 import {ActAsSheet,actAsCouple} from './couple';
 import {CreateSheet} from './create-entry';
@@ -229,9 +230,14 @@ function FeLayout(){
   document.addEventListener('focusin',on);document.addEventListener('focusout',out);
   window.addEventListener('resize',sync);vv?.addEventListener('resize',sync);
   return ()=>{clearTimeout(off);document.removeEventListener('focusin',on);document.removeEventListener('focusout',out);window.removeEventListener('resize',sync);vv?.removeEventListener('resize',sync);};},[]);
- // Where each tab was left (its last screen), for the dock to return to.
- const tabLoc=useRef(new Map<string,{to:string,tab?:string}>());
- useEffect(()=>{tabLoc.current.set(current,{to:pathname+search,...(typeof fromTab==='string'?{tab:fromTab}:{})});},[current,pathname,search,fromTab]);
+ // The app's own stacks of screens, one per dock tab (tabs.ts): the first screen starts the active tab's stack, every
+ // later change of place is noted there (the dock and «Назад» keep it themselves).
+ const navType=useNavigationType();const loc=useLocation();
+ tabsInit(current,{to:pathname+search,tab:typeof fromTab==='string'?fromTab:undefined});
+ useEffect(()=>{tabsNote(navType,{to:pathname+search,tab:typeof fromTab==='string'?fromTab:undefined},(loc.state as {tn?:unknown}|null)?.tn===true);},
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [loc.key]);
+ useEffect(()=>()=>tabsReset(),[]);
  const side=sideCurrent(current,parts,search);
  const nodock=current==='staff'||hiders>0||typing;
  const badge=useTabBadges();
@@ -249,10 +255,9 @@ function FeLayout(){
    const view=main.current?.querySelector<HTMLElement>('.view');
    if(view){view.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});return;}
   }
-  // Every tab keeps its own place, as in other apps: another tab opens where it was left (its screen, scroll, tab and
-  // loaded list), and the tab you are already in, from a deeper screen, goes back to its own root as it was.
-  const saved=current===id?null:tabLoc.current.get(id);
-  navigate(saved?.to??'/n/'+id,{state:{...(saved?.tab?{tab:saved.tab}:{}),restore:true}});
+  // Every dock tab has its own stack of screens (tabs.ts): another tab opens where it was left; the tab you are in goes
+  // back to its root.
+  tabsGo(id,navigate);
  };
  // The side menu: «События», «Сообщества» and «Уведомления» open their own screen; a tap on the one already lit scrolls to the top.
  const goSide=(id:string)=>{
