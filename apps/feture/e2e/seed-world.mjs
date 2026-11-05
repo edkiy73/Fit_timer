@@ -1436,8 +1436,9 @@ async function media() {
     if (!have.length || have.some(m => m.kind === 'video')) return; // a video is never the first, at most one
     const ids = have.filter(m => m.id && !m.postId).map(m => m.id).slice(0, 5);
     if (!ids.length) return;
-    const clip = await uploadVideo(key, clips[clipName], { purpose: 'avatar' });
+    const clip = await uploadVideo(key, clips[clipName], { purpose: 'avatar', approve: false });
     must(await api(email(key), 'profile.photosSet', { opId: uuid7(), assetIds: [...ids, clip] }), 'photosSet clip');
+    await approveAsset(clip); // staff approve only media that is attached to something
     log('  profile clip', key);
   });
   for (const [key, clipName] of PRIVATE_CLIPS) await step(`private clip ${key}`, async () => {
@@ -1445,8 +1446,9 @@ async function media() {
     if (!pv.on) return; // only people who have the private part on
     const have = pv.media ?? [];
     if (have.some(m => m.kind === 'video')) return;
-    const clip = await uploadVideo(key, clips[clipName], { purpose: 'private' });
+    const clip = await uploadVideo(key, clips[clipName], { purpose: 'private', approve: false });
     must(await api(email(key), 'private.setMedia', { opId: uuid7(), assetIds: [...have.map(m => m.id), clip] }), 'private.setMedia');
+    await approveAsset(clip);
     log('  private clip', key);
   });
 }
