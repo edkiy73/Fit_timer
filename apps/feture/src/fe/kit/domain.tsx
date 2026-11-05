@@ -575,6 +575,12 @@ export function KeyValues({rows}:{rows:(readonly [string,ReactNode]|readonly [st
  return <dl className="st-kv">{shown.map(([k,v,w])=>{const wide=w==='wide'||(typeof v==='string'&&v.length>40);
   return <div key={k} className={'st-kv-row'+(wide?' wide':'')}><dt>{k}</dt><dd>{v}</dd></div>;})}</dl>;
 }
+/** One subject with its numbers (a report reason in the DSA report): the name and a side note (the median wait) on the
+ * top line, then a tile per number — big figure, small caption. Tiles wrap to the next line, so large numbers never run into each other. */
+export function StatCard({title,aside,stats}:{title:ReactNode,aside?:ReactNode,stats:readonly (readonly [string,ReactNode])[]}){
+ return <div className="st-stat"><div className="st-stat-h"><b>{title}</b>{aside!=null&&aside!==''&&<span>{aside}</span>}</div>
+  <div className="st-stat-g">{stats.map(([k,v])=><div key={k} className="st-stat-c"><b>{v}</b><small>{k}</small></div>)}</div></div>;
+}
 /** The picture under review: the media, a blurred preview, or a placeholder icon; `caption` under it (side by side in ReviewPair). */
 export function ReviewMedia({children,blur,icon:I,caption}:{children?:ReactNode,blur?:string|null|undefined,icon?:LucideIcon|undefined,caption?:ReactNode}){
  const box=<div className="st-media">{children??(blur?<img className="st-blur" src={blur} alt="" draggable={false}/>:I?<div className="st-ph"><I/></div>:null)}</div>;

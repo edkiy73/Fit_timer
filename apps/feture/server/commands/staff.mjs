@@ -264,6 +264,23 @@ const run = {
     return { id: input.id };
   },
 
+  async 'staff.categorySave'(q, { account, input }) {
+    await requireStaff(q, account, ['owner', 'lead']);
+    if (input.create) {
+      const [taken] = await q.query('select 1 from feture.topic_category where id = $1', [input.id]);
+      if (taken) fail(409, 'conflict', { rule: 'category_exists' });
+      await q.query(
+        `insert into feture.topic_category (id, ru, en, plate, position, hidden)
+         select $1, $2, $3, (array['rose','lilac','amber','coal','sea','moss','wine','night'])[1 + count(*)::int % 8], coalesce(max(position) + 1, 0), $4 from feture.topic_category`,
+        [input.id, input.ru, input.en, input.hidden]);
+    } else {
+      const rows = await q.query('update feture.topic_category set ru = $2, en = $3, hidden = $4 where id = $1 returning id', [input.id, input.ru, input.en, input.hidden]);
+      if (!rows[0]) fail(404, 'not_found');
+    }
+    await journal(q, account.id, input.create ? 'category.create' : 'category.save', 'topic', null, { category: input.id, hidden: input.hidden });
+    return { id: input.id };
+  },
+
   async 'staff.team'(q, { account }) {
     await requireStaff(q, account, ['owner']);
     const rows = await q.query(
