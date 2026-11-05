@@ -273,7 +273,7 @@ function ChatView({id,to}:{id:string,to:string}){
  const {call,acting}=useFe();const {t,locale}=useI18n();const navigate=useNavigate();const toast=useToast();const wide=useWide();
  useScreenTag('H02');
  const [draft,setDraft]=useState<Draft|null>(null);const [req,setReq]=useState<Req|null>(null);const [reqBusy,setReqBusy]=useState('');
- const [meta,setMeta]=useSeen<Chat|null>('ChatView.meta',()=>null);const [items,setItems]=useSeen<Msg[]|null>('ChatView.items',()=>null);const [state,setState]=useState('active');const [paused,setPaused]=useState(false);const [otherRead,setOtherRead]=useState(0);const [tag,setTag]=useState<string|null>(null);
+ const [meta,setMeta]=useSeen<Chat|null>('ChatView.meta',()=>null);const [items,setItems]=useSeen<Msg[]|null>('ChatView.items',()=>null);const [state,setState]=useState(()=>meta?.state??'active');const [paused,setPaused]=useState(false);const [otherRead,setOtherRead]=useState(0);const [tag,setTag]=useState<string|null>(null);
  // An unsent text (and the message it answers) is kept per account and acting profile (drafts.ts), so it survives leaving
  // the screen or signing out and never shows to another account.
  const dk=useDraftKey();const draftSlot=dk.key(id||'new:'+to);

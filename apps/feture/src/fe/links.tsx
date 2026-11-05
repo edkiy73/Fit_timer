@@ -102,7 +102,7 @@ function LinkPicker({mine,onClose}:{mine:LinksMine,onClose:()=>void}){
 /** `/n/me/links` — SC.P21 for the own profile. */
 export function LinksScreen(){
  const {call,acting}=useFe();const {t}=useI18n();const navigate=useNavigate();const toast=useToastV21();
- const [r,setR]=useSeen<LinksMine|null>('LinksScreen.r',()=>null);const [from,setFrom]=useState<LinksFrom|null>(null);const [error,setError]=useState<unknown>(null);
+ const [r,setR]=useSeen<LinksMine|null>('LinksScreen.r',()=>null);const [from,setFrom]=useSeen<LinksFrom|null>('LinksScreen.from',()=>null);const [error,setError]=useState<unknown>(null);
  const [busy,setBusy]=useState(false);const [menu,setMenu]=useState<{l:LinkView,pend:boolean}|null>(null);const [removing,setRemoving]=useState<LinkView|null>(null);
  const [picking,setPicking]=useState(false);
  const load=useCallback(()=>{setError(null);Promise.all([call('links.mine',{},linksMineRes),call('profile.settings',{},settingsRes).catch(()=>null)])
