@@ -217,7 +217,8 @@ test('digest: in the morning of the person’s zone, once a day, never empty, no
 
     // Next morning: opened the app since the last digest → none. Not opened, «Обычные» → the names and the actions.
     const next = new Date(morning.getTime() + 864e5);
-    await db.query(`update feture.email_address set digest_at = now() - interval '1 day' where account_id = $1`, [b.account]);
+    // The test's own clock (not the database's): the dates here are fixed, so «a day ago» is a day before `next`.
+    await db.query(`update feture.email_address set digest_at = $2::timestamptz - interval '1 day' where account_id = $1`, [b.account, next.toISOString()]);
     await db.query(`update feture.email_address set seen_at = now() where account_id = $1`, [b.account]);
     await call('ua', a.id, { action: 'follow.set', opId: op(), profileId: b.id, on: false }).catch(() => null);
     await queueDigests(db, { now: next });
