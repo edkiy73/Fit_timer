@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {useOptionalAuth} from '@appbase/ui-react/auth.js';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {Users,AtSign,CircleCheck,ShieldCheck} from 'lucide-react';
+import {Users,AtSign,CircleCheck,LocateFixed,ShieldCheck} from 'lucide-react';
 import {Alert,Ask,Btn,Card,Check,Chip,Chips,ChoiceChips,Divider,Empty,Field,H,Input,Note,Row,SectionLabel,Select,Sheet,Skel,Spacer,Stack,Text,TextArea} from './kit';
 import {useTopics} from './post-parts';
 import {useChecks} from './kit/validate';
@@ -15,6 +15,7 @@ import {TermsSheet,loadDocuments} from './terms-sheet';
 import {pendingPairLink} from './pair-link';
 import {DiscoverPhotoAsk} from './discover-photo';
 import {ChipPick} from './kit/ChipPick';
+import {PickField,PlacePicker,placeName,type Place} from './kit/Place';
 
 /** V21 A04 (nickname, date of birth, consent) → A04X (under 18) → A05 «Расскажи о себе» (Discover on by default —
  * owner decision 27.10.2026; who sees the answers: «Все» by default — owner decision 27.10.2026). Each screen has the
@@ -24,14 +25,23 @@ export const NICK=/^[A-Za-z0-9](?:[A-Za-z0-9_.]{1,18})[A-Za-z0-9]$/;
 const created=z.object({ok:z.boolean(),profileId:z.uuid().optional(),rule:z.string().optional()});
 export const nickAnswer=z.object({ok:z.literal(true),available:z.boolean(),reason:z.string().optional()});
 const option=z.object({kind:z.string(),code:z.string(),ru:z.string(),en:z.string()});
-const catalog=z.object({ok:z.literal(true),options:z.array(option)});
+const catalog=z.object({ok:z.literal(true),options:z.array(option),places:z.array(z.object({id:z.string(),code:z.string().nullable().optional(),country:z.string().nullable().optional(),ru:z.string().nullable(),en:z.string().nullable(),lat:z.number().nullable().optional(),lon:z.number().nullable().optional()})).default([])});
+type Cat=z.infer<typeof catalog>['places'][number];
+/** The catalog city nearest to a point, if one is within 150 km (flat-earth distance is enough at this scale). The position stays on the phone. */
+function nearestCity(places:readonly Cat[],lat:number,lon:number){
+ let best:Cat|null=null,bd=Infinity;
+ for(const p of places){if(p.lat==null||p.lon==null)continue;const dy=(p.lat-lat)*111,dx=(p.lon-lon)*111*Math.cos(lat*Math.PI/180),d=Math.hypot(dx,dy);if(d<bd){bd=d;best=p;}}
+ return best&&bd<=150?best:null;
+}
+const here=()=>new Promise<{lat:number,lon:number}>((res,rej)=>{if(!('geolocation' in navigator)){rej(new Error('unsupported'));return;}
+ navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lon:p.coords.longitude}),rej,{enableHighAccuracy:false,maximumAge:600000,timeout:15000});});
 const onboarded=z.object({ok:z.literal(true),discoverVisible:z.boolean(),photoNeeded:z.boolean()});
 const photoIds=z.object({ok:z.literal(true),profile:z.object({photos:z.array(z.object({id:z.string()}).passthrough())}).passthrough()});
 
 type Form={nick:string,name:string,dd:string,mm:string,yy:string,terms:boolean,news:boolean,u18retry:boolean};
 type Step={id:'A04'}|{id:'A04X'}|{id:'A05',profileId:string,about?:About}|{id:'A05B',profileId:string,about:About};
 /** The answers of «Расскажи о себе»; they are saved together with step 2 («Готово»), so «‹» from step 2 keeps them. */
-type About={pick:Record<Kind,string[]>,vis:'only'|'granted'|'all',discover:'visible'|'off',partner:''|'yes'|'no'};
+type About={pick:Record<Kind,string[]>,vis:'only'|'granted'|'all',discover:'visible'|'off',partner:''|'yes'|'no',cityId?:string|null};
 
 export function Register(){
  const {state}=useFe();
@@ -182,6 +192,7 @@ type Opt=z.infer<typeof option>;
 function AboutYou({profileId,onNext,onLeave,initial}:{profileId:string,onLeave:()=>void,initial?:About|undefined,onNext:(a:About)=>void}){
  const {call}=useFe();const {t,locale}=useI18n();const toast=useToast();
  const [options,setOptions]=useState<Opt[]|null>(null);const [loadFailed,setLoadFailed]=useState(false);
+ const [places,setPlaces]=useState<Cat[]>([]);const [cityId,setCityId]=useState<string|null>(initial?.cityId??null);const [cityOpen,setCityOpen]=useState(false);const [added,setAdded]=useState<Place|null>(null);const [locating,setLocating]=useState(false);
  const [picked,setPicked]=useState<Record<Kind,string[]>>(initial?.pick??{gender:[],orient:[],role:[],status:[],format:[],seek:[]});
  const [vis,setVis]=useState<'only'|'granted'|'all'>(initial?.vis??'all');
  // Owner 28.10.2026: off by default; «Показываться» asks for a photo first and turns on once one is added (it is reviewed).
@@ -193,7 +204,7 @@ function AboutYou({profileId,onNext,onLeave,initial}:{profileId:string,onLeave:(
   setPhotos(have);if(have.length)setDiscover('visible');else setAskPhoto(true);
  };
  const [partner,setPartner]=useState<''|'yes'|'no'>(initial?.partner??'');
- const load=()=>{setLoadFailed(false);setOptions(null);call('catalog.get',{},catalog,{asAccount:true}).then(r=>setOptions(r.options)).catch(()=>setLoadFailed(true));};
+ const load=()=>{setLoadFailed(false);setOptions(null);call('catalog.get',{},catalog,{asAccount:true}).then(r=>{setOptions(r.options);setPlaces(r.places);}).catch(()=>setLoadFailed(true));};
  useEffect(load,[call]);
  const label=(o:Opt)=>locale==='en'?o.en:o.ru;
  // «мы пара» is a couple profile, made through the pair invitation, not a personal status (V21 optList).
@@ -206,7 +217,19 @@ function AboutYou({profileId,onNext,onLeave,initial}:{profileId:string,onLeave:(
   return {...p,[kind]:[...p[kind],code]};
  });
  // V21 A05: «Дальше» / «Позже» go to step 2 (interests and communities); everything is saved there by «Готово».
- const finish=(skip:boolean)=>onNext({pick:skip?{gender:[],orient:[],role:[],status:[],format:[],seek:[]}:picked,vis,discover,partner});
+ const finish=(skip:boolean)=>onNext({pick:skip?{gender:[],orient:[],role:[],status:[],format:[],seek:[]}:picked,vis,discover,partner,cityId});
+ const cityLabel=(()=>{const x=cityId?places.find(y=>y.id===cityId)??(added?.id===cityId?added:null):null;return x?placeName(x,locale):null;})();
+ // One tap: the phone's question, then the nearest catalog city is filled in. Only the city is saved; the position never leaves the phone.
+ const locate=async()=>{
+  setLocating(true);
+  try{const c=await here();const x=nearestCity(places,c.lat,c.lon);
+   if(x){setCityId(x.id);toast(t('fe.onb.city.found',{name:placeName(x,locale)}),{type:'ok'});}else toast(t('fe.onb.city.none'),{type:'info'});}
+  catch{toast(t('fe.onb.city.denied'),{type:'info'});}finally{setLocating(false);}
+ };
+ const addPlace=async(country:string,name:string):Promise<Place>=>{
+  const r=await call('place.submit',{opId:newOpId(),country,name},z.object({placeId:z.string()}),{asAccount:true});
+  const x={id:r.placeId,country,ru:name,en:name,pending:true};setAdded(x);return x;
+ };
  const radio=<T extends string>(items:[T,string][],sel:T|'',pick:(v:T)=>void,aria:string)=><ChoiceChips label={aria} value={sel||null} options={items} onChange={pick}/>;
  const group=(kind:Kind)=>{
   const list=listOf(kind);if(!list.length)return null;
@@ -223,6 +246,12 @@ function AboutYou({profileId,onNext,onLeave,initial}:{profileId:string,onLeave:(
    <AuthLogo/>
    <Steps at={2}/>
    <H level={2} className="t">{t('fe.reg.about.title')}</H>
+   <section className="fin"><div className="fin-t"><b>{t('fe.onb.city.title')}</b></div>
+    <Stack gap={2}>
+     <PickField label={t('fe.mx.ed.city')} value={cityLabel} placeholder={t('fe.onb.city.pick')} onClick={()=>setCityOpen(true)}/>
+     <Btn kind="soft" icon={LocateFixed} busy={locating} disabled={locating||!places.length} onClick={()=>void locate()}>{t('fe.onb.city.locate')}</Btn>
+    </Stack>
+   </section>
    <section className="fin"><div className="fin-t"><b>{t('fe.reg.discover.title')}</b></div>
     <Stack gap={2}>{radio([['visible',t('fe.onb.discover.on')],['off',t('fe.onb.discover.off')]],discover,v=>void pickDiscover(v),t('fe.reg.discover.title'))}
      <Note>{discover==='visible'?t('fe.onb.discover.noteOn'):t('fe.onb.discover.noteOff')}</Note></Stack>
@@ -238,6 +267,7 @@ function AboutYou({profileId,onNext,onLeave,initial}:{profileId:string,onLeave:(
    <Btn onClick={()=>finish(false)}>{t('fe.onb.next')}</Btn>
    <Btn className="secondary" kind="soft" onClick={()=>finish(true)}>{t('fe.onb.later')}</Btn>
   </div></div>
+  {cityOpen&&<PlacePicker places={places} current={cityId} add={addPlace} onPick={x=>{if(x)setCityId(x.id);setCityOpen(false);}} onClose={()=>setCityOpen(false)}/>}
   {askPhoto&&<DiscoverPhotoAsk existing={photos??[]} profileId={profileId} onCancel={()=>setAskPhoto(false)}
    onAdded={()=>{setAskPhoto(false);setPhotos(p=>[...(p??[]),'added']);setDiscover('visible');toast(t('fe.onb.discover.photoAdded'),{type:'ok'});}}/>}
  </>;
@@ -269,7 +299,7 @@ function FirstSteps({profileId,about,onBack,onLeave}:{profileId:string,about:Abo
  const done=async()=>{
   setBusy(true);setFailure('');const p=about.pick;
   try{
-   await call('onboarding.complete',{opId:opId.current,detailsVis:'all',genders:p.gender,orients:p.orient,roles:p.role,formats:p.format,seeks:p.seek,status:p.status[0]??null,discover:about.discover},onboarded,{profileId});
+   await call('onboarding.complete',{opId:opId.current,detailsVis:'all',genders:p.gender,orients:p.orient,roles:p.role,formats:p.format,seeks:p.seek,status:p.status[0]??null,discover:about.discover,cityId:about.cityId??null},onboarded,{profileId});
    let failed=0;
    for(const [communityId,j] of Object.entries(joins)){
     try{await call('community.join',{opId:newOpId(),communityId,rulesAccepted:true,answer:j.answer},z.object({ok:z.literal(true)}).passthrough(),{profileId});}catch{failed++;}

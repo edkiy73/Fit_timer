@@ -16,6 +16,13 @@ type Settings=z.infer<typeof settingsRes>['settings'];
 const ok=z.object({ok:z.literal(true)}).passthrough();
 /** One offer per page load at most; the server's `offered` mark makes it once per account. */
 let asked=false;
+/** How often the offer may come back (owner 05.11.2026): at most three times, two weeks apart, per device; switching push
+ * off oneself in settings ends it. Kept on the device because the permission is the device's. */
+const ASK_KEY='fe.pushAsk',ASK_MAX=3,ASK_GAP=14*864e5;
+const askLog=():{n:number,at:number}=>{try{const v=JSON.parse(localStorage.getItem(ASK_KEY)||'');return {n:Number(v.n)||0,at:Number(v.at)||0};}catch{return {n:0,at:0};}};
+const canAsk=()=>{const a=askLog();return a.n<ASK_MAX&&Date.now()-a.at>=ASK_GAP;};
+const noteAsked=()=>{try{localStorage.setItem(ASK_KEY,JSON.stringify({n:askLog().n+1,at:Date.now()}));}catch{/* private mode: it may ask again next time */}};
+export const stopAsking=()=>{try{localStorage.setItem(ASK_KEY,JSON.stringify({n:ASK_MAX,at:Date.now()}));}catch{/* nothing to keep */}};
 const wait=(ms:number)=>new Promise<void>(r=>setTimeout(r,ms));
 
 /** In the Android/iOS app push goes through FCM (push-native.ts), on the website through web push (push-web.ts). */
@@ -42,7 +49,7 @@ function useTurnOn(){
 /** V21 N02 `maybePush`: after the first useful action (never on start, never twice) — in a chat a quiet toast with
  * «Включить», elsewhere a small sheet. Also keeps an already subscribed browser registered. */
 export function PushOffer(){
- const {state,call}=useFe();const {t}=useI18n();const toast=useToast();const {pathname}=useLocation();const navigate=useNavigate();
+ const {state,call}=useFe();const {t}=useI18n();const toast=useToast();const {pathname,state:navState}=useLocation();const navigate=useNavigate();
  const webKey=state.status==='ready'?state.boot.push?.webKey:undefined;
  const ready=state.status==='ready';
  const [sheet,setSheet]=useState(false);
@@ -56,28 +63,43 @@ export function PushOffer(){
  useEffect(()=>{
   if(native?!ready:!webKey)return;
   return onUseful(()=>{
-   if(asked||(!native&&(!webPushSupported()||Notification.permission!=='default')))return;
+   if(asked||!canAsk()||(!native&&(!webPushSupported()||Notification.permission!=='default')))return;
    asked=true;
    void (async()=>{
     try{
      if(native?!(await nativePushOfferable()):await webPushState()==='on')return;
      const s:Settings=(await callRef.current('notifications.settings.get',{},settingsRes,{asAccount:true})).settings;
-     if(s.offered)return;
      const route=where.current;
      await wait(900);
      // Moved on, or a sheet / dialog is open: not now — the next useful action may ask.
      if(where.current!==route||document.querySelector('.v21 .sheet.on, .v21 .dialog.on')){asked=false;return;}
      await callRef.current('notifications.settings.update',{opId:newOpId(),settings:{...s,offered:true}},ok,{asAccount:true});
+     noteAsked();
      if(route.startsWith('/n/chats/'))toast(t('fe.push.chatOffer'),{ms:6000,action:{label:t('fe.push.turnOn'),fn:()=>void turnOnRef.current()}});
      else setSheet(true);
     }catch{asked=false;}
    })();
   });
  },[webKey,ready,t,toast]);
+ // Right after sign-up (the feed opens with `welcome`): the first offer, once, without waiting for a first action.
+ const welcomed=useRef(false);
+ useEffect(()=>{
+  if(!ready||welcomed.current||!(navState as {welcome?:boolean}|null)?.welcome||!canAsk())return;
+  welcomed.current=true;
+  void (async()=>{
+   try{
+    if(!native&&(!webKey||!webPushSupported()||Notification.permission!=='default'))return;
+    if(native?!(await nativePushOfferable()):await webPushState()==='on')return;
+    await wait(900);
+    if(document.querySelector('.v21 .sheet.on, .v21 .dialog.on'))return;
+    asked=true;noteAsked();setSheet(true);
+   }catch{/* the next useful action may ask */}
+  })();
+ },[ready,webKey,navState]);
  if(!sheet)return null;
  const close=()=>setSheet(false);
  return <Sheet title={t('fe.push.offerTitle')} lead={<span className="ico l"><Bell/></span>} onClose={close}
-  foot={<><Btn onClick={()=>{close();void turnOn();}}>{t('fe.push.offerOk')}</Btn><Btn kind="text" onClick={close}>{t('fe.push.later')}</Btn></>}>
+  foot={<Btn onClick={()=>{close();void turnOn();}}>{t('fe.push.offerOk')}</Btn>}>
   <Card list><Row icon={Bell} title={BRAND} sub={t('fe.push.preview')}/></Card>
   <Spacer size={2}/><Note>{t('fe.push.offerText')}</Note>
  </Sheet>;
@@ -102,7 +124,7 @@ export function PushSwitch(){
  const flip=()=>{
   if(busy)return;setBusy(true);
   const done=(p:Promise<unknown>)=>void p.finally(()=>read().then(setS).finally(()=>setBusy(false)));
-  if(s==='on')done(native?disableNativePush(call):disableWebPush(call));
+  if(s==='on'){stopAsking();done(native?disableNativePush(call):disableWebPush(call));}
   else done(turnOn()); // asks the browser / phone right away, inside this tap
  };
  const k=native?'fe.push.app.':'fe.push.';
@@ -128,7 +150,7 @@ export function usePushDevice(){
  const flip=()=>{
   if(busy)return;setBusy(true);
   const done=(p:Promise<unknown>)=>void p.finally(()=>read().then(setS).finally(()=>setBusy(false)));
-  if(s==='on')done(native?disableNativePush(call):disableWebPush(call));
+  if(s==='on'){stopAsking();done(native?disableNativePush(call):disableWebPush(call));}
   else done(turnOn());
  };
  const k=native?'app':'web';
