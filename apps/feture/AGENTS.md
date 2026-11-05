@@ -65,8 +65,17 @@ compatibility for couples/profiles that exist now: a migration may reshape or re
 a data-preserving path. This stops being true on the day the owner announces the launch; from then on migrations must
 keep real users' data. Until then do not mention «existing couples» as a risk in a plan.
 
-## Licences and credits: the «copyright» document (owner, 06.11.2026)
-Whenever the product takes something from outside — a dataset (GeoNames cities), a photo or a stock picture, an icon set, a font, a library that asks for a notice, a map or a model — **look at its licence first, and if it asks for attribution or a notice, put exactly that into the published «copyright» document in the same change** (not «later»). The document is built up in parts: one short section per source, with what it is, who made it, the licence and its link, and the exact wording the licence requires; add your section to what is already there. In the PR description name the source, the licence, and the section you added. If the licence forbids our use (non-commercial, no derivatives, a share-alike we cannot meet), stop and ask the owner before using it. Sources so far: **GeoNames** (cities; CC BY 4.0). The lawyer completes the document before the launch; until then it carries at least the credits the licences require.
+## Legal documents follow the product (owner, 06.11.2026)
+The published documents (`DOCUMENT_KEYS` in `contracts/staff.mjs`: terms, privacy, community, adult-content, complaints, age, retention, cookies, copyright) say what the product does. A change that makes one of them untrue or incomplete **updates that document in the same PR** (in parts: add or change only the paragraph that is affected). Ask yourself before you finish:
+- **Credits and licences** (a dataset, a picture, an icon set, a font, a library that wants a notice, a map): what the licence asks for goes into «copyright» — source, author, licence and link, and the exact wording the licence requires. A licence that forbids our use (non-commercial, no derivatives, a share-alike we cannot meet): stop and ask the owner.
+- **New personal data, or an old one used for a new purpose** (location, photos, documents, selfies, contacts, device data, logs): «privacy» (what, why, who sees it) and «retention» (how long it is kept and when it is deleted).
+- **A new outside service that receives our data** (mail, push, storage, CDN, payments, analytics, maps, geocoding, an AI model): «privacy» names it as a recipient, in the same words as the service's own role.
+- **Anything kept on the device or in the browser, tracking, analytics:** «cookies».
+- **A new place where people publish or write to each other, a new kind of content, a new rule of what may be posted:** «community»; explicit or adult material: «adult-content»; how a report, a removal or an appeal works: «complaints».
+- **Age, identity or photo checks:** «age».
+- **Money, Premium, a trial, a refund, a change of what is free:** «terms».
+- **Something we promise** in a screen text («удаляется через 30 дней», «видят только вы», «мы не храним») must be true and match the documents; if it is not, change the code or the text.
+In the PR description name the documents you changed, or write «documents: no change» with the reason. Documents are saved and published by an owner or a lead (`staff.documentSave` → `staff.documentPublish`; the `qa-mod-lead` account can). The lawyer completes them before the launch; until then they carry at least what the licences and the real behaviour require. Sources credited so far: **GeoNames** (cities; CC BY 4.0).
 
 ## Product decisions in force
 
