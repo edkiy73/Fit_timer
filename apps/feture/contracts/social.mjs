@@ -5,7 +5,7 @@ import { id, opId } from './platform.mjs';
 
 export const socialCommands = {
   'block.set': {
-    profile: true, write: true,
+    profile: true, write: true, rate: { kind: 'block.set', max: 500, window: '1 day' },
     // keepCouple: a block from the personal profile covers its couples too unless asked to leave the couple open (audit 19).
     input: z.strictObject({ opId, profileId: id, on: z.boolean(), alsoFor: z.enum(['partner', 'me']).optional(), keepCouple: z.boolean().default(false) }),
   },
@@ -22,7 +22,7 @@ export const socialCommands = {
   'activity.mute': { profile: true, write: true, input: z.strictObject({ opId, profileId: id, on: z.boolean() }) },
   'feedHide.list': { profile: true, write: false, input: z.strictObject({}) },
   'saved.set': {
-    profile: true, write: true,
+    profile: true, write: true, rate: { kind: 'saved.set', max: 500, window: '1 day' },
     input: z.strictObject({ opId, kind: z.enum(['post', 'event', 'topic', 'discussion']), targetId: z.string().max(64), on: z.boolean() }),
   },
   'saved.list': { profile: true, write: false, input: z.strictObject({ kind: z.enum(['post', 'event', 'topic', 'discussion']).optional() }) },

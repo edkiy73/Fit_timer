@@ -15,8 +15,8 @@ export const MAX_ALBUMS = 50;
 export const galleryCommands = {
   'album.list': { profile: true, write: false, input: z.strictObject({ profileId: id }) },
   'album.create': { profile: true, write: true, rate: { kind: 'album.create', max: 500, window: '1 day' }, input: z.strictObject({ opId, title }) },
-  'album.rename': { profile: true, write: true, input: z.strictObject({ opId, albumId: id, title }) },
-  'album.delete': { profile: true, write: true, input: z.strictObject({ opId, albumId: id }) },
+  'album.rename': { profile: true, write: true, rate: { kind: 'album.rename', max: 300, window: '1 day' }, input: z.strictObject({ opId, albumId: id, title }) },
+  'album.delete': { profile: true, write: true, rate: { kind: 'album.delete', max: 300, window: '1 day' }, input: z.strictObject({ opId, albumId: id }) },
   'album.update': {
     profile: true, write: true,
     input: z.strictObject({

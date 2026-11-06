@@ -747,6 +747,13 @@ test('invitations and promo codes: rewarded only after onboarding and the age ch
     await db.tx(q => settleReferral(q, a1));
     await db.tx(q => settleReferral(q, a1));
     assert.ok(Math.abs(new Date(await until(n1)).getTime() - (Date.now() + 7 * DAY)) < 60000, 'the newcomer: 7 days');
+    // The inviter waits a week (security audit 06.11.2026): nothing yet, then paid once when the week is over.
+    const { sweepReferrals } = await import('../server/commands/referral.mjs');
+    assert.equal(await until(inviter), null, 'the inviter is not paid at once');
+    assert.equal(await sweepReferrals(db), 0, 'and not before the week is over');
+    await db.query(`update feture.referral_use set inviter_due_at = now() - interval '1 minute' where invitee_account_id = $1`, [a1]);
+    assert.equal(await sweepReferrals(db), 1);
+    assert.equal(await sweepReferrals(db), 0, 'once');
     assert.ok(Math.abs(new Date(await until(inviter)).getTime() - (Date.now() + 7 * DAY)) < 60000, 'the inviter: 7 days, once');
     assert.equal((await db.query(`select count(*)::int n from feture.outbox where topic = 'premium.referral'`))[0].n, 1);
     assert.ok((await db.query(`select payload from feture.outbox where topic = 'premium.granted' order by created_at desc limit 5`)).some(r => r.payload.why === 'invited'), 'the newcomer is told it is the invitation bonus');
@@ -761,8 +768,16 @@ test('invitations and promo codes: rewarded only after onboarding and the age ch
     await db.query(`update feture.account set onboarded_at = now(), age_verified_until = now() + interval '1 year' where id = $1`, [a2]);
     const before = new Date(await until(inviter)).getTime();
     await db.tx(q => settleReferral(q, a2));
+    await db.query(`update feture.referral_use set inviter_due_at = now() - interval '1 minute' where invitee_account_id = $1`, [a2]);
+    await sweepReferrals(db);
     assert.ok(await until(n2), 'the newcomer still gets theirs');
     assert.equal(new Date(await until(inviter)).getTime(), before, 'the inviter is over the cap');
+
+    // Two accounts of one device (both saw the same Core session) cannot invite each other (audit 06.11.2026).
+    const n9 = await person('ui', 'Ivo');
+    const a9 = await acc(n9), invAcc = await acc(await (async () => (await db.query(`select person_profile_id id from feture.account where id = (select owner_account_id from feture.referral_code where code = $1)`, [mine.code]))[0].id)());
+    await db.query(`insert into feture.session_seen (account_id, session_id) values ($1, 'shared-device'), ($2, 'shared-device')`, [a9, invAcc]);
+    assert.equal((await call('ui', n9, { action: 'referral.apply', opId: op(), code: mine.code })).rule, 'own_code');
 
     // A promo code: its own days (0 = only counted), a limit and an end date; staff only; counted in the statistics.
     assert.equal((await call('ua', inviter, { action: 'staff.promoCreate', opId: op(), code: 'BLOGGER1', label: 'Блогер', days: 30 })).status, 403);

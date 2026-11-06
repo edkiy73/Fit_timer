@@ -81,7 +81,7 @@ login allowed (→ «Before release» item 4), backups never restored, `zod` bel
 
 - **Refunds/chargebacks never applied** (`server/billing/robokassa.mjs:34-39` only emits `paid`; `pay-events.mjs:44` handles
   `refunded` but nothing sends it). Premium stays until `staff.premiumRevoke`. Fix: a staff «refunded» action or a reconciliation job.
-- **Referral farming** (`server/commands/referral.mjs`): own code only blocks the identical account; no device/session link; the
+- **(done in the stage 4a PR: a shared device blocks the code and voids the inviter reward — `session_seen` holds the Core session id, one per browser/phone; the inviter is paid a week after the newcomer by `sweepReferrals`, only if the newcomer is still active and unrestricted and the cap allows; migration `20261106910000`. `inviter_days` default left as is: the programme is off until launch.)** **Referral farming** (`server/commands/referral.mjs`): own code only blocks the identical account; no device/session link; the
   inviter reward is not clawed back; the «account ≤ 7 days old» window does not stop bots. Fix: reject on shared device/session
   (`session_seen`), 7-day activity hold before paying the inviter, `inviter_days` 0 until launch. `referral.apply` and
   `settleReferral` race on `max_uses` and the cap (**fixed in the stage 2 PR: the code row is locked**).
@@ -94,14 +94,14 @@ login allowed (→ «Before release» item 4), backups never restored, `zod` bel
   media URLs are bearer links valid 600 s that survive `access.revoke` (`server/media/bunny.mjs:33`, `delivery.mjs`), view-once
   clips live ≥ 300 s, and the `reuse` map hands one URL to every viewer. Fix: burn the viewer nick into a per-viewer file, cut the
   TTL to 30–60 s for private/view-once, no `reuse` there, and say plainly in the documents that revoke is not instant.
-- **Location oracle:** `distanceKm` (5 km steps) from `discover.cards`, plus `people.search/byNick` for hidden profiles and a free
+- **(done in the stage 4a PR: distance only to someone in Discover, 10 km steps, a place changes at most once an hour)** **Location oracle:** `distanceKm` (5 km steps) from `discover.cards`, plus `people.search/byNick` for hidden profiles and a free
   `location.set` (`server/commands/discover.mjs:154-170, 513`, `people.mjs`) trilaterate a hidden person. Fix: distance only when
   `feture.discoverable(target)`, quantize to 10–25 km, limit location changes.
-- **`saved.set` is unvalidated** (`server/commands/social.mjs`, `contracts/social.mjs:26`) and `event_visible` trusts `saved_item`
+- **(done in the stage 4a PR: `saved.set` checks visibility, caps 1000 rows and 500/day; migration `20261106900000` gives `event_visible` the community and organizer checks on the saved branch)** **`saved.set` is unvalidated** (`server/commands/social.mjs`, `contracts/social.mjs:26`) and `event_visible` trusts `saved_item`
   for cancelled events (migration `20261104500000_fe_audit_stage6.sql:22-25`): a former member can read a cancelled event of a
   closed community. Address and join link stay gated. Fix: visibility check and a cap in `saved.set`, drop the clause.
-- **Scraping:** `people.search` 10 000/day with a 2-letter prefix. Fix: 500/day, ≥ 3 letters, a trust gate for new accounts.
-- **Writes without a daily cap:** `community.invite`, `post.saveDraft`, `post.edit`, `event.update`, `profile.update`, `block.set`,
+- **Scraping:** `people.search` was 10 000/day with a 2-letter prefix. **Partly done in the stage 4a PR: 2000/day.** Still open: ≥ 3 letters, a trust gate for new accounts.
+- **(done in the stage 4a PR: daily caps on those writes; rate kind names must be lowercase `[a-z_.]` — the table's check constraint)** **Writes without a daily cap:** `community.invite`, `post.saveDraft`, `post.edit`, `event.update`, `profile.update`, `block.set`,
   `poll.vote`, `album.*`, `private.set*` (only the 600/min account quota). Fix: 60–200/day, 20/day for `community.invite`.
 - **Mail:** domain `mail.kinhaze.com` is verified in Resend (SPF/DKIM ok); DMARC not checked (see «Before release» 6).
 

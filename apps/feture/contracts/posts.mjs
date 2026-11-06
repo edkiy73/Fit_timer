@@ -84,9 +84,9 @@ export const POST_TYPES = /** @type {const} */ (['note', 'text', 'photo', 'poll'
 export const ACTIVITY_KINDS = /** @type {const} */ (['posts', 'likes', 'events', 'communities', 'follows']);
 
 export const postsCommands = {
-  'post.saveDraft': { profile: true, write: true, input: z.strictObject({ opId, postId: id.optional(), post: draftFields }) },
+  'post.saveDraft': { profile: true, write: true, rate: { kind: 'post.save_draft', max: 1000, window: '1 day' }, input: z.strictObject({ opId, postId: id.optional(), post: draftFields }) },
   'post.publish': { profile: true, write: true, rate: { kind: 'post.publish', max: 250, window: '1 day' }, input: z.strictObject({ opId, postId: id }) },
-  'post.edit': { profile: true, write: true, input: z.strictObject({ opId, postId: id, rev: z.int().positive(), post: postFields }) },
+  'post.edit': { profile: true, write: true, rate: { kind: 'post.edit', max: 300, window: '1 day' }, input: z.strictObject({ opId, postId: id, rev: z.int().positive(), post: postFields }) },
   'post.delete': { profile: true, write: true, input: z.strictObject({ opId, postId: id }) },
   'post.get': { profile: true, write: false, input: z.strictObject({ postId: id }) },
   'feed.list': {
@@ -140,7 +140,7 @@ export const postsCommands = {
     profile: true, write: true, rate: { kind: 'reaction.set', max: 5000, window: '1 day' },
     input: z.strictObject({ opId, targetType: z.enum(['post', 'reply']), targetId: id, on: z.boolean() }),
   },
-  'poll.vote': { profile: true, write: true, input: z.strictObject({ opId, postId: id, option: z.int().min(0).max(9).nullable() }) },
+  'poll.vote': { profile: true, write: true, rate: { kind: 'poll.vote', max: 1000, window: '1 day' }, input: z.strictObject({ opId, postId: id, option: z.int().min(0).max(9).nullable() }) },
   'reply.create': {
     profile: true, write: true, rate: { kind: 'reply.create', max: 1500, window: '1 day' },
     input: z.strictObject({ opId, postId: id, parentId: id.optional(), body: field('reply') }),
