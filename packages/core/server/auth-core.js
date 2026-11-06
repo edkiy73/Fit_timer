@@ -93,7 +93,7 @@ const NO_ACCOUNT_EXTENSION = Object.freeze({
   async onVerify(){ return {fields:{}}; }
 });
 
-function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics, sanitizeClientDiagnostic, emailChange = false, blockDisposableEmail = false} = {}){
+function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics, sanitizeClientDiagnostic, emailChange = false, blockDisposableEmail = false, captcha = null} = {}){
   if(!analytics || typeof analytics.recordAnalytics !== 'function' || typeof analytics.removeAnalyticsDevice !== 'function'){
     throw new Error('analytics_required');
   }
@@ -456,6 +456,8 @@ function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics, 
     if(act === 'send'){
       // Отправка письма — чувствительная операция: если защитный счётчик недоступен,
       // лучше честно ответить 503, чем превратить сбой Redis в бесплатный mail-bomb.
+      // A bot check before any mail goes out (security audit 06.11.2026, B1; opt-in per product: createAuthHandler({captcha})).
+      if(captcha && !(await captcha.ok(req, email, body && body.captcha))) return fail(res, 400, 'captcha_failed');
       // Free throwaway inboxes (opt-in per product): a bot cannot make accounts from them (security audit 06.11.2026, B1).
       if(blockDisposableEmail && isDisposableEmail(email)) return fail(res, 400, 'email_not_allowed');
       if(!(await rateOkScoped(req, 'auth-send-ip', 30, '', 3600, true))

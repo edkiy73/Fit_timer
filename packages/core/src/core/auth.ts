@@ -35,6 +35,8 @@ export interface AuthClientOptions {
   deviceKey?: string;
   fetch?: typeof fetch;
   createDeviceId?: () => string;
+  /** Extra fields for the sign-in code request (a bot-check token): called right before `send`. */
+  beforeSend?: () => Promise<Record<string, unknown>>;
 }
 
 export interface VerifyInput {
@@ -266,7 +268,8 @@ export function createAuthClient(options: AuthClientOptions = {}): AuthClient {
     async sendCode(email, locale = 'ru') {
       const normalized = normalizeEmail(email);
       if(!validEmail(normalized)) throw new Error('bad_email');
-      return post({action:'send', email:normalized, locale:localeOf(locale)});
+      const extra = options.beforeSend ? await options.beforeSend() : {};
+      return post({...extra, action:'send', email:normalized, locale:localeOf(locale)});
     },
 
     async verifyCode(input) {
