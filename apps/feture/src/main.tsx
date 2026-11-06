@@ -1,5 +1,5 @@
+import './zod-config';
 import { StrictMode } from 'react';
-import * as z from 'zod';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createHashRouter, RouterProvider } from 'react-router';
@@ -15,9 +15,6 @@ const fonts = document.createElement('link');
 fonts.rel = 'stylesheet';
 fonts.href = 'https://fonts.googleapis.com/css2?family=Geologica:wght,CRSV,SHRP@300..900,0..1,0..100&family=Onest:wght@400..800&display=swap';
 document.head.appendChild(fonts);
-// zod would probe whether it may compile validators with `new Function`; under the CSP that is a violation report every time. Without it
-// the schemas run interpreted, which is all this app needs.
-z.config({ jitless: true });
 
 applyProductTheme();
 // Every pressed button that waits for the server shows a spinner until the answer comes.
