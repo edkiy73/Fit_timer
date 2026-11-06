@@ -139,3 +139,4 @@ inputs, bounded arrays, no user strings in SQL · reports never auto-hide · adm
 ## Log
 
 - 06.11.2026 — audit done, report written; owner decisions recorded; stage 1 started.
+- 06.11.2026 — stage 1 live (#1617, #1618): security headers and body limits in Caddy, refused-credentials limit (verified on prod: 429 after 40 refused tokens in a minute, a 200 KB body gets 413), SSE by /64, pool 15 + `statement_timeout`, zod 4.6.7, Dependabot security updates on, build cache pruned (disk 81 % → 57 %). Found while rolling out: Caddy did not pick up the new Caddyfile (single-file bind mount), restarted by hand; `update.sh` fixed on the VPS and in `deploy/enable-autoupdate.sh`.
