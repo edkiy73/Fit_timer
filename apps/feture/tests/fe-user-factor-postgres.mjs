@@ -267,6 +267,15 @@ test('email text in English, and the guard for Core endpoints (sessions, email c
     await db.query('update feture.account_totp set last_step = 0');
     assert.equal((await call(keyHash, null, { action: 'account.factorSignIn', code: totpCode(s.secret) }, as('thief', 't-thief'))).verified, true);
     assert.equal(await guardCoreBody({ headers: {} }, { action: 'forget', email, deviceId: 'thief', syncToken: 't-thief' }, opts), null);
+    // Core's «forget everything» deletes the login behind account.delete's back: a sanction in force is carried here (audit B4).
+    const [{ id: sanctioned }] = await db.query('select id from feture.account where person_profile_id is not null');
+    await db.query(`update feture.account set state = 'suspended', suspension_rule = 'threats' where id = $1`, [sanctioned]);
+    assert.equal(await guardCoreBody({ headers: {} }, { action: 'forget', email, deviceId: 'thief', syncToken: 't-thief' }, opts), null);
+    assert.equal((await db.query('select count(*)::int n from feture.sanction_carry'))[0].n, 0, 'only the full deletion carries');
+    assert.equal(await guardCoreBody({ headers: {} }, { action: 'forget', scope: 'all', email, deviceId: 'thief', syncToken: 't-thief' }, opts), null);
+    const [carried] = await db.query('select kind, rule from feture.sanction_carry');
+    assert.deepEqual([carried.kind, carried.rule], ['suspend', 'threats']);
+    await db.query(`update feture.account set state = 'active', suspension_rule = null where id = $1`, [sanctioned]);
     // A database outage refuses (fail closed); no FetUre account yet = nothing to guard.
     const broken = { query: async () => { throw new Error('down'); } };
     assert.equal((await guardCoreBody({ headers: {} }, { action: 'forget', email, deviceId: 'thief', syncToken: 't-thief' }, { ...opts, db: /** @type {any} */ (broken) }))?.status, 503);

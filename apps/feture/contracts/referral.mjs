@@ -8,6 +8,8 @@ import { field } from './_text.mjs';
 
 /** A code as people type it: letters, digits, `-` and `_`, 3 to 24, any case (stored in capitals). */
 export const CODE = z.string().trim().regex(/^[A-Za-z0-9_-]{3,24}$/);
+/** A promo code staff make: at least 8 characters, so it cannot be found by trying (security audit 06.11.2026). */
+export const PROMO_CODE = z.string().trim().regex(/^[A-Za-z0-9_-]{8,24}$/);
 const days = z.int().min(0).max(365);
 
 export const referralCommands = {
@@ -25,7 +27,7 @@ export const referralCommands = {
   'staff.promoList': { profile: false, write: false, input: z.strictObject({}) },
   'staff.promoCreate': {
     profile: false, write: true,
-    input: z.strictObject({ opId, code: CODE, label: field('staffReason'), days, maxUses: z.int().min(1).max(1000000).optional(), expiresAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }),
+    input: z.strictObject({ opId, code: PROMO_CODE, label: field('staffReason'), days, maxUses: z.int().min(1).max(1000000).optional(), expiresAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }),
   },
   'staff.promoSet': { profile: false, write: true, input: z.strictObject({ opId, codeId: id, active: z.boolean() }) },
 };

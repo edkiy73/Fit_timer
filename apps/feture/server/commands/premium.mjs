@@ -214,11 +214,15 @@ export async function grantPeriod(q, accountId, source, days, { reason = null, g
   return e;
 }
 
-/** Gives every new account its welcome Premium when it finishes onboarding, if the switch is on (once per account).
+/** Gives every new account its welcome Premium when it finishes onboarding, if the switch is on (once per account), after the age check.
  * @param {Q} q @param {string} accountId */
 export async function grantWelcome(q, accountId) {
   const [promo] = await q.query('select welcome_days from feture.premium_promo where id');
   if (!promo?.welcome_days) return;
+  // Only an account that finished onboarding AND passed the age check (a staff-approved selfie or document): throwaway accounts
+  // made in bulk never get it (security audit 06.11.2026, B2). Called again when the age check is approved.
+  const [a] = await q.query('select onboarded_at, feture.age_ok(id) ok from feture.account where id = $1', [accountId]);
+  if (!a?.onboarded_at || !a.ok) return;
   if ((await q.query(`select 1 from feture.entitlement where account_id = $1 and source = 'promo' and reason = 'welcome'`, [accountId])).length) return;
   await grantPeriod(q, accountId, 'promo', promo.welcome_days, { reason: 'welcome', why: 'welcome' });
 }
@@ -537,7 +541,7 @@ const run = {
   },
 
   async 'staff.premiumGrantAll'(q, { account, input }) {
-    await requireStaff(q, account, ['owner', 'lead']);
+    await requireStaff(q, account, ['owner', 'lead'], { fresh: true }); // a code from the last minutes: it reaches many accounts (audit stage 2)
     const targets = await bulkTargets(q, input.audience, input.before);
     if (!targets.length) fail(422, 'rule_violation', { rule: 'nobody' });
     if (targets.length > BULK_MAX) fail(422, 'rule_violation', { rule: 'too_many' });
@@ -560,7 +564,7 @@ const run = {
   },
 
   async 'staff.premiumPromoSet'(q, { account, input }) {
-    await requireStaff(q, account, ['owner', 'lead']);
+    await requireStaff(q, account, ['owner', 'lead'], { fresh: true }); // a code from the last minutes: it reaches many accounts (audit stage 2)
     await q.query('update feture.premium_promo set welcome_days = $1, updated_by = $2, updated_at = now() where id', [input.welcomeDays, account.id]);
     await journal(q, account.id, 'premium.welcome', 'premium', account.id, { welcomeDays: input.welcomeDays });
     return { welcomeDays: input.welcomeDays };
@@ -721,6 +725,7 @@ const run = {
     if (input.approve) {
       await q.query(`update feture.account set age_verified_until = now() + make_interval(years => $2), updated_at = now() where id = $1`, [c.account_id, AGE_CHECK_YEARS]);
       await settleReferral(q, c.account_id); // an invitation waits for this check
+      await grantWelcome(q, c.account_id); // the welcome Premium waits for it too
     }
     const [p] = await q.query('select person_profile_id from feture.account where id = $1', [c.account_id]);
     await enqueue(q, 'verification.decided', p.person_profile_id, { state: input.approve ? 'approved' : 'rejected', reason: input.reason ?? null });

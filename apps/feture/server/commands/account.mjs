@@ -71,7 +71,7 @@ export const sanctionKey = (pepper, coreAccountHash) => hmac(pepper, 'feture-san
 
 /** Remembers a sanction in force for the login before its account is deleted (audit item 28). @param {Q} q
  * @param {string} pepper @param {string} coreAccountHash @param {string} accountId @param {string} pp person profile */
-async function carrySanction(q, pepper, coreAccountHash, accountId, pp) {
+export async function carrySanction(q, pepper, coreAccountHash, accountId, pp) {
   const [s] = await q.query(
     `select a.state, a.suspension_rule, p.suspended_until, p.restricted_at, p.restricted_until, p.restriction_rule, p.restriction_scope
      from feture.account a join feture.profile p on p.id = a.person_profile_id where a.id = $1`, [accountId]);

@@ -38,7 +38,7 @@ async function personalCode(q, accountId) {
  * only. @param {Q} q @param {string} accountId the invited account */
 export async function settleReferral(q, accountId) {
   const [u] = await q.query(
-    `select u.id, c.kind, c.owner_account_id inviter, c.days promo_days from feture.referral_use u join feture.referral_code c on c.id = u.code_id
+    `select u.id, u.code_id, c.kind, c.owner_account_id inviter, c.days promo_days from feture.referral_use u join feture.referral_code c on c.id = u.code_id
      where u.invitee_account_id = $1 and u.state = 'pending' for update of u`, [accountId]);
   if (!u) return;
   const [a] = await q.query('select onboarded_at, feture.age_ok(id) ok from feture.account where id = $1', [accountId]);
@@ -50,7 +50,9 @@ export async function settleReferral(q, accountId) {
   await q.query(`update feture.referral_use set state = 'rewarded', rewarded_at = now() where id = $1`, [u.id]);
   if (newcomerDays > 0) await grantPeriod(q, accountId, 'referral', newcomerDays, { reason: u.kind === 'personal' ? 'invited' : 'promo', why: u.kind === 'personal' ? 'invited' : 'promo' });
   if (u.kind !== 'personal' || !s.inviter_days) return;
-  // The inviter: up to `cap_count` rewarded invitations in the last `cap_days` days (this one included).
+  // The inviter: up to `cap_count` rewarded invitations in the last `cap_days` days (this one included). The code row is locked so
+  // two settlements of one inviter cannot both pass the cap.
+  await q.query('select 1 from feture.referral_code where id = $1 for update', [u.code_id]);
   const [{ n }] = await q.query(
     `select count(*)::int n from feture.referral_use x join feture.referral_code c on c.id = x.code_id
      where c.owner_account_id = $1 and x.state = 'rewarded' and x.rewarded_at > now() - make_interval(days => $2)`, [u.inviter, s.cap_days]);
@@ -76,7 +78,7 @@ const run = {
 
   async 'referral.apply'(q, { account, input }) {
     const code = input.code.toUpperCase();
-    const [c] = await q.query(`select * from feture.referral_code where code = $1 and active`, [code]);
+    const [c] = await q.query(`select * from feture.referral_code where code = $1 and active for update`, [code]); // locked: two uses cannot both pass max_uses
     // The same answer for «no such code», an expired or used-up one: nothing tells which codes exist.
     if (!c || (c.expires_at && new Date(c.expires_at).getTime() < Date.now())) fail(404, 'not_found');
     if (c.owner_account_id === account.id) fail(422, 'rule_violation', { rule: 'own_code' });
@@ -104,7 +106,7 @@ const run = {
   },
 
   async 'staff.referralSettingsSet'(q, { account, input }) {
-    await requireStaff(q, account, ROLES);
+    await requireStaff(q, account, ROLES, { fresh: true });
     const map = { enabled: 'enabled', rewardDays: 'reward_days', inviterDays: 'inviter_days', capCount: 'cap_count', capDays: 'cap_days' };
     for (const [k, col] of Object.entries(map)) if (k in input) await q.query(`update feture.referral_settings set ${col} = $1, updated_by = $2, updated_at = now() where id`, [/** @type {any} */ (input)[k], account.id]);
     const { opId: _o, ...changed } = /** @type {any} */ (input);
@@ -126,7 +128,7 @@ const run = {
   },
 
   async 'staff.promoCreate'(q, { account, input }) {
-    await requireStaff(q, account, ROLES);
+    await requireStaff(q, account, ROLES, { fresh: true });
     const code = input.code.toUpperCase();
     try {
       const [c] = await q.query(
@@ -141,7 +143,7 @@ const run = {
   },
 
   async 'staff.promoSet'(q, { account, input }) {
-    await requireStaff(q, account, ROLES);
+    await requireStaff(q, account, ROLES, { fresh: true });
     const [c] = await q.query(`update feture.referral_code set active = $2 where id = $1 and kind = 'promo' returning code`, [input.codeId, input.active]);
     if (!c) fail(404, 'not_found');
     await journal(q, account.id, 'promo.set', 'premium', account.id, { code: c.code, active: input.active });
