@@ -92,3 +92,13 @@ test('createSignals with the hub as sender: kind-only signals, de-duplicated', a
   await signals.send([{ profile: 'profile-a', kind: 'notify' }, { profile: 'profile-a', kind: 'notify' }, { profile: 'profile-a', kind: 'decide' }]);
   assert.deepEqual(got, [{ c: A, k: 'notify' }, { c: A, k: 'decide' }]);
 });
+
+test('one IPv6 /64 is one address, IPv4 stays as it is (audit B3c)', async () => {
+  const { addressKey } = await import('../server/realtime-sse.mjs');
+  assert.equal(addressKey('203.0.113.7'), '203.0.113.7');
+  assert.equal(addressKey('::ffff:203.0.113.7'), '203.0.113.7');
+  assert.equal(addressKey('2001:db8:1:2:aaaa:bbbb:cccc:dddd'), addressKey('2001:db8:1:2::1'));
+  assert.equal(addressKey('2001:db8:1:2::1'), '2001:0db8:0001:0002::/64');
+  assert.notEqual(addressKey('2001:db8:1:3::1'), addressKey('2001:db8:1:2::1'));
+  assert.equal(addressKey('2001:DB8::1'), '2001:0db8:0000:0000::/64');
+});

@@ -41,7 +41,7 @@
     "react-dom": "19.3.0",
     "react-router": "8.4.0",
     "sharp": "0.35.5",
-    "zod": "4.6.5"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@capacitor/cli": "8.5.2",

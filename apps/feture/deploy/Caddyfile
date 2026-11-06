@@ -13,9 +13,15 @@
 	request_body @upload {
 		max_size 120MB
 	}
-	@other not path /api/fe-upload
-	request_body @other {
-		max_size 5MB
+	# Commands and sign-in are small JSON (the handler's own cap is 16 KB): nothing bigger is read into memory before auth
+	# (security audit 06.11.2026, B3). Admin and document publishing keep a roomier limit.
+	@json path /api/fe /api/auth /api/fe-events
+	request_body @json {
+		max_size 64KB
+	}
+	@rest not path /api/fe-upload /api/fe /api/auth /api/fe-events
+	request_body @rest {
+		max_size 1MB
 	}
 
 	reverse_proxy app:3000 {
@@ -30,10 +36,16 @@
 		}
 	}
 
+	# Security audit 06.11.2026 (B7). The CSP is report-only first: the browser console shows what it would block; enforce it
+	# once a pass over every screen is clean. frame-ancestors/X-Frame-Options already forbid framing (clickjacking).
 	header {
 		Strict-Transport-Security "max-age=31536000"
 		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
 		Referrer-Policy no-referrer
+		Permissions-Policy "camera=(self), microphone=(self), geolocation=(self), payment=(), usb=(), interest-cohort=()"
+		Cross-Origin-Opener-Policy same-origin
+		Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.b-cdn.net; media-src 'self' blob: https://*.b-cdn.net; connect-src 'self' https://*.b-cdn.net; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 		-Server
 	}
 }

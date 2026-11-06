@@ -15,6 +15,18 @@ const TOKEN_RE = /^fe:[A-Za-z0-9_-]{22,64}$/;
 const MAX_CHANNELS = 4;
 const HEARTBEAT_MS = 25_000;
 
+/** The key one address is counted under: an IPv4 address as it is, an IPv6 one by its /64 (one subscriber owns a whole /64, so
+ * counting full addresses lets one machine open a connection from each of 2^64 of them — security audit 06.11.2026, B3c).
+ * @param {string} address */
+export function addressKey(address) {
+  const a = address.trim().toLowerCase().replace(/^::ffff:/, '');
+  if (!a.includes(':')) return a;
+  const [head, tail = ''] = a.split('::');
+  const h = head ? head.split(':') : [], t = tail ? tail.split(':') : [];
+  const groups = a.includes('::') ? [...h, ...Array(Math.max(0, 8 - h.length - t.length)).fill('0'), ...t] : h;
+  return groups.slice(0, 4).map(g => g.padStart(4, '0')).join(':') + '::/64';
+}
+
 /** @typedef {(event: {c: string, k: string, t?: string}) => void} Subscriber */
 
 export function createHub({ maxPerAddress = 20, maxTotal = 20_000 } = {}) {
@@ -67,7 +79,7 @@ export function createHub({ maxPerAddress = 20, maxTotal = 20_000 } = {}) {
     const topics = [...new Set(raw.split(',').filter(Boolean))];
     if (!topics.length || topics.length > MAX_CHANNELS || !topics.every(t => TOKEN_RE.test(t))) return refuse(400, 'channels');
     // Caddy sets X-Forwarded-For to the real client (deploy/Caddyfile); one address cannot hold the server open.
-    const address = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+    const address = addressKey(String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0]);
     if (total >= maxTotal || (perAddress.get(address) ?? 0) >= maxPerAddress) return refuse(429, 'too_many');
 
     total++;
