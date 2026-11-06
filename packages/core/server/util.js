@@ -69,9 +69,18 @@ async function readBody(req,maxBytes){
 function ipHash(req){
   const raw = (req.headers['x-forwarded-for'] || '').split(',')[0].trim()
     || (req.socket && req.socket.remoteAddress) || 'local';
-  let h = 5381;
-  for(let i = 0; i < raw.length; i++) h = ((h * 33) ^ raw.charCodeAt(i)) >>> 0;
-  return h.toString(36);
+  return require('crypto').createHash('sha256').update(ipKey(raw)).digest('base64url').slice(0, 12);
+}
+
+// Ключ счётчика: IPv4 как есть, IPv6 по сети /64 — одному абоненту отдают целую /64, и по полным адресам лимит обходится
+// бесплатно (аудит безопасности 06.11.2026).
+function ipKey(raw){
+  const a = String(raw).trim().toLowerCase().replace(/^::ffff:/, '');
+  if(!a.includes(':')) return a;
+  const [head, tail = ''] = a.split('::');
+  const h = head ? head.split(':') : [], t = tail ? tail.split(':') : [];
+  const groups = a.includes('::') ? [...h, ...Array(Math.max(0, 8 - h.length - t.length)).fill('0'), ...t] : h;
+  return groups.slice(0, 4).map(g => g.padStart(4, '0')).join(':') + '/64';
 }
 
 // Простое окно по IP. Для обычных дешёвых запросов оставляем fail-open:
@@ -212,5 +221,5 @@ function cors(req, res){
   return false;
 }
 
-module.exports = { SESSION_TTL, sessionExpiresAt, sessionId, activeSession, validSession, revokeSession, send, fail, readBody, readBodyWithRaw, rateOk, rateOkScoped, rndId, sameSecret, cors, allowedOrigin, ipHash, MAX_BODY,
+module.exports = { SESSION_TTL, sessionExpiresAt, sessionId, activeSession, validSession, revokeSession, send, fail, readBody, readBodyWithRaw, rateOk, rateOkScoped, rndId, sameSecret, cors, allowedOrigin, ipHash, ipKey, MAX_BODY,
                    clampText, clampLine, cleanPic, cleanLink };
