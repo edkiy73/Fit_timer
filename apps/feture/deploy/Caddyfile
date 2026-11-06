@@ -36,8 +36,9 @@
 		}
 	}
 
-	# Security audit 06.11.2026 (B7). The CSP is report-only first: the browser console shows what it would block; enforce it
-	# once a pass over every screen is clean. frame-ancestors/X-Frame-Options already forbid framing (clickjacking).
+	# Security audit 06.11.2026 (B7). The CSP is enforced (it ran report-only first; a pass over the signed-in screens was clean once the
+	# inline handler and zod's eval probe were gone). frame-ancestors/X-Frame-Options also forbid framing (clickjacking). A new outside
+	# host (a font, a script, a CDN) must be added here, or the browser blocks it.
 	header {
 		Strict-Transport-Security "max-age=31536000"
 		X-Content-Type-Options nosniff
@@ -45,7 +46,7 @@
 		Referrer-Policy no-referrer
 		Permissions-Policy "camera=(self), microphone=(self), geolocation=(self), payment=(), usb=(), interest-cohort=()"
 		Cross-Origin-Opener-Policy same-origin
-		Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.b-cdn.net; media-src 'self' blob: https://*.b-cdn.net; connect-src 'self' https://*.b-cdn.net https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		Content-Security-Policy "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.b-cdn.net; media-src 'self' blob: https://*.b-cdn.net; connect-src 'self' blob: data: https://*.b-cdn.net https://challenges.cloudflare.com; worker-src 'self' blob:; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 		-Server
 	}
 }
