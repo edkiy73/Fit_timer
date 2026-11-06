@@ -11,7 +11,7 @@ const sideFits = (/** @type {any} */ v) => (v.kind === 'ds' ? ['dom', 'sub'].inc
 
 export const peopleCommands = {
   'people.search': {
-    profile: true, write: false, rate: { kind: 'people.search', max: 10000, window: '1 day' },
+    profile: true, write: false, rate: { kind: 'people.search', max: 2000, window: '1 day' },
     input: z.strictObject({ q: z.string().trim().min(2).max(40) }),
   },
   'people.byNick': {

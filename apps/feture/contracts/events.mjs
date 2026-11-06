@@ -72,7 +72,7 @@ export const eventsCommands = {
   },
   'event.withdraw': { profile: true, write: true, input: z.strictObject({ opId, eventId: id }) },
   'event.update': {
-    profile: true, write: true,
+    profile: true, write: true, rate: { kind: 'event.update', max: 200, window: '1 day' },
     input: z.strictObject({ opId, eventId: id, rev: z.int().positive(), event: eventFields }),
   },
   'event.cancel': { profile: true, write: true, input: z.strictObject({ opId, eventId: id, reason: field('reason').default('') }) },

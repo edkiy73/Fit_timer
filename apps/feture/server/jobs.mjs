@@ -19,6 +19,7 @@ import { noticeHandlers, sweepNotices } from './commands/dsa.mjs';
 import { helpHandlers, sweepPublicHelp } from './commands/support.mjs';
 import { supportEmail } from './support-config.mjs';
 import { sweepPremium, sweepSelfies, verificationHandlers } from './commands/premium.mjs';
+import { sweepReferrals } from './commands/referral.mjs';
 
 /** Queue worker (S2 §8, D7). Called every minute by server/host.mjs (and soon after a command queued something,
  * server/kick.mjs) through `POST /api/fe?jobs=1` with the jobs secret. Every handler is idempotent.
@@ -323,6 +324,7 @@ async function tickOnce(db, deps, processed) {
   await sweepCommunityJoins(db);
   const selfies = await sweepSelfies(db);
   await sweepPremium(db);
+  await sweepReferrals(db);
   await sweepPushSent(db);
   if (deps.email) await queueDigests(db);
   await sweepEmail(db);

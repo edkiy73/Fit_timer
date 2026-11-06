@@ -13,8 +13,8 @@ export const accessCommands = {
   // For someone else's part also `age`: whether the viewer (or, for a couple, the partner) still needs the age check.
   'private.get': { profile: true, write: false, input: z.strictObject({ profileId: id }) },
   'private.setOn': { profile: true, write: true, input: z.strictObject({ opId, on: z.boolean(), confirm: z.boolean().optional() }) },
-  'private.setText': { profile: true, write: true, input: z.strictObject({ opId, text: field('privateText') }) },
-  'private.setMedia': { profile: true, write: true, input: z.strictObject({ opId, assetIds: z.array(id).max(18) }) },
+  'private.setText': { profile: true, write: true, rate: { kind: 'private.set_text', max: 200, window: '1 day' }, input: z.strictObject({ opId, text: field('privateText') }) },
+  'private.setMedia': { profile: true, write: true, rate: { kind: 'private.set_media', max: 200, window: '1 day' }, input: z.strictObject({ opId, assetIds: z.array(id).max(18) }) },
   'access.request': { profile: true, write: true, input: z.strictObject({ opId, profileId: id, scopes }) },
   'access.cancel': { profile: true, write: true, input: z.strictObject({ opId, requestId: id }) },
   'access.grant': {

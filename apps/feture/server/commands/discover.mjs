@@ -76,6 +76,11 @@ async function datingOpen(q) {
 /** Stores a shared location rounded to the 0.05° grid (~5 km); the exact one is never kept.
  * @param {Q} q @param {string} profileId @param {string} accountId @param {number} lat @param {number} lon */
 async function writeLocation(q, profileId, accountId, lat, lon) {
+  // A place moves once an hour at most: asking the distance to someone from many invented places finds them (audit 06.11.2026).
+  const [was] = await q.query(
+    `select (shared_at > now() - interval '1 hour' and (abs(lat - round($2::numeric * 20) / 20) > 0.001 or abs(lon - round($3::numeric * 20) / 20) > 0.001)) too_soon
+     from feture.profile_location where profile_id = $1`, [profileId, lat, lon]);
+  if (was?.too_soon) fail(429, 'rate_limited', { rule: 'location_often' });
   const [l] = await q.query(
     `insert into feture.profile_location (profile_id, lat, lon, shared_by) values ($1, (round($2::numeric * 20) / 20)::float8, (round($3::numeric * 20) / 20)::float8, $4)
      on conflict (profile_id) do update set lat = excluded.lat, lon = excluded.lon, shared_by = excluded.shared_by, shared_at = now()
@@ -162,9 +167,10 @@ export async function cards(q, viewer, ids, media) {
        (select count(*)::int from feture.interest i join feture.interest j on j.topic_id = i.topic_id and j.profile_id = $2 and j.vis = 'public' and j.value is not null
           where i.profile_id = p.id and i.vis = 'public' and i.value is not null) shared,
        ${PREMIUM_SQL} premium,
-       -- Distance only between two shared (rounded) locations, in 5 km steps and never under 5 km.
-       (select greatest(5, ceil(feture.km(me.lat, me.lon, l.lat, l.lon) / 5) * 5)::int from feture.profile_location me, feture.profile_location l
-          where me.profile_id = $2 and l.profile_id = p.id) distance_km
+       -- Distance only between two shared (rounded) locations, in 10 km steps and never under 10 km — and only to someone who is in
+       -- Discover: a hidden person found by name must not be locatable by asking from several places (security audit 06.11.2026).
+       (select greatest(10, ceil(feture.km(me.lat, me.lon, l.lat, l.lon) / 10) * 10)::int from feture.profile_location me, feture.profile_location l
+          where me.profile_id = $2 and l.profile_id = p.id and feture.discoverable(p.id)) distance_km
      from feture.profile p
      left join feture.profile_details d on d.profile_id = p.id
      left join feture.place pl on pl.id = d.city_id and pl.state = 'approved'

@@ -69,7 +69,7 @@ export const communitiesCommands = {
     profile: true, write: false,
     input: z.strictObject({ communityId: id.optional(), topic: code.optional(), limit: z.int().min(1).max(20).default(3) }),
   },
-  'community.invite': { profile: true, write: true, input: z.strictObject({ opId, communityId: id, revokeAll: z.boolean().optional() }) },
+  'community.invite': { profile: true, write: true, rate: { kind: 'community.invite', max: 30, window: '1 day' }, input: z.strictObject({ opId, communityId: id, revokeAll: z.boolean().optional() }) },
   'community.discussions': { profile: true, write: false, input: z.strictObject({ communityId: id, cursor: z.string().max(200).optional() }) },
   'discussion.host': {
     profile: true, write: true,

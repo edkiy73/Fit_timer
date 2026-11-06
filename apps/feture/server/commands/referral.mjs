@@ -50,17 +50,44 @@ export async function settleReferral(q, accountId) {
   await q.query(`update feture.referral_use set state = 'rewarded', rewarded_at = now() where id = $1`, [u.id]);
   if (newcomerDays > 0) await grantPeriod(q, accountId, 'referral', newcomerDays, { reason: u.kind === 'personal' ? 'invited' : 'promo', why: u.kind === 'personal' ? 'invited' : 'promo' });
   if (u.kind !== 'personal' || !s.inviter_days) return;
-  // The inviter: up to `cap_count` rewarded invitations in the last `cap_days` days (this one included). The code row is locked so
-  // two settlements of one inviter cannot both pass the cap.
-  await q.query('select 1 from feture.referral_code where id = $1 for update', [u.code_id]);
-  const [{ n }] = await q.query(
-    `select count(*)::int n from feture.referral_use x join feture.referral_code c on c.id = x.code_id
-     where c.owner_account_id = $1 and x.state = 'rewarded' and x.rewarded_at > now() - make_interval(days => $2)`, [u.inviter, s.cap_days]);
-  if (n > s.cap_count) return;
-  const [i] = await q.query(`select person_profile_id from feture.account where id = $1 and state = 'active'`, [u.inviter]);
-  if (!i) return;
-  await grantPeriod(q, u.inviter, 'referral', s.inviter_days, { reason: 'invitation', notify: false });
-  await enqueue(q, 'premium.referral', i.person_profile_id, { for: u.inviter, days: s.inviter_days });
+  // The inviter is paid a week later (sweepReferrals): a throwaway account that is gone or banned by then brings nothing.
+  await q.query(`update feture.referral_use set inviter_due_at = now() + interval '7 days' where id = $1`, [u.id]);
+}
+
+/** Do these two accounts share a device? A device is the browser or phone that signed in: both have seen the same Core session id.
+ * @param {Q} q @param {string} a @param {string} b */
+async function sharedDevice(q, a, b) {
+  return (await q.query(
+    `select 1 from feture.session_seen x join feture.session_seen y on y.session_id = x.session_id and y.account_id = $2 where x.account_id = $1 limit 1`, [a, b])).length > 0;
+}
+
+/** Pays the inviters whose week is over (queue worker, every minute): not when the newcomer is gone, restricted or banned, nor when the
+ * two share a device, nor beyond the cap. @param {import('../db.mjs').Db} db */
+export async function sweepReferrals(db) {
+  if (!(await db.query(`select to_regclass('feture.referral_use') is not null and exists (select 1 from information_schema.columns where table_schema = 'feture' and table_name = 'referral_use' and column_name = 'inviter_due_at') ok`))[0].ok) return 0;
+  return db.tx(async q => {
+    const s = await settings(q);
+    const due = await q.query(
+      `select u.id, u.invitee_account_id, c.owner_account_id inviter, c.id code_id from feture.referral_use u join feture.referral_code c on c.id = u.code_id
+       where u.inviter_state is null and u.inviter_due_at <= now() order by u.inviter_due_at limit 50 for update of u skip locked`);
+    let paid = 0;
+    for (const u of due) {
+      const [inv] = await q.query(
+        `select a.state, p.restricted_at is not null restricted from feture.account a left join feture.profile p on p.id = a.person_profile_id where a.id = $1`, [u.invitee_account_id]);
+      const [i] = await q.query(`select person_profile_id from feture.account where id = $1 and state = 'active'`, [u.inviter]);
+      await q.query('select 1 from feture.referral_code where id = $1 for update', [u.code_id]); // two of one inviter's settle in turn
+      const [{ n }] = await q.query(
+        `select count(*)::int n from feture.referral_use x join feture.referral_code c on c.id = x.code_id
+         where c.owner_account_id = $1 and x.inviter_state = 'paid' and x.inviter_due_at > now() - make_interval(days => $2)`, [u.inviter, s.cap_days]);
+      const ok = s.enabled && s.inviter_days > 0 && inv?.state === 'active' && !inv.restricted && i && n < s.cap_count && !(await sharedDevice(q, u.inviter, u.invitee_account_id));
+      await q.query(`update feture.referral_use set inviter_state = $2 where id = $1`, [u.id, ok ? 'paid' : 'void']);
+      if (!ok) continue;
+      await grantPeriod(q, u.inviter, 'referral', s.inviter_days, { reason: 'invitation', notify: false });
+      await enqueue(q, 'premium.referral', i.person_profile_id, { for: u.inviter, days: s.inviter_days });
+      paid++;
+    }
+    return paid;
+  });
 }
 
 /** @type {Record<keyof typeof referralCommands, import('../handler.mjs').Command['run']>} */
@@ -88,6 +115,8 @@ const run = {
     // For newcomers only: an account a week old or less (so an old account cannot collect a code afterwards).
     const [a] = await q.query(`select created_at > now() - interval '7 days' fresh from feture.account where id = $1`, [account.id]);
     if (!a.fresh) fail(422, 'rule_violation', { rule: 'not_new' });
+    // One person with two accounts on one device cannot invite themselves (security audit 06.11.2026).
+    if (c.kind === 'personal' && c.owner_account_id && await sharedDevice(q, c.owner_account_id, account.id)) fail(422, 'rule_violation', { rule: 'own_code' });
     if (c.max_uses) {
       const [{ n }] = await q.query('select count(*)::int n from feture.referral_use where code_id = $1', [c.id]);
       if (n >= c.max_uses) fail(404, 'not_found');
