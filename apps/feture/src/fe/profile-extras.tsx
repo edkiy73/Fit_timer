@@ -233,14 +233,14 @@ export function ProfileHero({p,rel,inert,onOpen}:{p:PersonProfile,rel:Relation|n
 }
 
 /** `openViewer()` — full-screen photos: ‹ ›, arrows, swipe, Esc. */
-export function PhotoViewer({srcs,index,onClose,wm}:{srcs:Slide[],index:number,onClose:()=>void,/** Someone else's private photos: the viewer's handle. */ wm?:string|null|undefined}){
+export function PhotoViewer({srcs,index,onClose,wm,onExpired}:{srcs:Slide[],index:number,onClose:()=>void,/** A clip's link ran out: the screen asks for fresh ones. */ onExpired?:(()=>void)|undefined,/** Someone else's private photos: the viewer's handle. */ wm?:string|null|undefined}){
  const {t}=useI18n();const [i,setI]=useState(index);const [on,setOn]=useState(false);const closeBtn=useRef<HTMLButtonElement>(null);const sx=useRef<number|null>(null);
  const step=useCallback((d:number)=>setI(v=>Math.max(0,Math.min(srcs.length-1,v+d))),[srcs.length]);
  useEffect(()=>{const r=requestAnimationFrame(()=>{setOn(true);closeBtn.current?.focus({preventScroll:true});});return ()=>cancelAnimationFrame(r);},[]);
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();else if(e.key==='ArrowLeft')step(-1);else if(e.key==='ArrowRight')step(1);};addEventListener('keydown',k);return ()=>removeEventListener('keydown',k);},[onClose,step]);
  return <Layer><div className={'viewer'+(on?' on':'')} role="dialog" aria-modal="true" aria-label={t('fe.px.ph.viewer')}
   onPointerDown={e=>{sx.current=e.clientX;}} onPointerUp={e=>{if(sx.current==null)return;const dx=e.clientX-sx.current;sx.current=null;if(Math.abs(dx)>50)step(dx<0?1:-1);}}>
-  <PhotoTrack srcs={srcs} index={i} wm={wm} onStep={step} onClose={onClose}/>
+  <PhotoTrack srcs={srcs} index={i} wm={wm} onExpired={onExpired} onStep={step} onClose={onClose}/>
   <div className="vw-top"><span className="vw-n">{i+1} / {srcs.length}</span><IconBtn ref={closeBtn} icon={X} kind="glass" label={t('fe.px.close')} onClick={onClose}/></div>
   {srcs.length>1&&<>
    <button type="button" className="vw-nav l" aria-label={t('fe.px.ph.prev')} disabled={i===0} onClick={()=>step(-1)}><ChevronLeft/></button>

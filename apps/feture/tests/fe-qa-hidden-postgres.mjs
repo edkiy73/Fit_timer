@@ -75,7 +75,7 @@ test('a persona’s posts, discussions, replies, likes, follows, events, communi
       { action: 'community.catalog' }, { action: 'discussions.popular', limit: 10 },
       { action: 'post.replies', postId: mine }, { action: 'post.likers', targetId: mine },
       { action: 'profile.followers', profileId: a }, { action: 'profile.followers', profileId: w, following: true },
-      { action: 'people.search', q: 'qa' }, { action: 'notifications.list' },
+      { action: 'people.search', q: 'qa-' }, { action: 'notifications.list' },
     ];
     for (const body of lists) {
       const { r, hits } = await sees('ua', a, body);
@@ -102,7 +102,7 @@ test('a persona’s posts, discussions, replies, likes, follows, events, communi
     await qa({ action: 'post.replies', postId: mine }, [reply.id]);
     await qa({ action: 'post.likers', targetId: mine }, [q1]);
     await qa({ action: 'profile.followers', profileId: a }, [q1]);
-    await qa({ action: 'people.search', q: 'qa' }, ['qa_one']);
+    await qa({ action: 'people.search', q: 'qa_' }, ['qa_one']);
     await qa({ action: 'profile.posts', profileId: q1 }, [qPost]);
     // …and the real people's things too.
     assert.ok((await sees('qa-2', q2, { action: 'feed.list', tab: 'forYou' })).text.includes(mine));

@@ -918,7 +918,7 @@ function ComposeForm({edit,fromSaved=false}:{edit?:Post|undefined,fromSaved?:boo
    .then(r=>setFolks(r.items.filter(p=>!!p.handle).map(p=>({id:p.id,handle:p.handle!,name:nameOf(p),avatar:thumbOf(p.avatar),kind:p.kind,halves:p.halves,mentionable:p.mentionable})))).catch(()=>{});}
  };
  useEffect(()=>{
-  if(!sug||sug.q.length<2){setFound([]);return;}
+  if(!sug||sug.q.length<3){setFound([]);return;}
   const id=setTimeout(()=>{call('people.search',{q:sug.q},mentionRes).then(r=>setFound(r.items.filter(p=>!!p.handle).map(p=>({id:p.id,handle:p.handle!,name:nameOf(p),avatar:thumbOf(p.avatar),kind:p.kind,halves:p.halves,mentionable:p.mentionable})))).catch(()=>setFound([]));},250);
   return ()=>clearTimeout(id);
  },[sug?.q,call]);
@@ -1095,7 +1095,7 @@ function MentionSheet({onClose,onPick}:{onClose:()=>void,onPick:(handle:string,m
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[call,acting]);
  const low=q.trim().toLowerCase().replace(/^@/,'');
- useEffect(()=>{if(low.length<2){setFound([]);return;}const id=setTimeout(()=>{call('people.search',{q:low},mentionRes).then(r=>setFound(r.items.map(p=>({id:p.id,handle:p.handle??'',name:nameOf(p),avatar:thumbOf(p.avatar),kind:p.kind,mentionable:p.mentionable,premium:p.premium,photoVerified:p.photoVerified})))).catch(()=>setFound([]));},250);
+ useEffect(()=>{if(low.length<3){setFound([]);return;}const id=setTimeout(()=>{call('people.search',{q:low},mentionRes).then(r=>setFound(r.items.map(p=>({id:p.id,handle:p.handle??'',name:nameOf(p),avatar:thumbOf(p.avatar),kind:p.kind,mentionable:p.mentionable,premium:p.premium,photoVerified:p.photoVerified})))).catch(()=>setFound([]));},250);
   return ()=>clearTimeout(id);},[low,call]);
  const match=(p:Mention)=>!low||p.handle.toLowerCase().startsWith(low)||p.name.toLowerCase().includes(low);
  const mine=(near??[]).filter(match) as (Mention&{kind:string})[];const known=new Set(mine.map(p=>p.id));const rest=found.filter(p=>!known.has(p.id));

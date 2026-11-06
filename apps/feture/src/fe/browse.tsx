@@ -171,7 +171,7 @@ export function SearchScreen(){
    const ids=matched.slice(0,10).map(x=>x.id);const opts={signal:ctl.signal};
    const none=Promise.resolve(null);
    Promise.allSettled([
-    want('people')?call('people.search',{q:term},peopleRes,opts).then(r=>r.items):none,
+    want('people')&&term.length>=3?call('people.search',{q:term},peopleRes,opts).then(r=>r.items):none,
     // Posts: words in the title or text, then those under the matching interests.
     // Filters apply in their own tab only (V21 gFilters); without them, matching interests add their posts and communities.
     want('posts')?(()=>{const pf=scope==='posts'?sf.posts:NO_SF.posts;const narrow={...(pf.types.length?{types:pf.types}:{}),...(pf.topics.length?{topics:pf.topics}:{})};const plain=!pf.types.length&&!pf.topics.length;

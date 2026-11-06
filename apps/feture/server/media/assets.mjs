@@ -1,10 +1,11 @@
 // @ts-check
 import { fail } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
+import { markedUrls } from './watermark.mjs';
 
 /** @typedef {import('../db.mjs').Q} Q @typedef {import('../profiles.mjs').Acting} Acting
  * @typedef {import('./r2.mjs').Storage} Storage
- * @typedef {{storage: Storage | null, delivery: import('./delivery.mjs').Delivery | null}} MediaConfig
+ * @typedef {{storage: Storage | null, delivery: import('./delivery.mjs').Delivery | null, watermark?: {secret: string, origin: string} | null}} MediaConfig
  * @typedef {'public' | 'private' | 'chat' | 'own'} Place where the media is shown; decides explicit handling
  */
 
@@ -28,6 +29,7 @@ const VIDEO_PURPOSES = new Set(['post', 'gallery', 'chat', 'private', 'avatar'])
 const TTL = { normal: 600, once: 60, private: 120 };
 // A clip is fetched in ranges while it plays: its link must outlive the longest clip even for view-once media.
 const FILE_TTL_MIN = 300;
+const FILE_TTL_PRIVATE = 120;
 
 /** Clients only ever get an upload URL for `u/<id>` (quarantine). Nothing reads it but the scanner.
  * Viewers get `o/<id>` and `v/<id>/*`, written by the server from the bytes it scanned, so replacing the
@@ -142,7 +144,7 @@ async function ownAsset(q, acting, assetId, { lock = false } = {}) {
  * @param {{id: string, owner_profile_id: string, kind: string, purpose: string, state: string, explicitness: string,
  *   width: number | null, height: number | null, view_rule: string, copies_at?: unknown, duration_ms?: number | null,
  *   waveform?: number[] | null}} asset
- * @param {{viewerProfileId: string, place: Place, showExplicit: boolean, staff?: boolean, opened?: boolean, blurAll?: boolean, fileTtlCap?: number}} ctx
+ * @param {{viewerProfileId: string, place: Place, showExplicit: boolean, staff?: boolean, opened?: boolean, blurAll?: boolean, fileTtlCap?: number, watermarkAccountId?: string}} ctx
  *   showExplicit: the viewer turned explicit content on — on the website, as Apple 1.2 requires —
  *   and has not asked to blur it (chatBlur). The same answer applies in the apps once set.
  *   opened: a view-once/timer media the viewer has consciously opened just now (chat.openMedia).
@@ -182,8 +184,15 @@ export async function mediaDto(cfg, asset, ctx) {
   // A video's pictures are its poster frame; the clip itself (`file`) only when nothing covers it.
   /** @type {import('./delivery.mjs').Variant[]} */
   const variants = blurred ? ['blur'] : asset.kind === 'video' ? ['thumb', 'card', 'full', 'file'] : ['thumb', 'card', 'full'];
-  const urls = await cfg.delivery.urls(variants.map(variant => ({ assetId: asset.id, variant, viewerProfileId: ctx.viewerProfileId,
-    ttlSeconds: variant === 'file' ? Math.min(Math.max(ttl, FILE_TTL_MIN), ctx.fileTtlCap ?? Infinity) : ttl })));
+  const marked = !!cfg.watermark && !!ctx.watermarkAccountId && asset.purpose === 'private' && !own && !blurred;
+  // Someone else's private pictures come through our server with the viewer's handle in them (watermark.mjs); a clip's own file
+  // lives 120 s (a clip is a minute at most; the app asks for a fresh link every minute while the part is open) instead of 300.
+  const fileTtl = asset.purpose === 'private' && !own ? FILE_TTL_PRIVATE : FILE_TTL_MIN;
+  const [plain, stamped] = [variants.filter(v => !(marked && v !== 'file')), variants.filter(v => marked && v !== 'file')];
+  const plainUrls = await cfg.delivery.urls(plain.map(variant => ({ assetId: asset.id, variant, viewerProfileId: ctx.viewerProfileId,
+    ttlSeconds: variant === 'file' ? Math.min(Math.max(ttl, fileTtl), ctx.fileTtlCap ?? Infinity) : ttl })));
+  const stampedUrls = stamped.length && cfg.watermark ? await markedUrls(cfg.watermark, { assetId: asset.id, variants: stamped, viewerProfileId: ctx.viewerProfileId, accountId: /** @type {string} */ (ctx.watermarkAccountId) }) : [];
+  const urls = variants.map(v => stamped.includes(v) ? stampedUrls[stamped.indexOf(v)] : plainUrls[plain.indexOf(v)]);
   return {
     id: asset.id,
     kind: asset.kind,

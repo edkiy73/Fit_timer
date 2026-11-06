@@ -592,13 +592,18 @@ const run = {
 
   async 'staff.premiumRevoke'(q, { account, input }) {
     const roles = await requireStaff(q, account, PREMIUM_ROLES);
-    const [e] = await q.query('select account_id, source from feture.entitlement where id = $1 and revoked_at is null', [input.entitlementId]);
+    const [e] = await q.query('select account_id, source, purchase_id from feture.entitlement where id = $1 and revoked_at is null', [input.entitlementId]);
     if (!e) fail(404, 'not_found');
     if (!ownerSelf(roles) && (await q.query(`select ${staffOwnAccount('$1::uuid', '$2::uuid')} own`, [e.account_id, account.id]))[0].own) fail(403, 'forbidden', { rule: 'self' });
     // A period somebody paid for, or was gifted, is taken back only on purpose; the refund is made at the provider.
     if (e.source !== 'staff' && !input.confirmPaid) fail(422, 'rule_violation', { rule: 'paid_confirm' });
     const rows = await q.query(`update feture.entitlement set revoked_at = now() where id = $1 and revoked_at is null returning account_id`, [input.entitlementId]);
     if (!rows[0]) fail(404, 'not_found');
+    // A paid period taken back after the refund at the provider: the purchase is marked refunded once none of its periods is left
+    // (so the books agree, and the provider's own refund notice later changes nothing twice).
+    if (e.purchase_id && !(await q.query('select 1 from feture.entitlement where purchase_id = $1 and revoked_at is null', [e.purchase_id])).length) {
+      await q.query(`update feture.purchase set state = 'refunded' where id = $1 and state = 'paid'`, [e.purchase_id]);
+    }
     await recompute(q, rows[0].account_id);
     // Other grants may keep Premium going: then it is not «disabled», and the person is not told so.
     const [a] = await q.query('select premium_until from feture.account where id = $1', [rows[0].account_id]);
