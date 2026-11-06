@@ -49,7 +49,7 @@ cap with a staff alert, collapse `+` aliases per registered domain.
 once an account finishes onboarding, with no age check; combined with B1 every fake account is free Premium. Currently harmless
 because the switch is off. Fix: after B1, grant only after the age check and a verified e-mail; daily cap on such grants with an alert.
 
-**B3 — cheap DoS (high, open).** (a) `/api/fe` does `authenticate` (a store lookup through PostgREST) before any limit, so garbage
+**B3 — cheap DoS (high, in progress — stage 1 PR).** Stage 1 does: (b) Caddy `request_body` 64 KB on `/api/fe`, `/api/auth`, 1 MB elsewhere (uploads unchanged) and `host.mjs` reads at most 64 KB / 1 MB with a 20 s body deadline; (a) a per-address, per-minute counter of *refused* credentials in `api/fe.mjs cachedAuth` (40/min → 429 `rate_limited` without a store lookup; process memory, only refusals count); (c) SSE counts addresses by /64 (`addressKey`); (d) pool 5 → 15, `statement_timeout` 10 s. Still open: the same limit across many addresses (needs Cloudflare in front), SSE accepts any well-formed token, a separate small pool for staff/jobs, Core `ipHash` by /64 (stage 2, B1). Original finding: (a) `/api/fe` does `authenticate` (a store lookup through PostgREST) before any limit, so garbage
 tokens hit the DB pool; (b) `host.mjs` buffers and parses up to 4 MB before auth, Caddy allows 5 MB; (c) SSE accepts any token that
 matches a regex, 20 000 total slots can be filled (`server/realtime-sse.mjs:44-63`); (d) app pool is 5 (`api/fe.mjs:63`), no
 `statement_timeout`; (e) `requestTimeout` 15 min on every path. Fix: per-IP counter before `authenticate`, Caddy `request_body`
@@ -70,12 +70,12 @@ old address, sliding/idle session expiry (e.g. 30 days idle), notice e-mail on f
 `origin/main` and rebuilds; migrations apply automatically. Fix: branch protection (soft mode, see decisions); `check` must report
 on every PR, so the `pull_request` trigger of `.github/workflows/source-consistency.yml` has no path filter.
 
-**B7 — no CSP / frame-ancestors / Permissions-Policy (high, open).** `deploy/Caddyfile` headers (lines ~32-38). Matters because the
+**B7 — no CSP / frame-ancestors / Permissions-Policy (high, in progress — stage 1 PR).** Stage 1 adds `X-Frame-Options DENY`, `Permissions-Policy`, `Cross-Origin-Opener-Policy` and `Content-Security-Policy-Report-Only` in `deploy/Caddyfile`; enforce the CSP after a clean pass of every screen in the browser console. HSTS `includeSubDomains` not added (other `kinhaze.com` subdomains may not be https). Original finding: `deploy/Caddyfile` headers (lines ~32-38). Matters because the
 sign-in token lives in the browser. Fix: add `X-Frame-Options`/`frame-ancestors`, `Permissions-Policy`, `Referrer-Policy`, HSTS
 with subdomains; CSP in report-only first, then enforce.
 
 **B8 — server hygiene (medium, open).** Disk at 81 % (about 35 GB is Docker build cache — `docker builder prune`), SSH password
-login allowed (→ «Before release» item 4), backups never restored, `zod` below 4.6.7, Dependabot security updates off.
+login allowed (→ «Before release» item 4), backups never restored, `zod` below 4.6.7 (**done in the stage 1 PR: 4.6.7**), Dependabot security updates (**turned on in repository settings**).
 
 ## B. Medium
 

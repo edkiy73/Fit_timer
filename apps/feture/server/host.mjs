@@ -28,7 +28,9 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const env = process.env;
 const PORT = Number(env.PORT || 3000);
 const STATIC_DIR = path.resolve(here, env.STATIC_DIR || '../dist');
-const MAX_BODY = 4 * 1024 * 1024; // Core's own ceiling; FetUre commands cap far lower themselves
+const MAX_BODY = 1024 * 1024; // was 4 MB (audit B3b): nothing of ours is bigger than this outside uploads
+// Commands and sign-in are tiny JSON — the handler's own cap is 16 KB; read at most 64 KB before auth (Caddy says the same).
+const SMALL = new Set(['fe', 'auth']);
 const require = createRequire(import.meta.url);
 // Mail goes out as KINHAZE (owner 03.11.2026). Installs made before the rename keep `FetUre <…>` in app.env, which
 // nothing here can edit: the sender's name is corrected at start, the address stays as configured.
@@ -73,14 +75,18 @@ function fail(res, status, error) {
 }
 
 /** Reads the body like Vercel: parsed JSON in `body` when it is JSON, the exact text in `rawBody`. @param {any} req */
-async function readBody(req) {
+async function readBody(req, max = MAX_BODY) {
   const chunks = [];
   let size = 0;
-  for await (const chunk of req) {
-    size += chunk.length;
-    if (size > MAX_BODY) throw Object.assign(new Error('too_large'), { status: 413 });
-    chunks.push(chunk);
-  }
+  // A body that trickles in holds a socket (the server-wide timeout is 15 minutes for uploads): these are small, so 20 s.
+  const slow = setTimeout(() => req.destroy(Object.assign(new Error('slow_body'), { status: 408 })), 20000);
+  try {
+    for await (const chunk of req) {
+      size += chunk.length;
+      if (size > max) throw Object.assign(new Error('too_large'), { status: 413 });
+      chunks.push(chunk);
+    }
+  } finally { clearTimeout(slow); }
   req.rawBody = Buffer.concat(chunks).toString('utf8');
   if (/^application\/json\b/i.test(String(req.headers['content-type'] || '')) && req.rawBody.trim()) {
     try { req.body = JSON.parse(req.rawBody); } catch { throw Object.assign(new Error('bad_json'), { status: 400 }); }
@@ -128,7 +134,7 @@ async function handle(req, res) {
     if (!handler) return fail(res, 404, 'not_found');
     req.query = Object.fromEntries(url.searchParams.entries());
     try {
-      if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') await readBody(req);
+      if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') await readBody(req, SMALL.has(m[1]) ? 64 * 1024 : MAX_BODY);
       await handler(req, res);
     } catch (error) {
       const status = Number(/** @type {any} */ (error)?.status);

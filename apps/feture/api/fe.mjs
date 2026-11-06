@@ -60,9 +60,10 @@ const env = process.env;
 const configured = !!(env.FETURE_DATABASE_URL && env.FETURE_ID_PEPPER);
 
 // One small pool per warm instance; Supavisor transaction mode needs prepare:false.
-const POOL = 5;
+// 15 (was 5): each request runs several sequential queries and staff, jobs and users share this pool (audit B3d).
+const POOL = 15;
 const sql = configured
-  ? postgres(env.FETURE_DATABASE_URL, { prepare: false, max: POOL, idle_timeout: 60, connect_timeout: 8, types: POSTGRES_TYPES })
+  ? postgres(env.FETURE_DATABASE_URL, { prepare: false, max: POOL, idle_timeout: 60, connect_timeout: 8, connection: { statement_timeout: 10000 }, types: POSTGRES_TYPES })
   : null;
 
 /** Media backend: bunny.net when configured (the self-hosted server), else Cloudflare R2 + media domain, else the
@@ -122,14 +123,29 @@ const realtimeCfg = signals ? { url: String(env.FETURE_API_ORIGIN).replace(/\/$/
 const AUTH_TTL = 30000;
 /** @type {Map<string, {at: number, core: Promise<any>}>} */
 const authCache = new Map();
+/** Refused credentials per address and minute (see cachedAuth). */
+const authFailures = new Map();
+const AUTH_FAIL_MAX = 40;
 /** @param {any} req */
 async function cachedAuth(req) {
   const h = (/** @type {string} */ n) => String(req.headers?.[n] ?? '');
   const key = createHash('sha256').update([h('x-fit-email'), h('x-fit-device'), h('x-fit-token')].join('\n')).digest('base64url');
   const hit = authCache.get(key);
   if (hit && Date.now() - hit.at < AUTH_TTL) return hit.core;
+  // Before the store lookup (security audit 06.11.2026, B3): an address that keeps sending credentials the store refuses is
+  // answered 429 without another lookup, so garbage tokens cannot drain the database pool. Counted per minute, in memory
+  // (one process); only refusals count, so a normal signed-in client is never held back by it.
+  const ip = ipHash(req), minute = Math.floor(Date.now() / 60000);
+  const seen = authFailures.get(ip);
+  if (seen && seen.minute === minute && seen.n >= AUTH_FAIL_MAX) throw Object.assign(new Error('rate_limited'), { status: 429 });
   // The promise is cached, not the result: the screen's first requests arrive together and share one check.
   const core = authenticate(req, store);
+  core.catch(error => {
+    if (/** @type {{status?: unknown}} */ (error)?.status !== 401) return; // an outage is not the caller's fault
+    if (authFailures.size > 20000) authFailures.clear();
+    const now = authFailures.get(ip);
+    authFailures.set(ip, now && now.minute === minute ? { minute, n: now.n + 1 } : { minute, n: 1 });
+  });
   if (authCache.size > 5000) authCache.clear();
   const entry = { at: Date.now(), core };
   authCache.set(key, entry);

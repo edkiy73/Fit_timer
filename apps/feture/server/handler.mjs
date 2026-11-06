@@ -111,6 +111,7 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
       try { core = await authenticate(req); mark('auth'); } catch (error) {
         // Only the identity check may answer 401; a 401 from storage or another backend is an outage.
         const status = /** @type {{status?: unknown}} */ (error)?.status;
+        if (status === 429) fail(429, 'rate_limited');
         fail(status === 401 ? 401 : 503, status === 401 ? 'auth_required' : 'unavailable');
       }
       // The quota counters live in another store (a network round trip): they are counted while this request reads its
