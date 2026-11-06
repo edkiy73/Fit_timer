@@ -24,6 +24,7 @@ function mailError(e:unknown,t:(k:string,p?:Record<string,string>)=>string){
  const x=e as AuthResponseError;
  switch(x?.code){
   case 'bad_email':return t('fe.w8.mail.bad');
+  case 'email_not_allowed':return t('fe.w8.mail.disposable');
   case 'same_email':return t('fe.w8.mail.same');
   case 'email_taken':return t('fe.w8.mail.taken');
   case 'bad_code':return t('fe.w8.mail.badCode',{n:String(x.left??0)});

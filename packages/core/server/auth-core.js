@@ -28,6 +28,7 @@
 const { store } = require('./store');
 const { SESSION_TTL, sessionExpiresAt, sessionId, revokeSession, validSession, activeSession, send, fail, readBody, rateOk, rateOkScoped, rndId, sameSecret, cors } = require('./util');
 const { sendMail } = require('./mail');
+const { isDisposableEmail } = require('./disposable-domains');
 const { recordClientError } = require('./diagnostics');
 const SyncShadow = require('./sync-shadow');
 const { capabilities } = require('./capabilities-core');
@@ -92,7 +93,7 @@ const NO_ACCOUNT_EXTENSION = Object.freeze({
   async onVerify(){ return {fields:{}}; }
 });
 
-function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics, sanitizeClientDiagnostic, emailChange = false} = {}){
+function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics, sanitizeClientDiagnostic, emailChange = false, blockDisposableEmail = false} = {}){
   if(!analytics || typeof analytics.recordAnalytics !== 'function' || typeof analytics.removeAnalyticsDevice !== 'function'){
     throw new Error('analytics_required');
   }
@@ -329,6 +330,7 @@ function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics, 
       if(!(await validSession(device, token))) return fail(res, 403, 'bad_sync_token');
       const next = normMail(body && body.newEmail);
       if(!EMAIL.test(next)) return fail(res, 400, 'bad_email');
+      if(blockDisposableEmail && act === 'email_change_send' && isDisposableEmail(next)) return fail(res, 400, 'email_not_allowed');
       if(next === email) return fail(res, 400, 'same_email');
       const nmh = sha(next).slice(0, 32);
       if(await store.get(`a:${nmh}`)) return fail(res, 409, 'email_taken');
@@ -465,6 +467,8 @@ function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics, 
     if(act === 'send'){
       // Отправка письма — чувствительная операция: если защитный счётчик недоступен,
       // лучше честно ответить 503, чем превратить сбой Redis в бесплатный mail-bomb.
+      // Free throwaway inboxes (opt-in per product): a bot cannot make accounts from them (security audit 06.11.2026, B1).
+      if(blockDisposableEmail && isDisposableEmail(email)) return fail(res, 400, 'email_not_allowed');
       if(!(await rateOkScoped(req, 'auth-send-ip', 30, '', 3600, true))
         || !(await rateOkScoped(req, 'auth-send-mail', 10, mh, 3600, true))){
         return fail(res, 429, 'rate_limited');
@@ -474,6 +478,14 @@ function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics, 
       const day = new Date().toISOString().slice(0, 10);
       const n = await store.incr(`mailday:${mh}:${day}`, 2 * 24 * 3600);
       if(n > PER_DAY) return fail(res, 429, 'too_many_today');
+      // One ceiling for the whole product per hour, whoever asks, counted after the per-address limits pass (only mail that would really go out):
+      // a circuit breaker against a flood from many addresses burning the sending domain's reputation and the mail budget (AUTH_SEND_GLOBAL_PER_HOUR, default 3000). A warning in the log when it trips.
+      const globalCap = Math.max(1, Number(process.env.AUTH_SEND_GLOBAL_PER_HOUR) || 3000);
+      const sentThisHour = await store.incr(`sendglobal:${Math.floor(Date.now() / 3600000)}`, 2 * 3600);
+      if(sentThisHour > globalCap){
+        if(sentThisHour === globalCap + 1) console.warn('auth_send_global_cap_reached', globalCap);
+        return fail(res, 429, 'rate_limited');
+      }
 
       const code = digits(6);
       await store.set(`mail:${mh}`, JSON.stringify({h: sha(code), tries: 0, at: Date.now()}), CODE_TTL);
