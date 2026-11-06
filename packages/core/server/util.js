@@ -83,6 +83,16 @@ function ipKey(raw){
   return groups.slice(0, 4).map(g => g.padStart(4, '0')).join(':') + '/64';
 }
 
+// The address as the send limits count it (security audit 06.11.2026): `name+anything@host` and, for Gmail, dots in the name are the same
+// mailbox, so they share one daily budget instead of giving a bot as many as it can type. Identity (the account) is never keyed by this.
+function limitMail(email){
+  const [local = '', host = ''] = String(email || '').trim().toLowerCase().split('@');
+  let name = local.split('+')[0];
+  const h = host === 'googlemail.com' ? 'gmail.com' : host;
+  if(h === 'gmail.com') name = name.replace(/\./g, '');
+  return (name || local) + '@' + h;
+}
+
 // Простое окно по IP. Для обычных дешёвых запросов оставляем fail-open:
 // временная проблема счётчика не должна выключать приложение целиком.
 async function rateOk(req, bucket, limit){
@@ -243,5 +253,5 @@ function cors(req, res){
   return false;
 }
 
-module.exports = { SESSION_TTL, sessionExpiresAt, sessionId, activeSession, validSession, revokeSession, send, fail, readBody, readBodyWithRaw, rateOk, rateOkScoped, rndId, sameSecret, cors, allowedOrigin, ipHash, ipKey, MAX_BODY,
+module.exports = { SESSION_TTL, sessionExpiresAt, sessionId, activeSession, validSession, revokeSession, send, fail, readBody, readBodyWithRaw, rateOk, rateOkScoped, rndId, sameSecret, cors, allowedOrigin, ipHash, ipKey, limitMail, MAX_BODY,
                    clampText, clampLine, cleanPic, cleanLink };
