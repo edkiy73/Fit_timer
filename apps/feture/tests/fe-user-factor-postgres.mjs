@@ -282,3 +282,62 @@ test('email text in English, and the guard for Core endpoints (sessions, email c
     assert.equal(await coreSessionBlocked({ accountHash: 'nobody', accountGeneration: 'g', sessionKey: 'k' }, { db, pepper: PEPPER, mail: null }), false);
   } finally { await pg.close(); }
 });
+
+test('confirm it is you: the factor, the deletion and the e-mail change wait for a code mailed to the signed-in address (audit B5)', async () => {
+  const mails = [];
+  const { pg, db, call, person } = await setup({ mail: async m => { mails.push(m); } });
+  try {
+    const as = { 'x-fit-email': 'anna@mail.example' };
+    await person('stepper', 'Stepper');
+    // Turning on a factor: refused until this sign-in confirmed itself.
+    const refused = await call('stepper', null, { action: 'account.factorStart' }, as);
+    assert.equal(refused.status, 403);
+    assert.equal(refused.rule, 'confirm');
+    // The code goes to the signed-in address only; a wrong code counts down, a right one trusts this sign-in.
+    assert.equal((await call('stepper', null, { action: 'account.confirmStart' }, as)).sent, true);
+    assert.equal(mails.length, 1);
+    assert.equal(mails[0].to, 'anna@mail.example');
+    const code = mails[0].text.match(/\b(\d{6})\b/)[1];
+    const wrong = await call('stepper', null, { action: 'account.confirmCheck', code: code === '000000' ? '111111' : '000000' }, as);
+    assert.deepEqual([wrong.status, wrong.confirmed, wrong.reason, wrong.left], [200, false, 'bad_code', 4]);
+    assert.equal((await call('stepper', null, { action: 'account.confirmCheck', code: code === '000000' ? '111111' : '000000' }, as)).left, 3, 'a wrong code is counted');
+    // Another sign-in (session) of the same account is not trusted by it.
+    assert.equal((await call('stepper', null, { action: 'account.factorStart' }, { ...as, 'x-test-session': 'other' })).rule, 'confirm');
+    const okc = await call('stepper', null, { action: 'account.confirmCheck', code }, as); assert.equal(okc.confirmed, true, JSON.stringify(okc));
+    assert.equal((await call('stepper', null, { action: 'account.factorStart' }, as)).status, 200);
+    // The code works once.
+    assert.equal((await call('stepper', null, { action: 'account.confirmCheck', code }, as)).reason, 'code_missing');
+    // Deleting the account asks too, for another sign-in.
+    const del = await call('stepper', null, { action: 'account.delete', opId: op(), confirmHandle: 'Stepper' }, { ...as, 'x-test-session': 'third' });
+    assert.deepEqual([del.status, del.rule], [403, 'confirm']);
+    // No real sender (a reserved test address): nothing is asked, nothing could be delivered.
+    assert.equal((await call('stepper', null, { action: 'account.factorStart' }, { 'x-fit-email': 'qa-x@feture.test', 'x-test-session': 'dev' })).status, 200);
+    assert.equal((await call('stepper', null, { action: 'account.confirmStart' }, { 'x-fit-email': 'qa-x@feture.test' })).sent, false);
+  } finally { await pg.close(); }
+});
+
+test('confirm it is you guards Core\'s e-mail change too (core-guard.mjs)', async () => {
+  const mails = [];
+  const mail = async m => { mails.push(m); };
+  const { pg, db, call } = await setup({ mail });
+  try {
+    const sha = v => createHash('sha256').update(v).digest('hex');
+    const email = 'ivan@mail.example', since = '2026-01-01T00:00:00.000Z', keyHash = sha(email).slice(0, 32);
+    const devices = { home: { h: sha('t-home'), at: new Date().toISOString(), label: 'Chrome · Mac' } };
+    const store = { configured: () => true, get: async k => k === 'a:' + keyHash ? JSON.stringify({ email, since, syncDevices: devices }) : null };
+    const gen = sha(keyHash + ':' + since);
+    const as = { 'x-test-user': keyHash, 'x-test-gen': gen, 'x-test-session': sha('fe-session:home:' + sha('t-home')), 'x-fit-email': email };
+    const reg = await call(keyHash, null, { action: 'account.create', opId: op(), handle: 'Ivan', birthDate: '1990-01-01', locale: 'ru', documents: (await import('./fe-helpers.mjs')).ACCEPT, newsOptIn: false }, as);
+    assert.equal(reg.status, 200, JSON.stringify(reg));
+    const opts = { store, db, pepper: PEPPER, mail };
+    const body = { action: 'email_change_send', email, deviceId: 'home', syncToken: 't-home', newEmail: 'new@mail.example' };
+    assert.deepEqual(await guardCoreBody({ headers: {} }, body, opts), { status: 403, error: 'second_factor', rule: 'confirm' });
+    assert.equal((await call(keyHash, null, { action: 'account.confirmStart' }, as)).sent, true);
+    const code = mails.at(-1).text.match(/\b(\d{6})\b/)[1];
+    assert.equal((await call(keyHash, null, { action: 'account.confirmCheck', code }, as)).confirmed, true);
+    assert.equal(await guardCoreBody({ headers: {} }, body, opts), null, 'after the code the change may go on');
+    // Other Core actions are not asked for it; without a real sender nothing is asked at all.
+    assert.equal(await guardCoreBody({ headers: {} }, { ...body, action: 'sessions' }, opts), null);
+    assert.equal(await guardCoreBody({ headers: {} }, body, { ...opts, mail: null }), null);
+  } finally { await pg.close(); }
+});

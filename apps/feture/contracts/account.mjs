@@ -12,6 +12,10 @@ export const accountCommands = {
   // приложения». Never in the replay ledger (`ledger: false`): the secret and recovery codes are never stored with a
   // result. Wrong codes answer 200 {verified: false, reason, left, lockedUntil} so the counted failure commits.
   'account.factor': { profile: false, write: false, input: z.strictObject({}) },
+  // «Confirm it is you» by a code mailed to the signed-in address (server/step-up.mjs): guards turning on a factor, deleting the
+  // account and (through Core's guard) changing the e-mail.
+  'account.confirmStart': { profile: false, write: true, ledger: false, input: z.strictObject({}), rate: { kind: 'confirm.start', max: 5, window: '1 hour' } },
+  'account.confirmCheck': { profile: false, write: true, ledger: false, input: z.strictObject({ code: z.string().trim().min(6).max(12) }), rate: { kind: 'confirm.check', max: 30, window: '1 hour' } },
   'account.factorStart': { profile: false, write: true, ledger: false, input: z.strictObject({}), rate: { kind: 'factor.start', max: 20, window: '1 hour' } },
   'account.factorConfirm': { profile: false, write: true, ledger: false, input: z.strictObject({ code: factorCode }), rate: { kind: 'factor.check', max: 60, window: '1 hour' } },
   // Turning it off and new recovery codes ask for a current code (or a recovery code).
