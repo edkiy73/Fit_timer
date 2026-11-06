@@ -79,8 +79,24 @@ export async function guardCoreBody(req, body, opts = {}) {
     // Core's «forget everything» deletes the login without going through account.delete: a sanction in force is carried to the
     // next account of this login here too, or a banned person would sign up again clean (security audit 06.11.2026, B4).
     if (body?.action === 'forget' && body?.scope === 'all') await carryOnForget(core, opts);
+    // A new e-mail address hands the account over: a code from the current address first (B5, server/step-up.mjs).
+    if (body?.action === 'email_change_send' && await confirmMissing(core, email, opts)) return { status: 403, error: 'second_factor', rule: 'confirm' };
     return null;
   } catch { return { status: 503, error: 'unavailable' }; }
+}
+
+/** Must this sign-in still confirm itself by mail before the e-mail may change? False without a real sender or a FetUre account.
+ * @param {Core} core @param {string} email @param {{db?: Db | null, pepper?: string, mail?: any}} opts */
+async function confirmMissing(core, email, opts) {
+  const d = opts.db === undefined ? database() : opts.db;
+  if (!d || !core.accountGeneration) return false;
+  const mail = opts.mail === undefined ? coreMailer() : opts.mail;
+  if (!mail || /\.test$/i.test(email)) return false;
+  const pepper = opts.pepper ?? process.env.FETURE_ID_PEPPER ?? '';
+  const [row] = await d.query(SELECT, [coreKeyHmac(pepper, core)]);
+  if (!row) return false;
+  const { stepUpPassed } = await import('./step-up.mjs');
+  return !(await stepUpPassed(d, { id: row.id, session: sessionHash(pepper, core.sessionKey) }));
 }
 
 /** @param {Core} core @param {{db?: Db | null, pepper?: string}} opts */

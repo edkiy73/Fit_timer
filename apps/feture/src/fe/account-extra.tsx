@@ -7,7 +7,7 @@ import type {AuthResponseError,AuthSessionInfo} from '@appbase/core/auth.js';
 import {Book,Calendar,Crown,Globe,Heart,Lock,LogOut,Mail,Pencil,ShieldCheck,Smartphone,type LucideIcon} from 'lucide-react';
 import {Actions,Alert,Ask,Bar,Btn,Card,CodeInput,Field,Group,Input,Note,Pill,Row,SectionLabel,Sheet,Skel,View} from './kit';
 import {useToast} from './toast';
-import {useFe,useShown} from './session';
+import {askConfirm,useFe,useShown} from './session';
 import {useDate} from './premium';
 import {SupportBlock} from './support';
 import {FactorSettings} from './factor';
@@ -45,7 +45,11 @@ function EmailChangeSheet({current,onClose}:{current:string,onClose:()=>void}){
   if(!EMAIL.test(v)){setErr(t('fe.w8.mail.bad'));return;}
   if(v===current.toLowerCase()){setErr(t('fe.w8.mail.same'));return;}
   setBusy(true);setErr('');
-  try{await auth.client.changeEmailStart?.(v,locale==='en'?'en':'ru');setEmail(v);setCode('');setStep(2);}
+  try{
+   try{await auth.client.changeEmailStart?.(v,locale==='en'?'en':'ru');}
+   // The account is handed over: a code from the current address first (server/step-up.mjs), then the same step again.
+   catch(e){if((e as AuthResponseError)?.code==='second_factor'&&await askConfirm())await auth.client.changeEmailStart?.(v,locale==='en'?'en':'ru');else throw e;}
+   setEmail(v);setCode('');setStep(2);}
   catch(e){setErr(mailError(e,t));}finally{setBusy(false);}
  };
  const confirm=async(c=code)=>{

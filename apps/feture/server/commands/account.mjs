@@ -12,6 +12,7 @@ import { checkCode, confirmEnrol, factorState, newRecoveryCodes, removeFactor, s
 import { keepOnlyThisSignin, passSignin } from '../signin.mjs';
 import { ANY_STAFF, journal, openStaffSession, refused } from './staff.mjs';
 import { hmac } from '../hash.mjs';
+import { checkStepUp, noticeFactor, requireStepUp, startStepUp } from '../step-up.mjs';
 
 /** Account deletion and data export (S1 §16).
  * Deleting: every couple of the account is deleted (the partner stays with a text archive), the person profile and its
@@ -91,7 +92,8 @@ const isStaff = async (q, accountId) => (await q.query(`select 1 from feture.sta
 
 /** @type {Record<keyof typeof accountCommands, Command['run']>} */
 const run = {
-  async 'account.delete'(q, { account, input, cfg, coreAccountHash }) {
+  async 'account.delete'(q, { account, input, cfg, coreAccountHash, confirm }) {
+    await requireStepUp(q, account, confirm); // a code from the signed-in address (B5)
     const [a] = await q.query(
       `select a.id, a.person_profile_id, p.handle from feture.account a left join feture.profile p on p.id = a.person_profile_id where a.id = $1 for update of a`, [account.id]);
     if (!a.person_profile_id || (a.handle ?? '').toLowerCase() !== input.confirmHandle.toLowerCase()) fail(400, 'invalid_input', { fields: ['confirmHandle'] });
@@ -148,25 +150,36 @@ const run = {
     return { enabled: f.enrolled, recoveryLeft: f.recoveryLeft, lockedUntil: f.lockedUntil, required: await isStaff(q, account.id) };
   },
 
-  async 'account.factorStart'(q, { account, cfg }) {
+  async 'account.confirmStart'(q, { account, cfg, confirm }) {
+    return await startStepUp(q, account, String(cfg.pepper ?? ''), confirm);
+  },
+
+  async 'account.confirmCheck'(q, { account, input, cfg }) {
+    return await checkStepUp(q, account, String(cfg.pepper ?? ''), input.code);
+  },
+
+  async 'account.factorStart'(q, { account, cfg, confirm }) {
+    await requireStepUp(q, account, confirm); // someone with a stolen session must not lock the owner out with their own authenticator (B5)
     const [p] = await q.query('select handle from feture.profile where id = $1', [account.person_profile_id]);
     return await startEnrol(q, account.id, cfg.pepper ?? '', p?.handle ? '@' + p.handle : 'KINHAZE');
   },
 
-  async 'account.factorConfirm'(q, { account, input, cfg }) {
+  async 'account.factorConfirm'(q, { account, input, cfg, confirm }) {
     const { result, codes } = await confirmEnrol(q, account.id, cfg.pepper ?? '', input.code);
     if (!result.ok) return refused(result);
     // On from now: this sign-in passed; every other sign-in asks for a code at its next request.
     await keepOnlyThisSignin(q, account);
+    await noticeFactor(confirm, account.locale, 'on');
     // Shown once: the server keeps only their hashes.
     return { verified: true, codes };
   },
 
-  async 'account.factorOff'(q, { account, input, cfg }) {
+  async 'account.factorOff'(q, { account, input, cfg, confirm }) {
     if (await isStaff(q, account.id)) fail(409, 'conflict', { rule: 'factor_required' });
     const r = await checkCode(q, account.id, cfg.pepper ?? '', input.code);
     if (!r.ok) return refused(r);
     await removeFactor(q, account.id);
+    await noticeFactor(confirm, account.locale, 'off');
     return { verified: true, off: true };
   },
 

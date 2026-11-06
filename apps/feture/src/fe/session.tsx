@@ -87,7 +87,7 @@ const dropListeners=new Set<()=>void>();
 export function onReadsDropped(f:()=>void){dropListeners.add(f);return ()=>{dropListeners.delete(f);};}
 /** Writes whose input carries no opId (contracts with `ledger: false`): never served from the cache, and they drop it.
  * Without this a second «Без звука» / «В архив» within 30 s was answered from memory and never reached the server. */
-const WRITES_WITHOUT_OPID=new Set(['staff.totpStart','staff.totpConfirm','staff.totpVerify','account.factorStart','account.factorConfirm','account.factorOff','account.factorCodes','account.factorSignIn','chat.read','chat.mute','chat.archive','notifications.read','notifications.readAll','media.commit','staff.mediaView','profile.setVisibility']);
+const WRITES_WITHOUT_OPID=new Set(['account.confirmStart','account.confirmCheck','staff.totpStart','staff.totpConfirm','staff.totpVerify','account.factorStart','account.factorConfirm','account.factorOff','account.factorCodes','account.factorSignIn','chat.read','chat.mute','chat.archive','notifications.read','notifications.readAll','media.commit','staff.mediaView','profile.setVisibility']);
 /** Two answers that differ only in the request id or in the signatures of media links are the same for a screen. */
 const sameAnswer=(a:unknown,b:unknown)=>{const k=(_:string,v:unknown)=>_==='requestId'?undefined:typeof v==='string'&&/^https?:\/\//.test(v)?v.split('?')[0]:v;
  return JSON.stringify(a,k)===JSON.stringify(b,k);};
@@ -134,6 +134,17 @@ export function askFactor(need:FactorNeed):Promise<boolean>{
  asking??=factorPrompt(need).finally(()=>{asking=null;});
  return asking;
 }
+/** «Confirm it is you» (server/step-up.mjs): 403 `second_factor` rule `confirm` opens the mail-code sheet (confirm.tsx) and, after a
+ * right code, repeats the call. Core's e-mail change asks through `askConfirm` itself. */
+let confirmPrompt:(()=>Promise<boolean>)|null=null;
+let confirming:Promise<boolean>|null=null;
+export function setConfirmPrompt(p:(()=>Promise<boolean>)|null){confirmPrompt=p;}
+export function askConfirm():Promise<boolean>{
+ if(!confirmPrompt)return Promise.resolve(false);
+ confirming??=confirmPrompt().finally(()=>{confirming=null;});
+ return confirming;
+}
+const confirmNeed=(e:unknown)=>e instanceof FeError&&e.code==='second_factor'&&e.rule==='confirm';
 /** The sign-in second step (optional factor, server/signin.mjs). */
 const signinStep=(e:unknown)=>e instanceof FeError&&e.code==='second_factor'&&e.rule==='signin';
 const factorNeed=(e:unknown):FactorNeed|null=>e instanceof FeError&&e.code==='second_factor'&&(e.rule==='verify'||e.rule==='fresh'||e.rule==='enrol')?e.rule:null;
@@ -241,6 +252,7 @@ export function FeSessionProvider({children}:{children:ReactNode}){
    // This sign-in must pass the second step now (the factor was turned on on another device): the app starts over
    // and shows the code screen.
    if(signinStep(e)){if(!pendingFactor.current){pendingFactor.current=true;reload();}return Promise.reject(e);}
+   if(confirmNeed(e)&&confirmPrompt)return askConfirm().then(ok=>ok?go():Promise.reject(e));
    const need=factorNeed(e);return need&&factorPrompt?askFactor(need).then(ok=>ok?go():Promise.reject(e)):Promise.reject(e);});
  },[callOnce,reload]);
  const peek=useCallback(<T,>(action:string,input:Record<string,unknown>,schema:z.ZodType<T>,opts:{asAccount?:boolean,profileId?:string}={}):T|null=>{

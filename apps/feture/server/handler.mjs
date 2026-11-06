@@ -29,6 +29,7 @@ import { noteAddress } from './email.mjs';
  *   input: import('zod').ZodType, profile: boolean, write: boolean, ledger?: boolean, allowPaused?: boolean,
  *   rate?: {kind: string, max: number, window: string} | ((input: any) => {kind: string, max: number, window: string} | null),
  *   run: (q: Q, ctx: {account: AccountRow, acting: Acting | null, input: any, cfg: Cfg, coreAccountHash: string, coreQa?: boolean,
+ *     confirm?: import('./step-up.mjs').Confirm,
  *     signal: (profileId: string | null | undefined, kind: import('./realtime.mjs').Kind, tag?: string) => void,
  *     channels: (q: Q, profileIds: string[]) => Promise<Record<string, string>>}) => Promise<Record<string, unknown>>
  * }} Command
@@ -183,6 +184,12 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
       const signal = (profile, kind, tag) => { if (profile) pending.push(tag ? { profile, kind, tag } : { profile, kind }); };
       const channels = signals ? signals.channels : async () => ({});
       /** The profile the command ran as (null for account-level commands). */
+      // The signed-in address is only in the request: a code for «confirm it is you» and the factor notices go straight to it
+      // (never stored; none for a reserved test address or when no real sender is set up).
+      const to = header(req, 'x-fit-email').toLowerCase();
+      /** @type {import('./step-up.mjs').Confirm} */
+      const confirm = { mail: mail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to) && !/\.test$/i.test(to)
+        ? m => Promise.race([mail({ to, ...m }).then(() => true, () => false), new Promise(r => setTimeout(() => r(false), 4000))]) : null };
       let actedAs = /** @type {string | null} */ (null);
       /** @param {Q} q */
       const exec = async q => {
@@ -190,7 +197,7 @@ export function createFeHandler({ db, pepper, cfg, commands, authenticate, quota
         const acting = cmd.profile ? await actingProfile(q, account.id, profileId, { write: cmd.write, allowPaused: cmd.allowPaused }) : null;
         actedAs = acting?.profileId ?? null;
         // coreAccountHash is stable across Core re-registrations; only for markers that must survive them (under-18).
-        return cmd.run(q, { account, acting, input, cfg: { ...cfg, pepper }, coreAccountHash: core.accountHash, coreQa: core.qa === true, signal, channels });
+        return cmd.run(q, { account, acting, input, cfg: { ...cfg, pepper }, coreAccountHash: core.accountHash, coreQa: core.qa === true, confirm, signal, channels });
       };
       const result = await collectEnqueued(queued, async () => !cmd.write ? await exec(db)
         // The acting profile is part of the request: the same opId under another profile is a conflict, not a replay.

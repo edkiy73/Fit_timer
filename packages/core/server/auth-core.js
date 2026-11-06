@@ -369,12 +369,14 @@ function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics, 
       if(!sameSecret(sha(code), rec.h)) return fail(res, 403, 'bad_code', {left: TRIES - rec.tries});
       await store.del(`mailchg:${mh}`);
 
+      let noticeLocale = 'ru';
       const moved = await store.withLock(`lock:email:${mh}`, async () => {
         let cur = null;
         try{ cur = JSON.parse(await store.get(`a:${mh}`)); }catch(e){ return 'identity_unavailable'; }
         if(!cur) return 'identity_unavailable';
         if(await store.get(`a:${nmh}`)) return 'email_taken';
         cur.keyHash = typeof cur.keyHash === 'string' && /^[0-9a-f]{32}$/.test(cur.keyHash) ? cur.keyHash : mh;
+        noticeLocale = cur.locale === 'en' ? 'en' : 'ru';
         cur.email = next;
         cur.emailChangedAt = new Date().toISOString();
         await store.set(`a:${nmh}`, JSON.stringify(cur));
@@ -395,6 +397,15 @@ function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics, 
         return '';
       }, {ttl:8, retries:60, delay:50});
       if(moved) return fail(res, moved === 'email_taken' ? 409 : 503, moved);
+      // The old address hears that the account moved (security audit 06.11.2026, B5): whoever owned it can react. Best effort.
+      try{
+        const appName = productIdentity().name;
+        const en = noticeLocale === 'en';
+        await sendMail({to: email,
+          subject: en ? `Your ${appName} email address was changed` : `Почта в ${appName} изменена`,
+          text: en ? `The email address of your ${appName} account was changed to ${next.replace(/^(.).*(@.*)$/, '$1***$2')}.\n\nIf this wasn’t you, contact support right away: someone else may have access to your account.\n`
+                   : `Адрес почты в аккаунте ${appName} изменён на ${next.replace(/^(.).*(@.*)$/, '$1***$2')}.\n\nЕсли это сделал не ты, сразу напиши в поддержку: к аккаунту мог получить доступ кто-то другой.\n`});
+      }catch(e){ /* a notice is a courtesy */ }
       return send(res, 200, {ok:true, email:next});
     }
 

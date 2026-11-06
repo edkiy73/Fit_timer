@@ -11,6 +11,7 @@ import {FeError} from '../feture/fe-api';
 import {feErrorMessage} from '../feture/fe-api';
 import {ActingAv,Brand,Btn,Empty,H,Skel} from './kit';
 import {FeSessionProvider,useFe,useLive} from './session';
+import {ConfirmPromptHost} from './confirm';
 import {sweepDrafts} from './drafts';
 import {countsRes} from './inbox';
 import {closeShown,setAppBadge} from './shown-push';
@@ -79,7 +80,7 @@ function useImageFade(){
 export function FeRoot(){
  useEffect(()=>{sweepDrafts();},[]);
  useEffect(()=>rememberPushTaps(),[]);
- return <FeSessionProvider><AppUpdateProvider><ImageFade/><div className="v21 fe-v21"><MaintenanceGate><FeGate/></MaintenanceGate></div></AppUpdateProvider></FeSessionProvider>;
+ return <FeSessionProvider><AppUpdateProvider><ImageFade/><ConfirmPromptHost/><div className="v21 fe-v21"><MaintenanceGate><FeGate/></MaintenanceGate></div></AppUpdateProvider></FeSessionProvider>;
 }
 function ImageFade(){useImageFade();return null;}
 
