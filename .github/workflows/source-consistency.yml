@@ -2,9 +2,13 @@ name: AppBase — all apps consistency
 
 # Проверяет Core и только затронутые приложения (scripts/affected-apps.mjs):
 # изменение packages/core или корня — всё; apps/<name> — это приложение; Markdown — ничего.
+# The pull_request trigger has no path filter on purpose (security audit 06.11.2026): `check` is a required status of the
+# protected `main`, so it must report on every PR, documents-only ones too (those finish fast: nothing is affected).
 on:
   pull_request:
-    paths: &consistency_paths
+  push:
+    branches: [main]
+    paths:
       - 'packages/core/**'
       - 'packages/ui-react/**'
       - 'apps/**'
@@ -14,9 +18,6 @@ on:
       - '.github/workflows/source-consistency.yml'
       - '!**/*.md'
       - '!apps/*/docs/**'
-  push:
-    branches: [main]
-    paths: *consistency_paths
 
 
 concurrency:

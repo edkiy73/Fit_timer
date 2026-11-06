@@ -1,0 +1,141 @@
+# Security audit — FetUre (06.11.2026)
+
+The living record of the security audit: what was found, what is decided, what is fixed and how, what is deferred on purpose.
+**Every PR that fixes or changes one of these items updates its status here, in the same PR** (see AGENTS.md). Read this before
+touching sign-in, sessions, staff access, rate limits, Premium/referral grants, private media, Caddy or the deploy.
+
+Scope: sign-in and sessions, staff and 2FA, authorization of content, private part, Premium and money, spam/DoS, the VPS and the
+deploy. Method: five read-only code audits (auth, content authorization, private/money, spam/DoS, infra) plus live probes of
+prod from outside, GitHub repository settings, `npm audit`, DNS/mail. Nothing was load-tested on purpose (not to hurt prod).
+Not covered: Bunny and Robokassa dashboards, the UI, the Android app (APK), live load tests.
+
+Status words: **open** · **in progress (PR)** · **done (PR, how)** · **release** (deferred on purpose until before launch) ·
+**decision** (owner decided to accept).
+
+## Owner decisions (do not re-litigate)
+
+- **Development stage (06.11):** while there are no real people, the development access stays: QA/mod personas on
+  `@feture.test`, the test sign-in (`TEST_LOGIN_KEY`, fixed code), the agents' SSH access and keys, the staff 2FA waiver switch,
+  the admin key. They are needed for checks. They are removed before launch — see «Before release».
+- **Repository stays public for now (06.11)**, owner accepts the risk (code, plans and this audit are readable by anyone). Before
+  launch: scrub, make it private, buy GitHub Pro (private repos on the Free plan have no branch protection and only 2000 CI
+  minutes a month; the VPS fetches `origin` anonymously over https — it needs a read-only deploy key first, or auto-deploy stops).
+- **Branch protection on `main`, soft mode:** PR required, status `check` required, no review needed (solo owner), no force
+  push or deletion, admins may bypass (`gh pr merge --admin`, only in an emergency, then tell the owner).
+
+## Before release (deferred on purpose — do these when the main testing is over)
+
+1. Remove `TEST_LOGIN_KEY`, `TEST_LOGIN_STATIC_CODE` and the `@feture.test` test sign-in from prod env; delete the QA/mod personas
+   and their staff roles from prod (`docs/moderators.md`).
+2. Turn the staff 2FA waiver off (`staff-factor-switch`, migration `20261029220000`) — staff 2FA is mandatory again.
+3. Rotate `ADMIN_KEY` and every secret the agents have seen (admin key, Resend, Bunny, Robokassa, jobs secret, DB passwords);
+   remove the agents' SSH key from `authorized_keys`.
+4. SSH: `PasswordAuthentication no`, `PermitRootLogin prohibit-password`, fail2ban.
+5. Repository: private, GitHub Pro, a read-only deploy key on the VPS, strip planning/audit documents that should not be public,
+   two-factor on the owner's GitHub account, restrict token scopes.
+6. Restore test of a database backup (never done), DMARC record for `kinhaze.com`/`mail.kinhaze.com` (DNS is at Bunny; Resend
+   already reports SPF/DKIM verified), email support address (see `feture-audit-decisions`).
+7. Keep «Premium for new accounts» and the invitation program **off** on prod until items B1 and B2 below are fixed.
+
+## A. Found and to fix (most important first)
+
+**B1 — no bot protection on sign-up (high, open).** No CAPTCHA, no disposable-mail filter. Per-IP limits use the first
+`X-Forwarded-For` entry as the full IPv6 address, so one /64 is 2^64 «IPs» (`packages/core/server/auth-core.js:454-460`,
+`util.js:69`). Effect: thousands of fake accounts, mail cost and domain reputation burn (Resend), farming of anything per-account.
+Fix: Cloudflare Turnstile on `send` (token checked on the server), limits by /64, disposable-domain blocklist, global hourly send
+cap with a staff alert, collapse `+` aliases per registered domain.
+
+**B2 — free Premium farm (high, open, dormant).** `grantWelcome` (PR #1608, `server/commands/premium.mjs`) gives N days of Premium
+once an account finishes onboarding, with no age check; combined with B1 every fake account is free Premium. Currently harmless
+because the switch is off. Fix: after B1, grant only after the age check and a verified e-mail; daily cap on such grants with an alert.
+
+**B3 — cheap DoS (high, open).** (a) `/api/fe` does `authenticate` (a store lookup through PostgREST) before any limit, so garbage
+tokens hit the DB pool; (b) `host.mjs` buffers and parses up to 4 MB before auth, Caddy allows 5 MB; (c) SSE accepts any token that
+matches a regex, 20 000 total slots can be filled (`server/realtime-sse.mjs:44-63`); (d) app pool is 5 (`api/fe.mjs:63`), no
+`statement_timeout`; (e) `requestTimeout` 15 min on every path. Fix: per-IP counter before `authenticate`, Caddy `request_body`
+32 KB on JSON routes, verify SSE tokens and limit by /64, pool 15–20 plus a small separate pool for staff/jobs,
+`statement_timeout` 10 s, short timeouts on non-upload paths. Cloudflare in front later (Caddy `trusted_proxies`).
+
+**B4 — banned person returns clean (high, open).** Core `forget` (scope `all`, `auth-core.js:205`, `api/auth.js`) bypasses
+`handler.mjs`, so the suspension check and `carrySanction` (only in `account.delete`) never run. Re-registering with the same
+e-mail gives a new generation and no `sanction_carry`. Fix: refuse `forget` for suspended/restricted accounts, or run
+`carrySanction` in the guard in `api/auth.js` before Core deletes.
+
+**B5 — one stolen session = permanent takeover (high, open).** 90-day fixed sessions in `localStorage`; with one, with no fresh
+e-mail code: `email_change_send/verify` (no notice to the old address), `account.factorStart/Confirm` (attacker enrols their own
+authenticator and locks the owner out), `account.delete`. Fix: fresh e-mail code for these three, notice with a cancel window to the
+old address, sliding/idle session expiry (e.g. 30 days idle), notice e-mail on factor change.
+
+**B6 — `main` deploys on every commit (high, in progress).** `/opt/feture/update.sh` (cron, every minute) checks out
+`origin/main` and rebuilds; migrations apply automatically. Fix: branch protection (soft mode, see decisions); `check` must report
+on every PR, so the `pull_request` trigger of `.github/workflows/source-consistency.yml` has no path filter.
+
+**B7 — no CSP / frame-ancestors / Permissions-Policy (high, open).** `deploy/Caddyfile` headers (lines ~32-38). Matters because the
+sign-in token lives in the browser. Fix: add `X-Frame-Options`/`frame-ancestors`, `Permissions-Policy`, `Referrer-Policy`, HSTS
+with subdomains; CSP in report-only first, then enforce.
+
+**B8 — server hygiene (medium, open).** Disk at 81 % (about 35 GB is Docker build cache — `docker builder prune`), SSH password
+login allowed (→ «Before release» item 4), backups never restored, `zod` below 4.6.7, Dependabot security updates off.
+
+## B. Medium
+
+- **Refunds/chargebacks never applied** (`server/billing/robokassa.mjs:34-39` only emits `paid`; `pay-events.mjs:44` handles
+  `refunded` but nothing sends it). Premium stays until `staff.premiumRevoke`. Fix: a staff «refunded» action or a reconciliation job.
+- **Referral farming** (`server/commands/referral.mjs`): own code only blocks the identical account; no device/session link; the
+  inviter reward is not clawed back; the «account ≤ 7 days old» window does not stop bots. Fix: reject on shared device/session
+  (`session_seen`), 7-day activity hold before paying the inviter, `inviter_days` 0 until launch. `referral.apply` and
+  `settleReferral` race on `max_uses` and the cap (lock the code row).
+- **Mass Premium and promo actions need no fresh 2FA code** (PR #1608): `staff.premiumGrantAll` (up to 20 000 accounts, 400 days),
+  `staff.promoCreate/Set`, `staff.referralSettingsSet`, `staff.premiumPromoSet`, owner/lead only, journalled, no second approver.
+  Fix: `{ fresh: true }` on all of them; for grant-to-all a second owner or a 10-minute delay with undo.
+- **Promo codes can be guessed**: 3–24 chars, 20 tries a day per account (many accounts, see B1). Fix: ≥ 8 random chars, a shared
+  limit of failures per IP and /64, alert on bursts.
+- **Private part:** the watermark is only a client overlay (`server/commands/access.mjs:205-216`, `server/media/render.mjs`);
+  media URLs are bearer links valid 600 s that survive `access.revoke` (`server/media/bunny.mjs:33`, `delivery.mjs`), view-once
+  clips live ≥ 300 s, and the `reuse` map hands one URL to every viewer. Fix: burn the viewer nick into a per-viewer file, cut the
+  TTL to 30–60 s for private/view-once, no `reuse` there, and say plainly in the documents that revoke is not instant.
+- **Location oracle:** `distanceKm` (5 km steps) from `discover.cards`, plus `people.search/byNick` for hidden profiles and a free
+  `location.set` (`server/commands/discover.mjs:154-170, 513`, `people.mjs`) trilaterate a hidden person. Fix: distance only when
+  `feture.discoverable(target)`, quantize to 10–25 km, limit location changes.
+- **`saved.set` is unvalidated** (`server/commands/social.mjs`, `contracts/social.mjs:26`) and `event_visible` trusts `saved_item`
+  for cancelled events (migration `20261104500000_fe_audit_stage6.sql:22-25`): a former member can read a cancelled event of a
+  closed community. Address and join link stay gated. Fix: visibility check and a cap in `saved.set`, drop the clause.
+- **Scraping:** `people.search` 10 000/day with a 2-letter prefix. Fix: 500/day, ≥ 3 letters, a trust gate for new accounts.
+- **Writes without a daily cap:** `community.invite`, `post.saveDraft`, `post.edit`, `event.update`, `profile.update`, `block.set`,
+  `poll.vote`, `album.*`, `private.set*` (only the 600/min account quota). Fix: 60–200/day, 20/day for `community.invite`.
+- **Mail:** domain `mail.kinhaze.com` is verified in Resend (SPF/DKIM ok); DMARC not checked (see «Before release» 6).
+
+## C. Low
+
+Wrong-code counter not atomic (`auth-core.js:365,512`; ~20 tries instead of 5) · new-device alert silenced by an empty country
+(`signin.mjs noteSignin`) · `email_change_send` leaks «e-mail taken» · `staff.ageCheckDecide`/`staff.restrict` take no fresh code ·
+late payment after a `failed` purchase gives no Premium (`pay-events.mjs:16-18`) · Robokassa: compare `OutSum`/`InvId`, constant-time
+compare · `pay-return` redirect leaks purchase ids · `premium.giftCheck` shows queued Premium · one lead can set prices/grant 400 days
+alone · `profile.followers` open for every active profile · idempotency ledger stores the `community.invite` token in plaintext ·
+original video keeps metadata (GPS) · age gate checked only at request time (`access.mjs:295`) · couple partner changes shared private
+content without approval (unclear if by design) · SSE channel tokens in the URL · `chat.typing` pings a hider · profile report existence
+oracle · weak 32-bit IP hash · slow bodies hold a socket 15 min · report queue can be flooded by bots · DSA form global bucket can be
+exhausted (~40 IPs).
+
+## D. Verified fine (do not redo)
+
+Sign-in codes (CSPRNG, hashed, 15 min, single use, 5 tries, daily cap per address, fail-closed limits) · Core session tokens (~160 bit,
+hashed, 8 devices) · TOTP (sealed, replay-proof, lockout, hashed recovery codes) · staff roles and fresh-code gates for grants, 2FA
+reset, document publish, suspensions, age-check open · `x-test-*` headers do not exist in code · payments (server prices, frozen amount,
+atomic fulfil, unique `store_ref`, signatures, no self-gift, journalled grants) · private part before access returns nothing, explicit
+media not in public places, blurred preview is a separate file · content authorization SQL (`post_visible`, `event_visible`,
+`community_visible`), acting-profile resolution, chats, invites (hashed tokens), exact address/join link only for admitted · strict zod
+inputs, bounded arrays, no user strings in SQL · reports never auto-hide · admin/PostgREST/DB not exposed, Storybook not in prod (`/kit/` 404).
+
+## E. Plan (stages)
+
+1. **Stage 1 — safe, fast:** this document; branch protection (soft); Caddy headers and body limits (B7, B3b); per-IP limit before
+   `authenticate`, SSE token check and /64 (B3a,c); DB pool, timeouts (B3d); zod and Dependabot; `docker builder prune` (B8).
+2. **Stage 2 — sign-in and accounts:** Turnstile, /64, disposable mail (B1); fresh code for e-mail/factor/delete, session expiry (B5);
+   `forget` for banned (B4); welcome-Premium conditions (B2); fresh code and long random codes for mass Premium/promo.
+3. **Stage 3 — before release:** the list above.
+4. **Stage 4 — money and privacy:** refunds, referral rules, per-viewer watermark, short links, distance, saved events, caps.
+
+## Log
+
+- 06.11.2026 — audit done, report written; owner decisions recorded; stage 1 started.

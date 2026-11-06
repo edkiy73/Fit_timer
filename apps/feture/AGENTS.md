@@ -65,6 +65,14 @@ compatibility for couples/profiles that exist now: a migration may reshape or re
 a data-preserving path. This stops being true on the day the owner announces the launch; from then on migrations must
 keep real users' data. Until then do not mention «existing couples» as a risk in a plan.
 
+## Security audit (owner, 06.11.2026)
+
+`docs/security-audit.md` is the record of the security audit: findings, decisions, what is fixed and how, and what is deferred on
+purpose (the development access — QA personas, test sign-in, SSH keys, staff 2FA waiver — stays until the «Before release» list is
+done). Read it before touching sign-in, sessions, staff access, rate limits, Premium/referral grants, private media, Caddy or the
+deploy. A PR that fixes or changes one of its items updates the item's status and «how» in the same PR. Do not remove the
+development access early, and do not forget the list before launch.
+
 ## Legal documents follow the product (owner, 06.11.2026)
 The published documents (`DOCUMENT_KEYS` in `contracts/staff.mjs`: terms, privacy, community, adult-content, complaints, age, retention, cookies, copyright) say what the product does. A change that makes one of them untrue or incomplete **updates that document in the same PR** (in parts: add or change only the paragraph that is affected). Ask yourself before you finish:
 - **Credits and licences** (a dataset, a picture, an icon set, a font, a library that wants a notice, a map): what the licence asks for goes into «copyright» — source, author, licence and link, and the exact wording the licence requires. A licence that forbids our use (non-commercial, no derivatives, a share-alike we cannot meet): stop and ask the owner.
