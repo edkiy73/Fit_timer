@@ -78,3 +78,12 @@ assert.equal(await activeSession(dev(hex('d'), 100), fakeStore), false, 'the 90 
 mem.set('session:revoked:' + hex('e'), '1');
 assert.equal(await activeSession(dev(hex('e'), 1), fakeStore), false, 'a revoked one stays revoked');
 console.log('idle expiry ok');
+
+// One mailbox, one budget: plus tags and Gmail dots do not make new addresses for the send limits.
+const { limitMail } = require('../server/util');
+assert.equal(limitMail('Anna+1@Mail.example'), 'anna@mail.example');
+assert.equal(limitMail('a.n.n.a+x@gmail.com'), 'anna@gmail.com');
+assert.equal(limitMail('anna@googlemail.com'), 'anna@gmail.com');
+assert.equal(limitMail('a.nna@other.org'), 'a.nna@other.org', 'dots count outside Gmail');
+assert.equal(limitMail('+@x.org'), '+@x.org', 'an address that is only a tag is left as it is');
+console.log('limitMail ok');

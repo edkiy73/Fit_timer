@@ -26,7 +26,7 @@
    расширению аккаунта продукта (хуки передаются в createAuthHandler). */
 
 const { store } = require('./store');
-const { SESSION_TTL, sessionExpiresAt, sessionId, revokeSession, validSession, activeSession, send, fail, readBody, rateOk, rateOkScoped, rndId, sameSecret, cors } = require('./util');
+const { SESSION_TTL, sessionExpiresAt, sessionId, revokeSession, validSession, activeSession, send, fail, readBody, rateOk, rateOkScoped, rndId, sameSecret, cors, limitMail } = require('./util');
 const { sendMail } = require('./mail');
 const { isDisposableEmail } = require('./disposable-domains');
 const { recordClientError } = require('./diagnostics');
@@ -472,13 +472,13 @@ function createAuthHandler({accountExtension = NO_ACCOUNT_EXTENSION, analytics, 
       // Free throwaway inboxes (opt-in per product): a bot cannot make accounts from them (security audit 06.11.2026, B1).
       if(blockDisposableEmail && isDisposableEmail(email)) return fail(res, 400, 'email_not_allowed');
       if(!(await rateOkScoped(req, 'auth-send-ip', 30, '', 3600, true))
-        || !(await rateOkScoped(req, 'auth-send-mail', 10, mh, 3600, true))){
+        || !(await rateOkScoped(req, 'auth-send-mail', 10, sha(limitMail(email)).slice(0, 32), 3600, true))){
         return fail(res, 429, 'rate_limited');
       }
       // Считаем ПО АДРЕСУ, а не по устройству: иначе чужой почтовый ящик заваливается
       // письмами с любого количества телефонов, и виноваты в этом мы.
       const day = new Date().toISOString().slice(0, 10);
-      const n = await store.incr(`mailday:${mh}:${day}`, 2 * 24 * 3600);
+      const n = await store.incr(`mailday:${sha(limitMail(email)).slice(0, 32)}:${day}`, 2 * 24 * 3600);
       if(n > PER_DAY) return fail(res, 429, 'too_many_today');
       // One ceiling for the whole product per hour, whoever asks, counted after the per-address limits pass (only mail that would really go out):
       // a circuit breaker against a flood from many addresses burning the sending domain's reputation and the mail budget (AUTH_SEND_GLOBAL_PER_HOUR, default 3000). A warning in the log when it trips.
