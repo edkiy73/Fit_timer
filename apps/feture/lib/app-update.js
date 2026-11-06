@@ -59,7 +59,8 @@ async function sendPublicUpdate(store,res){
  res.setHeader('Cache-Control','public, max-age=60');
  let android;
  try{android=await readUpdate(store);}catch{android=sanitize(null);}
- return send(res,200,{update:{android}});
+ // The bot check's site key is public (security audit B1): the sign-in screen needs it before anyone is signed in.
+ return send(res,200,{update:{android},captcha:{siteKey:process.env.TURNSTILE_SITE_KEY||null}});
 }
 
 /** @param {any} store */

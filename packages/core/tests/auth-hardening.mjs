@@ -37,3 +37,27 @@ assert.equal(r.body.error, 'email_not_allowed');
 const open = createAuthHandler({ analytics });
 assert.notEqual((await call(open, { action: 'send', email: 'bot@mailinator.com', locale: 'en' }, '10.40.0.2')).body?.error, 'email_not_allowed', 'off unless a product opts in');
 console.log('auth-hardening ok');
+
+// Cloudflare Turnstile (B1): off without a secret; with one, a code is only sent for a token Cloudflare accepts.
+const { createTurnstile } = require('../server/turnstile');
+const answers = []; let asked = 0;
+const fakeFetch = async (url, init) => { asked++; return { json: async () => answers.shift() ?? { success: false } }; };
+const ts = createTurnstile({ skip: e => /\.test$/.test(e), fetchImpl: fakeFetch, secret: () => process.env.TURNSTILE_SECRET_KEY });
+delete process.env.TURNSTILE_SECRET_KEY;
+assert.equal(await ts.ok({ headers: {} }, 'a@b.co', undefined), true, 'not set up: nothing is asked');
+process.env.TURNSTILE_SECRET_KEY = 'secret-for-tests';
+assert.equal(await ts.ok({ headers: {} }, 'a@b.co', undefined), false, 'no token');
+assert.equal(asked, 0, 'no token never reaches Cloudflare');
+assert.equal(await ts.ok({ headers: {} }, 'world@feture.test', undefined), true, 'a reserved test address is not asked');
+answers.push({ success: true });
+assert.equal(await ts.ok({ headers: { 'x-forwarded-for': '203.0.113.9' } }, 'a@b.co', 'tok'), true);
+answers.push({ success: false });
+assert.equal(await ts.ok({ headers: {} }, 'a@b.co', 'bad'), false, 'Cloudflare says no');
+const down = createTurnstile({ fetchImpl: async () => { throw new Error('offline'); }, secret: () => 'k' });
+assert.equal(await down.ok({ headers: {} }, 'a@b.co', 'tok'), true, 'an outage of the check does not lock everybody out');
+const guarded = createAuthHandler({ analytics, captcha: ts });
+const noToken = await call(guarded, { action: 'send', email: 'bot@example.org', locale: 'en' }, '10.40.0.3');
+assert.equal(noToken.statusCode, 400);
+assert.equal(noToken.body.error, 'captcha_failed');
+delete process.env.TURNSTILE_SECRET_KEY;
+console.log('turnstile ok');

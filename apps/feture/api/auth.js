@@ -3,7 +3,11 @@ const { createAuthHandler } = require('../../../packages/core/server/auth-core')
 const { cors, fail, readBody } = require('../../../packages/core/server/util');
 const analytics = require('../lib/app-analytics');
 const {safeFetureDiagnostic}=require('../lib/feture/diagnostic-policy');
-const core = createAuthHandler({analytics,sanitizeClientDiagnostic:safeFetureDiagnostic,emailChange:true,blockDisposableEmail:true});
+const {createTurnstile}=require('../../../packages/core/server/turnstile');
+// Test accounts (reserved @feture.test addresses, no real mailbox — development access, see docs/security-audit.md «Before release»)
+// are not asked for the bot check; everybody else is, once the Turnstile keys are in the environment.
+const captcha=createTurnstile({skip:email=>/\.test$/i.test(email)});
+const core = createAuthHandler({analytics,sanitizeClientDiagnostic:safeFetureDiagnostic,emailChange:true,blockDisposableEmail:true,captcha});
 
 // The sign-in second step (optional factor, server/core-guard.mjs): Core's actions that act with a session — the
 // sessions list, signing out elsewhere, email change, deletion, nickname — wait until the sign-in passed it. Sign-in,
