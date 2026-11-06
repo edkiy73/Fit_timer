@@ -699,6 +699,9 @@ test('Premium in bulk: a count first, one period each queued after their own, jo
     const c = await person('uc', 'Noa');
     const [{ id: accC }] = await db.query('select id from feture.account where person_profile_id = $1', [c]);
     await db.tx(q => grantWelcome(q, accC));
+    assert.equal((await db.query(`select count(*)::int n from feture.entitlement where account_id = $1`, [accC]))[0].n, 0, 'not before onboarding and the age check (audit B2)');
+    await db.query(`update feture.account set onboarded_at = now(), age_verified_until = now() + interval '1 year' where id = $1`, [accC]);
+    await db.tx(q => grantWelcome(q, accC));
     await db.tx(q => grantWelcome(q, accC));
     assert.equal((await db.query(`select count(*)::int n from feture.entitlement where account_id = $1 and reason = 'welcome'`, [accC]))[0].n, 1, 'once');
     assert.ok(Math.abs(await until(c) - (Date.now() + 14 * 86400000)) < 60000);
@@ -762,30 +765,31 @@ test('invitations and promo codes: rewarded only after onboarding and the age ch
     assert.equal(new Date(await until(inviter)).getTime(), before, 'the inviter is over the cap');
 
     // A promo code: its own days (0 = only counted), a limit and an end date; staff only; counted in the statistics.
-    assert.equal((await call('ua', inviter, { action: 'staff.promoCreate', opId: op(), code: 'BLOG1', label: 'Блогер', days: 30 })).status, 403);
-    const made = await call('uo', null, { action: 'staff.promoCreate', opId: op(), code: 'blog1', label: 'Блогер Аня', days: 30, maxUses: 1 });
-    assert.equal(made.code, 'BLOG1');
-    assert.equal((await call('uo', null, { action: 'staff.promoCreate', opId: op(), code: 'BLOG1', label: 'ещё', days: 1 })).rule, 'code_taken');
-    await call('uo', null, { action: 'staff.promoCreate', opId: op(), code: 'COUNT0', label: 'Только учёт', days: 0 });
+    assert.equal((await call('ua', inviter, { action: 'staff.promoCreate', opId: op(), code: 'BLOGGER1', label: 'Блогер', days: 30 })).status, 403);
+    assert.equal((await call('uo', null, { action: 'staff.promoCreate', opId: op(), code: 'SHORT1', label: 'x', days: 1 })).status, 400, 'a promo code is at least 8 characters');
+    const made = await call('uo', null, { action: 'staff.promoCreate', opId: op(), code: 'blogger1', label: 'Блогер Аня', days: 30, maxUses: 1 });
+    assert.equal(made.code, 'BLOGGER1');
+    assert.equal((await call('uo', null, { action: 'staff.promoCreate', opId: op(), code: 'BLOGGER1', label: 'ещё', days: 1 })).rule, 'code_taken');
+    await call('uo', null, { action: 'staff.promoCreate', opId: op(), code: 'COUNTONLY0', label: 'Только учёт', days: 0 });
     const n3 = await person('ud', 'Dan'), n4 = await person('ue', 'Eve');
-    assert.equal((await call('ud', n3, { action: 'referral.apply', opId: op(), code: 'Blog1' })).state, 'pending');
-    assert.equal((await call('ue', n4, { action: 'referral.apply', opId: op(), code: 'BLOG1' })).status, 404, 'used up');
+    assert.equal((await call('ud', n3, { action: 'referral.apply', opId: op(), code: 'Blogger1' })).state, 'pending');
+    assert.equal((await call('ue', n4, { action: 'referral.apply', opId: op(), code: 'BLOGGER1' })).status, 404, 'used up');
     const a3 = await acc(n3);
     await db.query(`update feture.account set onboarded_at = now(), age_verified_until = now() + interval '1 year' where id = $1`, [a3]);
     await db.tx(q => settleReferral(q, a3));
     assert.ok(Math.abs(new Date(await until(n3)).getTime() - (Date.now() + 30 * DAY)) < 60000);
-    await call('ue', n4, { action: 'referral.apply', opId: op(), code: 'COUNT0' });
+    await call('ue', n4, { action: 'referral.apply', opId: op(), code: 'COUNTONLY0' });
     const a4 = await acc(n4);
     await db.query(`update feture.account set onboarded_at = now(), age_verified_until = now() + interval '1 year' where id = $1`, [a4]);
     await db.tx(q => settleReferral(q, a4));
     assert.equal(await until(n4), null, 'days 0: counted, nothing given');
     const list = await call('uo', null, { action: 'staff.promoList' });
-    assert.deepEqual(list.items.map(i => [i.code, i.used, i.rewarded]).sort(), [['BLOG1', 1, 1], ['COUNT0', 1, 1]]);
+    assert.deepEqual(list.items.map(i => [i.code, i.used, i.rewarded]).sort(), [['BLOGGER1', 1, 1], ['COUNTONLY0', 1, 1]]);
     await call('uo', null, { action: 'staff.promoSet', opId: op(), codeId: made.id, active: false });
     const n5 = await person('uf', 'Finn');
-    assert.equal((await call('uf', n5, { action: 'referral.apply', opId: op(), code: 'BLOG1' })).status, 404, 'switched off');
+    assert.equal((await call('uf', n5, { action: 'referral.apply', opId: op(), code: 'BLOGGER1' })).status, 404, 'switched off');
     // An old account cannot collect a code.
     await db.query(`update feture.account set created_at = now() - interval '30 days' where person_profile_id = $1`, [n5]);
-    assert.equal((await call('uf', n5, { action: 'referral.apply', opId: op(), code: 'COUNT0' })).rule, 'not_new');
+    assert.equal((await call('uf', n5, { action: 'referral.apply', opId: op(), code: 'COUNTONLY0' })).rule, 'not_new');
   } finally { await env.pg.close(); }
 });

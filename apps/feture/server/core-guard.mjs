@@ -75,9 +75,23 @@ export async function guardCoreBody(req, body, opts = {}) {
     core = await authenticate({ headers: { 'x-fit-email': email, 'x-fit-device': str(body?.deviceId).trim(), 'x-fit-token': str(body?.syncToken) || str(body?.token) } }, store);
   } catch { return null; }
   try {
-    return (await coreSessionBlocked(core, { headers: req.headers ?? {}, email, db: opts.db, pepper: opts.pepper, mail: opts.mail }))
-      ? { status: 403, error: 'second_factor', rule: 'signin' } : null;
+    if (await coreSessionBlocked(core, { headers: req.headers ?? {}, email, db: opts.db, pepper: opts.pepper, mail: opts.mail })) return { status: 403, error: 'second_factor', rule: 'signin' };
+    // Core's «forget everything» deletes the login without going through account.delete: a sanction in force is carried to the
+    // next account of this login here too, or a banned person would sign up again clean (security audit 06.11.2026, B4).
+    if (body?.action === 'forget' && body?.scope === 'all') await carryOnForget(core, opts);
+    return null;
   } catch { return { status: 503, error: 'unavailable' }; }
+}
+
+/** @param {Core} core @param {{db?: Db | null, pepper?: string}} opts */
+async function carryOnForget(core, opts) {
+  const d = opts.db === undefined ? database() : opts.db;
+  if (!d || !core.accountGeneration) return;
+  const pepper = opts.pepper ?? process.env.FETURE_ID_PEPPER ?? '';
+  const [row] = await d.query(SELECT, [coreKeyHmac(pepper, core)]);
+  if (!row?.person_profile_id) return;
+  const { carrySanction } = await import('./commands/account.mjs');
+  await carrySanction(d, pepper, core.accountHash, row.id, row.person_profile_id);
 }
 
 /** The same for a request carrying Core identity headers (the domain API, the operator cabinet): throws a 403 / 503

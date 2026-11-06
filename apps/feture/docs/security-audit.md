@@ -45,7 +45,7 @@ Status words: **open** · **in progress (PR)** · **done (PR, how)** · **releas
 Fix: Cloudflare Turnstile on `send` (token checked on the server), limits by /64, disposable-domain blocklist, global hourly send
 cap with a staff alert, collapse `+` aliases per registered domain.
 
-**B2 — free Premium farm (high, open, dormant).** `grantWelcome` (PR #1608, `server/commands/premium.mjs`) gives N days of Premium
+**B2 — free Premium farm (high, done in the stage 2 PR — still keep the switch off until B1 is done).** Fixed: `grantWelcome` now needs onboarding finished AND `feture.age_ok` (a staff-approved selfie/document); it is called again when the age check is approved. Original finding: `grantWelcome` (PR #1608, `server/commands/premium.mjs`) gives N days of Premium
 once an account finishes onboarding, with no age check; combined with B1 every fake account is free Premium. Currently harmless
 because the switch is off. Fix: after B1, grant only after the age check and a verified e-mail; daily cap on such grants with an alert.
 
@@ -56,7 +56,7 @@ matches a regex, 20 000 total slots can be filled (`server/realtime-sse.mjs:44-6
 32 KB on JSON routes, verify SSE tokens and limit by /64, pool 15–20 plus a small separate pool for staff/jobs,
 `statement_timeout` 10 s, short timeouts on non-upload paths. Cloudflare in front later (Caddy `trusted_proxies`).
 
-**B4 — banned person returns clean (high, open).** Core `forget` (scope `all`, `auth-core.js:205`, `api/auth.js`) bypasses
+**B4 — banned person returns clean (high, done in the stage 2 PR).** Fixed in `server/core-guard.mjs` (`carryOnForget`): Core `forget` with scope `all` carries a sanction in force (`carrySanction`, now exported from `account.mjs`) before Core deletes the login; tested in `tests/fe-user-factor-postgres.mjs`. Original finding: Core `forget` (scope `all`, `auth-core.js:205`, `api/auth.js`) bypasses
 `handler.mjs`, so the suspension check and `carrySanction` (only in `account.delete`) never run. Re-registering with the same
 e-mail gives a new generation and no `sanction_carry`. Fix: refuse `forget` for suspended/restricted accounts, or run
 `carrySanction` in the guard in `api/auth.js` before Core deletes.
@@ -84,11 +84,11 @@ login allowed (→ «Before release» item 4), backups never restored, `zod` bel
 - **Referral farming** (`server/commands/referral.mjs`): own code only blocks the identical account; no device/session link; the
   inviter reward is not clawed back; the «account ≤ 7 days old» window does not stop bots. Fix: reject on shared device/session
   (`session_seen`), 7-day activity hold before paying the inviter, `inviter_days` 0 until launch. `referral.apply` and
-  `settleReferral` race on `max_uses` and the cap (lock the code row).
-- **Mass Premium and promo actions need no fresh 2FA code** (PR #1608): `staff.premiumGrantAll` (up to 20 000 accounts, 400 days),
+  `settleReferral` race on `max_uses` and the cap (**fixed in the stage 2 PR: the code row is locked**).
+- **(done in the stage 2 PR: `{ fresh: true }` on `staff.premiumGrantAll`, `staff.premiumPromoSet`, `staff.promoCreate`, `staff.promoSet`, `staff.referralSettingsSet`; a second owner/delay for grant-to-all still open)** **Mass Premium and promo actions need no fresh 2FA code** (PR #1608): `staff.premiumGrantAll` (up to 20 000 accounts, 400 days),
   `staff.promoCreate/Set`, `staff.referralSettingsSet`, `staff.premiumPromoSet`, owner/lead only, journalled, no second approver.
   Fix: `{ fresh: true }` on all of them; for grant-to-all a second owner or a 10-minute delay with undo.
-- **Promo codes can be guessed**: 3–24 chars, 20 tries a day per account (many accounts, see B1). Fix: ≥ 8 random chars, a shared
+- **(done in the stage 2 PR: staff promo codes are at least 8 characters, server contract and staff form; a shared failure limit per IP and /64 still open)** **Promo codes can be guessed**: 3–24 chars, 20 tries a day per account (many accounts, see B1). Fix: ≥ 8 random chars, a shared
   limit of failures per IP and /64, alert on bursts.
 - **Private part:** the watermark is only a client overlay (`server/commands/access.mjs:205-216`, `server/media/render.mjs`);
   media URLs are bearer links valid 600 s that survive `access.revoke` (`server/media/bunny.mjs:33`, `delivery.mjs`), view-once

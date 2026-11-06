@@ -1485,7 +1485,7 @@ function Premium(){
   try{setRef(await call('staff.referralSettingsSet',{opId:newOpId(),...patch},refRes,{asAccount:true}));}catch(e){err(e);}finally{setBusy(false);}};
  const rfNum=(k:keyof typeof rf)=>Number(rf[k]);
  const rfOk=rfNum('rewardDays')>=1&&rfNum('rewardDays')<=365&&rfNum('inviterDays')>=0&&rfNum('inviterDays')<=365&&rfNum('capCount')>=1&&rfNum('capDays')>=1&&rfNum('capDays')<=365;
- const pcOk=/^[A-Za-z0-9_-]{3,24}$/.test(pc.code.trim())&&pc.label.trim().length>=3&&pc.days!==''&&Number(pc.days)<=365&&(!pc.expires||/^\d{4}-\d{2}-\d{2}$/.test(pc.expires.trim()));
+ const pcOk=/^[A-Za-z0-9_-]{8,24}$/.test(pc.code.trim())&&pc.label.trim().length>=3&&pc.days!==''&&Number(pc.days)<=365&&(!pc.expires||/^\d{4}-\d{2}-\d{2}$/.test(pc.expires.trim()));
  const createPromo=async()=>{setBusy(true);setFailure('');
   try{await call('staff.promoCreate',{opId:newOpId(),code:pc.code.trim(),label:pc.label.trim(),days:Number(pc.days),...(pc.maxUses?{maxUses:Number(pc.maxUses)}:{}),...(pc.expires?{expiresAt:pc.expires.trim()}:{})},z.object({ok:z.literal(true)}),{asAccount:true});
    setPc({code:'',label:'',days:'30',maxUses:'',expires:''});await loadPromos();}
