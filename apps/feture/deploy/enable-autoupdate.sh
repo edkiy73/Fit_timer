@@ -16,9 +16,13 @@ cd "$DIR/repo"
 git fetch -q origin "$BRANCH"
 [ "\$(git rev-parse HEAD)" = "\$(git rev-parse origin/$BRANCH)" ] && exit 0
 echo "\$(date -u +%FT%TZ) update \$(git rev-parse --short HEAD) -> \$(git rev-parse --short origin/$BRANCH)"
+OLD="\$(git rev-parse HEAD)"
 git checkout -q -B "$BRANCH" "origin/$BRANCH"
 cd apps/feture/deploy
 docker compose up -d --build
+# Caddyfile is a single-file bind mount: a checkout swaps the file, the running Caddy keeps the old one (found 06.11.2026, audit
+# stage 1) — restart it when the file changed (a second of downtime).
+git diff --quiet "\$OLD" HEAD -- Caddyfile || docker compose restart caddy
 docker image prune -f >/dev/null 2>&1 || true
 # Build cache grew to 35 GB (audit B8): keep what was used in the last 3 days, drop the rest.
 docker builder prune -f --filter until=72h >/dev/null 2>&1 || true
