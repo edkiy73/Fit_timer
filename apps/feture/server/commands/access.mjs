@@ -212,7 +212,7 @@ const run = {
     const shown = [];
     for (const m of media) {
       if (!own && !scopes.includes(m.kind === 'video' ? 'video' : 'photos')) continue;
-      const dto = await mediaDto(cfg.media, m, { viewerProfileId: viewer.profileId, place: own ? 'own' : 'private', showExplicit: !!acc.show_explicit });
+      const dto = await mediaDto(cfg.media, m, { viewerProfileId: viewer.profileId, place: own ? 'own' : 'private', showExplicit: !!acc.show_explicit, watermarkAccountId: own ? undefined : account.id });
       if (dto) shown.push(own ? dto : { ...dto, watermark });
     }
     // The «По доступу» interests are a part of the private part of their own («Интересы»): the owner sees them all

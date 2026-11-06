@@ -38,6 +38,7 @@ import { readJson } from '../server/handler.mjs';
 import { createR2Storage } from '../server/media/r2.mjs';
 import { bunnyFromEnv } from '../server/media/bunny.mjs';
 import { uploadUrlFor } from '../server/media/upload-proxy.mjs';
+import { serveMarked } from '../server/media/watermark.mjs';
 import { createSupabaseStorage } from '../server/media/supabase-storage.mjs';
 import { signedStorageDelivery, tokenDelivery } from '../server/media/delivery.mjs';
 import { createSharpRenderer } from '../server/media/render.mjs';
@@ -159,7 +160,7 @@ const billing = { providers: providersFromEnv(env), returnBase: env.FETURE_APP_U
 const handler = db && createFeHandler({
   db,
   pepper: env.FETURE_ID_PEPPER ?? '',
-  cfg: { media: { storage: media.storage, delivery: media.delivery }, realtime: realtimeCfg,
+  cfg: { media: { storage: media.storage, delivery: media.delivery, watermark: env.FETURE_UPLOAD_SECRET && env.FETURE_API_ORIGIN ? { secret: env.FETURE_UPLOAD_SECRET, origin: env.FETURE_API_ORIGIN } : null }, realtime: realtimeCfg,
     push: webPush ? { webKey: webPush.publicKey } : null,
     billing },
   signals,
@@ -219,6 +220,11 @@ async function rawBody(req) {
 const flag = (req, name) => new URL(String(req.url || '/'), 'http://x').searchParams.get(name) === '1';
 
 export default async function fe(/** @type {any} */ req, /** @type {any} */ res) {
+  // A picture of someone's private part with the viewer's handle in it (server/media/watermark.mjs): a GET with a signed link.
+  if (req.method === 'GET' && flag(req, 'media')) {
+    if (!req.query) req.query = Object.fromEntries(new URL(String(req.url || '/'), 'http://x').searchParams.entries());
+    return serveMarked({ db, secret: env.FETURE_UPLOAD_SECRET ?? '', storage: media.storage }, req, res);
+  }
   if (flag(req, 'jobs')) {
     const auth = String(req.headers?.authorization || '');
     if (req.method !== 'POST' || !sameSecret(auth.replace(/^Bearer /, ''), env.FETURE_JOBS_SECRET ?? '')) return json(res, 401, { ok: false });

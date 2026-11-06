@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {useI18n} from '@appbase/ui-react/i18n.js';
 import {KeyRound,Camera,ChevronRight,Clock,Eye,Lock,LockOpen,PenLine,Send,ShieldCheck,Trash2,X} from 'lucide-react';
 import {FeError,feErrorMessage,newOpId} from '../feture/fe-api';
-import {type Slide,AddCard,Alert,Btn,Card,CheckList,Chips,ChoiceChips,Counter,Empty,Field,FilePick,Group,MultiChips,Note,PersonLine,PhotoAdd,PhotoSlot,PhotoSlots,Pill,RequestCard,Row,SectionLabel,SelectRow,Sheet,Skel,Stack,TextArea,VaultHead,Veil,ProfileAv} from './kit';
+import {type Slide,VideoBadge,AddCard,Alert,Btn,Card,CheckList,Chips,ChoiceChips,Counter,Empty,Field,FilePick,Group,MultiChips,Note,PersonLine,PhotoAdd,PhotoSlot,PhotoSlots,Pill,RequestCard,Row,SectionLabel,SelectRow,Sheet,Skel,Stack,TextArea,VaultHead,Veil,ProfileAv} from './kit';
 import {Uploader} from './kit/Uploader';
 import {FIELD,textLength,useChecks} from './kit/validate';
 import {useSendPhoto,useSendVideo} from './media-upload';
@@ -387,6 +387,11 @@ export function PrivateVault({profileId,name,preview,pre}:{profileId:string,name
  const load=useCallback(()=>{call('private.get',{profileId},priv,{fresh:true}).then(setP).catch(()=>setP(null));},[call,profileId]);
  const given=pre!=null;
  useEffect(()=>{if(!given)load();},[load,given]);
+ // Someone else's clips: their links live two minutes (the server checks the grant every time it makes one), so the part asks for
+ // fresh ones every minute while it is open and no clip is on screen — a tap on play always finds at least a minute of link, which is
+ // all a clip (a minute at most) needs. A person whose access was taken back meets the locked part at the next refresh.
+ const refreshing=!preview&&!!p&&!p.own&&!!p.scopes?.includes('video')&&view===null;
+ useEffect(()=>{if(!refreshing)return;const id=setInterval(()=>{if(!document.hidden)load();},60000);return ()=>clearInterval(id);},[refreshing,load]);
  // Back from the age check this request sent the person to: open the request sheet again.
  const ageOk=!!preview||!p?.age||p.age==='ok';
  useAgeResume(v=>v==='access:'+profileId,()=>setSheet('request'),!!p?.canRequest&&ageOk);
@@ -408,7 +413,8 @@ export function PrivateVault({profileId,name,preview,pre}:{profileId:string,name
  </>;
  const head=(isOpen:boolean,badge?:ReactNode)=><div className="vault-h"><span className="vi">{isOpen?<LockOpen/>:<Lock/>}</span><div><b>{t('fe.px.pr.title')}</b></div>{badge&&<span className="vst">{badge}</span>}</div>;
  if(scopesOpen.length){
-  const photos=(p.media??[]).filter(m=>m.kind!=='video'&&mediaSrc(m)&&(preview||scopesOpen.includes('photos')));
+  // Pictures and clips, each by its own grant (a viewer with only «видео» sees clips, with only «фото» pictures).
+  const photos=(p.media??[]).filter(m=>mediaSrc(m)&&(preview||scopesOpen.includes(m.kind==='video'?'video':'photos')));
   const wm=preview||p.own?null:photos.find(m=>m.watermark)?.watermark??null;
   const until=!preview&&p.until?<Pill tone="v">{w.until(p.until)}</Pill>:undefined;
   const desc=scopesOpen.includes('info')&&p.text?<Group title={t('fe.px.pr.desc')}><Card><div className="md bio">{p.text.split(/\n{2,}/).map((x,i)=><p key={i}>{x}</p>)}</div></Card></Group>:null;
@@ -418,12 +424,12 @@ export function PrivateVault({profileId,name,preview,pre}:{profileId:string,name
   return <section className="vault open" id="priv">{head(true,until)}<div className="vault-b">
    {desc}
    {photos.length>0&&<Group bare title={<>{t('fe.px.pr.photos')} · {photos.length}</>} foot={preview?t('fe.px.pr.wmPreview'):t('fe.px.pr.wm')}>
-    <div className="ggrid">{photos.map((m,i)=><button key={i} type="button" className="gtile" onClick={()=>setView(i)}><img src={mediaSrc(m)!} alt="" loading="lazy" draggable={false}/></button>)}</div>
+    <div className="ggrid">{photos.map((m,i)=><button key={i} type="button" className="gtile" onClick={()=>setView(i)}><img src={mediaSrc(m)!} alt="" loading="lazy" draggable={false}/>{m.kind==='video'&&<VideoBadge durationMs={m.durationMs}/>}</button>)}</div>
    </Group>}
    {!desc&&!photos.length&&<Empty compact icon={Lock} title={t('fe.px.pr.nothing')}/>}
    {more}{more&&ageLine}
   </div>
-  {view!==null&&<PhotoViewer srcs={photos.map(m=>slideOf(m,mediaSrc(m))!)} index={view} wm={wm} onClose={()=>setView(null)}/>}
+  {view!==null&&<PhotoViewer srcs={photos.map(m=>slideOf(m,mediaSrc(m))!)} index={view} wm={wm} onClose={()=>setView(null)} onExpired={load}/>}
   {sheets}</section>;
  }
  const action=preview?<Btn kind="dark" disabled aria-disabled="true">{t('fe.px.pr.ask')}</Btn>
