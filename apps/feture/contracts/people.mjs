@@ -12,7 +12,7 @@ const sideFits = (/** @type {any} */ v) => (v.kind === 'ds' ? ['dom', 'sub'].inc
 export const peopleCommands = {
   'people.search': {
     profile: true, write: false, rate: { kind: 'people.search', max: 10000, window: '1 day' },
-    input: z.strictObject({ q: z.string().trim().min(2).max(40) }),
+    input: z.strictObject({ q: z.string().trim().min(3).max(40) }), // a handle is at least 3 characters; shorter starts would let one walk the whole prefix space
   },
   'people.byNick': {
     profile: true, write: false, rate: { kind: 'people.nick', max: 1000, window: '1 day' },

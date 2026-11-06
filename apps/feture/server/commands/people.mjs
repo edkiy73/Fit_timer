@@ -1,4 +1,5 @@
 // @ts-check
+import { limit } from '../limits.mjs';
 import { peopleCommands } from '../../contracts/people.mjs';
 import { fail, isUniqueViolation } from '../errors.mjs';
 import { enqueue } from '../outbox.mjs';
@@ -218,6 +219,9 @@ const run = {
   async 'people.search'(q, { acting: a, input, cfg }) {
     const viewer = need(a);
     await requireUnrestricted(q, viewer, 'search');
+    // A day-old account may look people up only a little: fresh accounts made in bulk cannot walk the directory (security audit 06.11.2026).
+    const [age] = await q.query(`select created_at > now() - interval '1 day' fresh from feture.account where id = $1`, [viewer.accountId]);
+    if (age?.fresh) await limit(q, viewer.accountId, 'people.search_new', 50, '1 day');
     const prefix = input.q.toLowerCase().replace(/[\\%_]/g, (/** @type {string} */ m) => '\\' + m);
     const rows = await q.query(
       `select p.id, ${acceptsMention('p', '$1')} mentionable from feture.profile p

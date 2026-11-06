@@ -6,6 +6,7 @@
 import { PLANS } from '../contracts/premium.mjs';
 import { fulfilPurchase, notifyRefunded, notifyRenewalFailed, recompute } from './commands/premium.mjs';
 import { enqueue } from './outbox.mjs';
+import { journal } from './commands/staff.mjs';
 
 /** @param {Q} q @param {import('./commands/premium.mjs').PaymentProvider} provider @param {any} ev */
 export async function applyPayEvent(q, provider, ev) {
@@ -13,8 +14,13 @@ export async function applyPayEvent(q, provider, ev) {
   switch (ev?.type) {
     case 'paid':
       // Only a purchase of this provider's own, and only while it waits (a closed one is not granted silently).
-      if ((await q.query('select 1 from feture.purchase where id = $1 and provider = $2', [ev.purchaseId, provider.id])).length) {
+      {
+        const [p] = await q.query('select state from feture.purchase where id = $1 and provider = $2', [ev.purchaseId, provider.id]);
+        if (!p) return;
         await fulfilPurchase(q, ev.purchaseId, String(ev.storeRef).slice(0, 200), { recurring });
+        // Money arrived for a checkout that was already closed (failed or timed out): nothing is granted silently, but a person paid
+        // and got nothing — the journal shows it for staff to settle by hand (security audit 06.11.2026).
+        if (p.state === 'failed' || p.state === 'canceled') await journal(q, null, 'payment.late', 'purchase', ev.purchaseId, { provider: provider.id, was: p.state });
       }
       return;
     case 'failed':

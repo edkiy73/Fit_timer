@@ -78,7 +78,7 @@ function LinkPicker({mine,onClose}:{mine:LinksMine,onClose:()=>void}){
    .then(([a,b])=>{const seen=new Set<string>();setKnown([...a.items,...b.items].filter(x=>!seen.has(x.id)&&seen.add(x.id)).map(x=>({id:x.id,kind:x.kind,handle:x.handle,name:x.name,src:x.avatar??null,halves:x.halves,premium:x.premium,photoVerified:x.photoVerified})));})
    .catch(()=>setKnown([]));},[call,acting]);
  const term=q.trim();
- useEffect(()=>{setFound(null);if(tab!=='all'||term.length<2)return;const ctl=new AbortController();
+ useEffect(()=>{setFound(null);if(tab!=='all'||term.length<3)return;const ctl=new AbortController();
   const timer=setTimeout(()=>call('people.search',{q:term},searchRes,{signal:ctl.signal})
    .then(r=>setFound(r.items.filter(x=>x.id!==acting?.id).map(x=>({id:x.id,kind:x.kind,halves:x.halves,handle:x.handle,name:x.name,premium:x.premium,photoVerified:x.photoVerified,src:mediaSrc(x.avatar?{src:x.avatar.src??null,...(x.avatar.pending!==undefined?{pending:x.avatar.pending}:{})}:null)})))).catch(()=>{if(!ctl.signal.aborted)setFound([]);}),350);
   return ()=>{clearTimeout(timer);ctl.abort();};},[tab,term,call,acting?.id]);

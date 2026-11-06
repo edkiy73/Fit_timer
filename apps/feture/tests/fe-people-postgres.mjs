@@ -14,12 +14,20 @@ import { setup as baseSetup, op } from './fe-helpers.mjs';
 const setup = () => baseSetup({ commands: { ...platform, ...me, ...social, ...inbox, ...people } });
 
 test('search: start of a nickname or name, not oneself, not anyone blocked; exact nickname lookup', async () => {
-  const { pg, call, person } = await setup();
+  const { pg, db, call, person } = await setup();
   try {
     const a = await person('ua', 'Alex'), b = await person('ub', 'Kira'), c = await person('uc', 'Kirill');
     assert.deepEqual((await call('ua', a, { action: 'people.search', q: 'kir' })).items.map((/** @type {any} */ x) => x.handle).sort(), ['Kira', 'Kirill']);
-    assert.deepEqual((await call('ua', a, { action: 'people.search', q: 'ra' })).items, []); // start only
-    assert.deepEqual((await call('ua', a, { action: 'people.search', q: 'k%' })).items, []); // wildcards are text
+    assert.deepEqual((await call('ua', a, { action: 'people.search', q: 'ira' })).items, []); // start only
+    assert.deepEqual((await call('ua', a, { action: 'people.search', q: 'k%x' })).items, []); // wildcards are text
+    assert.equal((await call('ua', a, { action: 'people.search', q: 'ki' })).status, 400, 'a search starts at three characters (audit 06.11.2026)');
+    // A day-old account looks people up 50 times a day at most.
+    await db.query(`delete from feture.rate_event where account_id = (select id from feture.account where person_profile_id = $1)`, [a]);
+    let last;
+    for (let i = 0; i < 51; i++) last = await call('ua', a, { action: 'people.search', q: 'kir' });
+    assert.equal(last.status, 429, 'the 51st search of a new account');
+    await db.query(`update feture.account set created_at = now() - interval '2 days' where person_profile_id = $1`, [a]);
+    assert.equal((await call('ua', a, { action: 'people.search', q: 'kir' })).status, 200, 'an older account is not held to it');
     await call('uc', c, { action: 'block.set', opId: op(), profileId: a, on: true });
     assert.deepEqual((await call('ua', a, { action: 'people.search', q: 'kir' })).items.map((/** @type {any} */ x) => x.handle), ['Kira']);
     assert.equal((await call('ua', a, { action: 'people.byNick', handle: 'kira' })).profile.id, b);
