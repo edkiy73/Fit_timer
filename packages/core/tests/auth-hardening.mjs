@@ -61,3 +61,20 @@ assert.equal(noToken.statusCode, 400);
 assert.equal(noToken.body.error, 'captcha_failed');
 delete process.env.TURNSTILE_SECRET_KEY;
 console.log('turnstile ok');
+
+// Idle expiry (B5): a session unused for 30 days dies; use renews it; a young session is never idle.
+const { activeSession } = require('../server/util');
+const day = 24 * 3600 * 1000;
+const hex = c => c.repeat(64);
+const mem = new Map();
+const fakeStore = { get: async k => mem.get(k) ?? null, set: async (k, v) => { mem.set(k, v); } };
+const dev = (h, ageDays) => ({ h, at: new Date(Date.now() - ageDays * day).toISOString() });
+assert.equal(await activeSession(dev(hex('a'), 40), fakeStore), false, '40 days old and no use in the last 30');
+mem.set('session:seen:' + hex('b'), '1');
+assert.equal(await activeSession(dev(hex('b'), 40), fakeStore), true, 'used lately');
+assert.equal(await activeSession(dev(hex('c'), 10), fakeStore), true, 'a young session is not idle');
+assert.equal(mem.has('session:seen:' + hex('c')), true, 'and use leaves its marker');
+assert.equal(await activeSession(dev(hex('d'), 100), fakeStore), false, 'the 90 days still end it');
+mem.set('session:revoked:' + hex('e'), '1');
+assert.equal(await activeSession(dev(hex('e'), 1), fakeStore), false, 'a revoked one stays revoked');
+console.log('idle expiry ok');

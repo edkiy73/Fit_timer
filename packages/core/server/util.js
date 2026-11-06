@@ -140,7 +140,29 @@ function sessionExpiresAt(device){
 // A separate token tombstone prevents concurrent account writes from resurrecting logout.
 async function activeSession(device, accountStore = store){
   if(!device || typeof device.h !== 'string' || !/^[a-f0-9]{64}$/.test(device.h) || sessionExpiresAt(device) <= Date.now()) return false;
-  return !(await accountStore.get('session:revoked:' + device.h));
+  if(await accountStore.get('session:revoked:' + device.h)) return false;
+  return !(await idleExpired(device, accountStore));
+}
+
+// Idle expiry (security audit 06.11.2026, B5): a session nobody used for IDLE_TTL dies long before its 90 days, so a token that
+// leaked and sat unused stops working. A marker key that lives IDLE_TTL is renewed by use (at most once an hour per process);
+// a session younger than IDLE_TTL is never idle, so sessions made before this existed need no marker.
+const IDLE_TTL = 30 * 24 * 3600;
+const TOUCH_EVERY = 3600 * 1000;
+const touched = new Map();
+async function idleExpired(device, accountStore){
+  const now = Date.now();
+  const last = touched.get(device.h);
+  if(last && now - last < TOUCH_EVERY) return false;
+  try{
+    const key = 'session:seen:' + device.h;
+    const issued = Date.parse(device.at || '');
+    if(Number.isFinite(issued) && now - issued >= IDLE_TTL * 1000 && !(await accountStore.get(key))) return true;
+    await accountStore.set(key, '1', IDLE_TTL);
+  }catch(e){ /* the store failing never signs anybody out */ }
+  if(touched.size > 20000) touched.clear();
+  touched.set(device.h, now);
+  return false;
 }
 async function validSession(device, token, accountStore = store){
   if(!token || !device || !sameSecret(require('crypto').createHash('sha256').update(String(token)).digest('hex'), device.h || '')) return false;
