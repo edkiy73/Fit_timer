@@ -272,6 +272,17 @@ const run = {
   async 'saved.set'(q, { acting: a, input }) {
     const acting = need(a);
     if (input.on) {
+      // Only what the person may open, and not without end (security audit 06.11.2026): a saved item shows the object later.
+      const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.targetId);
+      if (input.kind === 'post' || input.kind === 'event') {
+        if (!uuid) fail(404, 'not_found');
+        const [v] = input.kind === 'post'
+          ? await q.query(`select 1 from feture.post p where p.id = $1 and feture.post_visible(p, $2, $3)`, [input.targetId, acting.profileId, acting.accountId])
+          : await q.query(`select 1 from feture.event e where e.id = $1 and feture.event_visible(e, $2, $3)`, [input.targetId, acting.profileId, acting.accountId]);
+        if (!v) fail(404, 'not_found');
+      }
+      const [{ n }] = await q.query(`select count(*)::int n from feture.saved_item where profile_id = $1`, [acting.profileId]);
+      if (n >= 1000) fail(422, 'rule_violation', { rule: 'saved_limit' });
       await q.query(`insert into feture.saved_item (profile_id, kind, target_id) values ($1, $2, $3) on conflict do nothing`, [acting.profileId, input.kind, input.targetId]);
     } else {
       await q.query(`delete from feture.saved_item where profile_id = $1 and kind = $2 and target_id = $3`, [acting.profileId, input.kind, input.targetId]);

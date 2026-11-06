@@ -125,7 +125,7 @@ export const meCommands = {
   },
   'profile.get': { profile: true, write: false, input: z.strictObject({ profileId: id }) },
   'profile.update': {
-    profile: true, write: true,
+    profile: true, write: true, rate: { kind: 'profile.update', max: 300, window: '1 day' },
     input: z.strictObject({
       opId,
       rev: z.int().positive(),

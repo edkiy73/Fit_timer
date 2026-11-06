@@ -25,7 +25,7 @@ export const LIMITS = Object.freeze({
 const PUBLIC_ONLY = new Set(['avatar', 'community', 'event']);
 // Where a clip may go (a profile clip is never the first photo: photos.mjs); sound only as a chat voice message.
 const VIDEO_PURPOSES = new Set(['post', 'gallery', 'chat', 'private', 'avatar']);
-const TTL = { normal: 600, once: 60 };
+const TTL = { normal: 600, once: 60, private: 120 };
 // A clip is fetched in ranges while it plays: its link must outlive the longest clip even for view-once media.
 const FILE_TTL_MIN = 300;
 
@@ -175,7 +175,10 @@ export async function mediaDto(cfg, asset, ctx) {
     return { id: asset.id, kind: asset.kind, w: asset.width, h: asset.height, pending: true, explicit, blurred, viewRule: asset.view_rule, src: null, ...dur };
   }
   if (!cfg.delivery) fail(503, 'unavailable');
-  const ttl = asset.view_rule === 'normal' ? TTL.normal : TTL.once;
+  // The private part's pictures live two minutes, not ten, and below the reuse floor (delivery.mjs), so each viewer has a link of their own:
+  // a link outlives a revoked access by its lifetime (security audit 06.11.2026). A clip's own file keeps FILE_TTL_MIN: a player asks again
+  // for ranges while it plays.
+  const ttl = asset.view_rule === 'normal' ? (asset.purpose === 'private' ? TTL.private : TTL.normal) : TTL.once;
   // A video's pictures are its poster frame; the clip itself (`file`) only when nothing covers it.
   /** @type {import('./delivery.mjs').Variant[]} */
   const variants = blurred ? ['blur'] : asset.kind === 'video' ? ['thumb', 'card', 'full', 'file'] : ['thumb', 'card', 'full'];
