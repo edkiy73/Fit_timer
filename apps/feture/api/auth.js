@@ -3,7 +3,7 @@ const { createAuthHandler } = require('../../../packages/core/server/auth-core')
 const { cors, fail, readBody } = require('../../../packages/core/server/util');
 const analytics = require('../lib/app-analytics');
 const {safeFetureDiagnostic}=require('../lib/feture/diagnostic-policy');
-const core = createAuthHandler({analytics,sanitizeClientDiagnostic:safeFetureDiagnostic,emailChange:true});
+const core = createAuthHandler({analytics,sanitizeClientDiagnostic:safeFetureDiagnostic,emailChange:true,blockDisposableEmail:true});
 
 // The sign-in second step (optional factor, server/core-guard.mjs): Core's actions that act with a session — the
 // sessions list, signing out elsewhere, email change, deletion, nickname — wait until the sign-in passed it. Sign-in,
