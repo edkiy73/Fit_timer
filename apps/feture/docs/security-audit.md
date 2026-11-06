@@ -79,7 +79,7 @@ login allowed (→ «Before release» item 4), backups never restored, `zod` bel
 
 ## B. Medium
 
-- **Refunds/chargebacks never applied** (`server/billing/robokassa.mjs:34-39` only emits `paid`; `pay-events.mjs:44` handles
+- **Refunds/chargebacks never applied** (a manual path exists: staff revoke the paid period with `confirmPaid` in the Premium list; the automatic one needs the provider's refund API when payments are connected) — (`server/billing/robokassa.mjs:34-39` only emits `paid`; `pay-events.mjs:44` handles
   `refunded` but nothing sends it). Premium stays until `staff.premiumRevoke`. Fix: a staff «refunded» action or a reconciliation job.
 - **(done in the stage 4a PR: a shared device blocks the code and voids the inviter reward — `session_seen` holds the Core session id, one per browser/phone; the inviter is paid a week after the newcomer by `sweepReferrals`, only if the newcomer is still active and unrestricted and the cap allows; migration `20261106910000`. `inviter_days` default left as is: the programme is off until launch.)** **Referral farming** (`server/commands/referral.mjs`): own code only blocks the identical account; no device/session link; the
   inviter reward is not clawed back; the «account ≤ 7 days old» window does not stop bots. Fix: reject on shared device/session
@@ -90,7 +90,7 @@ login allowed (→ «Before release» item 4), backups never restored, `zod` bel
   Fix: `{ fresh: true }` on all of them; for grant-to-all a second owner or a 10-minute delay with undo.
 - **(done in the stage 2 PR: staff promo codes are at least 8 characters, server contract and staff form; a shared failure limit per IP and /64 still open)** **Promo codes can be guessed**: 3–24 chars, 20 tries a day per account (many accounts, see B1). Fix: ≥ 8 random chars, a shared
   limit of failures per IP and /64, alert on bursts.
-- **Private part:** the watermark is only a client overlay (`server/commands/access.mjs:205-216`, `server/media/render.mjs`);
+- **Private part (partly done in the stage 4a PR: private pictures live 120 s instead of 600 s and, being under the reuse floor, each viewer gets a link of their own — `TTL.private` in `server/media/assets.mjs`; a clip's own file keeps 300 s because a player asks again for ranges, so a revoked viewer can still play a clip they already opened for up to ~5 minutes. Still open: burning the viewer's nick into a per-viewer file — until then the watermark is a deterrent only and the documents must not promise traceability):** the watermark is only a client overlay (`server/commands/access.mjs:205-216`, `server/media/render.mjs`);
   media URLs are bearer links valid 600 s that survive `access.revoke` (`server/media/bunny.mjs:33`, `delivery.mjs`), view-once
   clips live ≥ 300 s, and the `reuse` map hands one URL to every viewer. Fix: burn the viewer nick into a per-viewer file, cut the
   TTL to 30–60 s for private/view-once, no `reuse` there, and say plainly in the documents that revoke is not instant.
