@@ -74,7 +74,7 @@ on every PR, so the `pull_request` trigger of `.github/workflows/source-consiste
 sign-in token lives in the browser. Fix: add `X-Frame-Options`/`frame-ancestors`, `Permissions-Policy`, `Referrer-Policy`, HSTS
 with subdomains; CSP in report-only first, then enforce.
 
-**B8 — server hygiene (medium, open).** Disk at 81 % (about 35 GB is Docker build cache — `docker builder prune`), SSH password
+**B8 — server hygiene (medium, open).** Disk was at 81 % (about 35 GB Docker build cache) — **done 06.11: `docker builder prune` brought it to 57 %, and `update.sh` (and `deploy/enable-autoupdate.sh`) now prune cache older than 72 h after each deploy**, SSH password
 login allowed (→ «Before release» item 4), backups never restored, `zod` below 4.6.7 (**done in the stage 1 PR: 4.6.7**), Dependabot security updates (**turned on in repository settings**).
 
 ## B. Medium

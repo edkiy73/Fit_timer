@@ -20,6 +20,8 @@ git checkout -q -B "$BRANCH" "origin/$BRANCH"
 cd apps/feture/deploy
 docker compose up -d --build
 docker image prune -f >/dev/null 2>&1 || true
+# Build cache grew to 35 GB (audit B8): keep what was used in the last 3 days, drop the rest.
+docker builder prune -f --filter until=72h >/dev/null 2>&1 || true
 echo "\$(date -u +%FT%TZ) done"
 SCRIPT
 chmod 755 "$DIR/update.sh"
