@@ -66,11 +66,11 @@ e-mail code: `email_change_send/verify` (no notice to the old address), `account
 authenticator and locks the owner out), `account.delete`. Fix: fresh e-mail code for these three, notice with a cancel window to the
 old address, sliding/idle session expiry (e.g. 30 days idle), notice e-mail on factor change.
 
-**B6 — `main` deploys on every commit (high, in progress).** `/opt/feture/update.sh` (cron, every minute) checks out
+**B6 — `main` deploys on every commit (high, done 06.11, #1617).** Branch protection is on (soft mode: PR + `check` required, no force push or deletion, admin bypass kept); `check` reports on documents-only PRs too (verified, 16 s). Original finding: `/opt/feture/update.sh` (cron, every minute) checks out
 `origin/main` and rebuilds; migrations apply automatically. Fix: branch protection (soft mode, see decisions); `check` must report
 on every PR, so the `pull_request` trigger of `.github/workflows/source-consistency.yml` has no path filter.
 
-**B7 — no CSP / frame-ancestors / Permissions-Policy (high, in progress — stage 1 PR).** Stage 1 adds `X-Frame-Options DENY`, `Permissions-Policy`, `Cross-Origin-Opener-Policy` and `Content-Security-Policy-Report-Only` in `deploy/Caddyfile`; enforce the CSP after a clean pass of every screen in the browser console. HSTS `includeSubDomains` not added (other `kinhaze.com` subdomains may not be https). Original finding: `deploy/Caddyfile` headers (lines ~32-38). Matters because the
+**B7 — no CSP / frame-ancestors / Permissions-Policy (high, in progress — stage 1 PR).** First pass of the report-only CSP on the login page (06.11): two reports — the inline `onload` on the Google Fonts `<link>` in `index.html` (an inline event handler) and a string-evaluation probe (most likely zod's JIT, which falls back when it is blocked). Before enforcing: replace the inline handler (self-hosted fonts or a script file), check the signed-in screens (feed, chat, media, staff, payments return) in the console, then switch the header to `Content-Security-Policy`. Stage 1 adds `X-Frame-Options DENY`, `Permissions-Policy`, `Cross-Origin-Opener-Policy` and `Content-Security-Policy-Report-Only` in `deploy/Caddyfile`; enforce the CSP after a clean pass of every screen in the browser console. HSTS `includeSubDomains` not added (other `kinhaze.com` subdomains may not be https). Original finding: `deploy/Caddyfile` headers (lines ~32-38). Matters because the
 sign-in token lives in the browser. Fix: add `X-Frame-Options`/`frame-ancestors`, `Permissions-Policy`, `Referrer-Policy`, HSTS
 with subdomains; CSP in report-only first, then enforce.
 
@@ -139,4 +139,5 @@ inputs, bounded arrays, no user strings in SQL · reports never auto-hide · adm
 ## Log
 
 - 06.11.2026 — audit done, report written; owner decisions recorded; stage 1 started.
+- 06.11.2026 — branch protection on `main` enabled (soft mode); Caddy restart on Caddyfile change added to `update.sh` (#1623).
 - 06.11.2026 — stage 1 live (#1617, #1618): security headers and body limits in Caddy, refused-credentials limit (verified on prod: 429 after 40 refused tokens in a minute, a 200 KB body gets 413), SSE by /64, pool 15 + `statement_timeout`, zod 4.6.7, Dependabot security updates on, build cache pruned (disk 81 % → 57 %). Found while rolling out: Caddy did not pick up the new Caddyfile (single-file bind mount), restarted by hand; `update.sh` fixed on the VPS and in `deploy/enable-autoupdate.sh`.
